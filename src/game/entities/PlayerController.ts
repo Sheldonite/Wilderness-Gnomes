@@ -4,10 +4,24 @@ import { GAME_CONFIG } from '../config/gameConfig';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { clampToArena, normalize } from '../utils/math';
 
+const PLAYER_SPRITE_KEY = 'player-code-wizard';
+const PLAYER_IDLE_ANIMATION_KEY = 'player-idle-down';
+const PLAYER_SPRITE_SCALE = 0.75;
+
+const PLAYER_WALK_ANIMATION_BY_DIRECTION: Record<string, string> = {
+  '0,1': 'player-walk-down',
+  '1,1': 'player-walk-down-right',
+  '1,0': 'player-walk-right',
+  '1,-1': 'player-walk-up-right',
+  '0,-1': 'player-walk-up',
+  '-1,-1': 'player-walk-up-left',
+  '-1,0': 'player-walk-left',
+  '-1,1': 'player-walk-down-left'
+};
+
 export class PlayerController {
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly radius = BALANCE.player.radius;
-  private lastFacingX = 1;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -15,8 +29,10 @@ export class PlayerController {
     x: number,
     y: number
   ) {
-    this.sprite = scene.add.sprite(x, y, 'player-placeholder');
+    this.sprite = scene.add.sprite(x, y, PLAYER_SPRITE_KEY, 0);
     this.sprite.setDepth(20);
+    this.sprite.setScale(PLAYER_SPRITE_SCALE);
+    this.sprite.play(PLAYER_IDLE_ANIMATION_KEY);
   }
 
   update(deltaMs: number, keys: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>): void {
@@ -34,14 +50,17 @@ export class PlayerController {
     );
 
     this.sprite.setPosition(next.x, next.y);
+    this.updateAnimation(horizontal, vertical);
+  }
 
-    if (Math.abs(direction.x) > 0.05) {
-      this.lastFacingX = direction.x;
+  private updateAnimation(horizontal: number, vertical: number): void {
+    if (horizontal === 0 && vertical === 0) {
+      this.sprite.play(PLAYER_IDLE_ANIMATION_KEY, true);
+      return;
     }
 
-    this.sprite.setFlipX(this.lastFacingX < 0);
-    this.sprite.setRotation(direction.x * 0.08);
-    this.sprite.setScale(1, direction.y !== 0 || direction.x !== 0 ? 1.04 : 1);
+    const animationKey = PLAYER_WALK_ANIMATION_BY_DIRECTION[`${horizontal},${vertical}`];
+    this.sprite.play(animationKey, true);
   }
 
   get position(): Vector2Like {

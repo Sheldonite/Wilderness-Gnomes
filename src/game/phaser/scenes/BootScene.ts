@@ -1,13 +1,59 @@
 import Phaser from 'phaser';
+import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
+
+const PLAYER_SPRITE_KEY = 'player-code-wizard';
+const PLAYER_ANIMATION_PREFIX = 'player';
+const PLAYER_FRAME_SIZE = 96;
+const PLAYER_FRAMES_PER_ROW = 4;
+
+const PLAYER_ANIMATION_ROWS = [
+  ['idle-down', 0, 6],
+  ['walk-down', 1, 8],
+  ['walk-down-right', 2, 8],
+  ['walk-right', 3, 8],
+  ['walk-up-right', 4, 8],
+  ['walk-up', 5, 8],
+  ['walk-up-left', 6, 8],
+  ['walk-left', 7, 8],
+  ['walk-down-left', 8, 8]
+] as const;
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
   }
 
+  preload(): void {
+    this.load.spritesheet(PLAYER_SPRITE_KEY, playerSpriteSheetUrl, {
+      frameWidth: PLAYER_FRAME_SIZE,
+      frameHeight: PLAYER_FRAME_SIZE
+    });
+  }
+
   create(): void {
     this.createPlaceholderTextures();
+    this.createPlayerAnimations();
     this.scene.start('StartScene');
+  }
+
+  private createPlayerAnimations(): void {
+    for (const [name, row, frameRate] of PLAYER_ANIMATION_ROWS) {
+      const key = `${PLAYER_ANIMATION_PREFIX}-${name}`;
+      if (this.anims.exists(key)) {
+        continue;
+      }
+
+      const start = row * PLAYER_FRAMES_PER_ROW;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers(PLAYER_SPRITE_KEY, {
+          start,
+          end: start + PLAYER_FRAMES_PER_ROW - 1
+        }),
+        frameRate,
+        repeat: -1
+      });
+    }
   }
 
   private createPlaceholderTextures(): void {
