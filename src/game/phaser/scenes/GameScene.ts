@@ -11,6 +11,7 @@ import { CollisionSystem } from '../../systems/CollisionSystem';
 import { EnemySpawner } from '../../systems/EnemySpawner';
 import { UpgradeSystem } from '../../systems/UpgradeSystem';
 import { WeaponSystem } from '../../systems/WeaponSystem';
+import { DebugSpriteSheetMenu } from '../../ui/DebugSpriteSheetMenu';
 import { UIManager } from '../../ui/UIManager';
 
 export class GameScene extends Phaser.Scene {
@@ -22,6 +23,7 @@ export class GameScene extends Phaser.Scene {
   private upgradeSystem!: UpgradeSystem;
   private collisionSystem!: CollisionSystem;
   private uiManager!: UIManager;
+  private debugSpriteSheetMenu!: DebugSpriteSheetMenu;
   private keys!: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
   private enemies: EnemyController[] = [];
   private projectiles: Projectile[] = [];
@@ -41,6 +43,7 @@ export class GameScene extends Phaser.Scene {
     this.collisionSystem = new CollisionSystem();
     this.cameraController = new CameraController(this.cameras.main);
     this.uiManager = new UIManager(this.gameManager);
+    this.debugSpriteSheetMenu = new DebugSpriteSheetMenu(this);
 
     this.createArenaBackdrop();
 
@@ -63,6 +66,10 @@ export class GameScene extends Phaser.Scene {
 
   update(timeMs: number, deltaMs: number): void {
     this.uiManager.update(this.gameManager.getHudSnapshot());
+
+    if (this.debugSpriteSheetMenu.isOpen) {
+      return;
+    }
 
     if (this.gameManager.state === 'GameOver') {
       this.showGameOverOnce();
@@ -186,6 +193,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private destroyRunObjects(): void {
+    this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
     for (const enemy of this.enemies) {
       enemy.destroy();

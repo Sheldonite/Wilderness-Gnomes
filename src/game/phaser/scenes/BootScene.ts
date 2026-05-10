@@ -1,22 +1,21 @@
 import Phaser from 'phaser';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
-
-const PLAYER_SPRITE_KEY = 'player-code-wizard';
-const PLAYER_ANIMATION_PREFIX = 'player';
-const PLAYER_FRAME_SIZE = 96;
-const PLAYER_FRAMES_PER_ROW = 4;
-
-const PLAYER_ANIMATION_ROWS = [
-  ['idle-down', 0, 6],
-  ['walk-down', 1, 8],
-  ['walk-down-right', 2, 8],
-  ['walk-right', 3, 8],
-  ['walk-up-right', 4, 8],
-  ['walk-up', 5, 8],
-  ['walk-up-left', 6, 8],
-  ['walk-left', 7, 8],
-  ['walk-down-left', 8, 8]
-] as const;
+import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
+import {
+  ENEMY_ANIMATION_PREFIX,
+  ENEMY_ANIMATION_ROWS,
+  ENEMY_FRAMES_PER_ROW,
+  ENEMY_FRAME_SIZE,
+  ENEMY_SPRITE_KEY
+} from '../../config/enemySprite';
+import {
+  applyPlayerSpriteAdjustments,
+  PLAYER_ANIMATION_PREFIX,
+  PLAYER_ANIMATION_ROWS,
+  PLAYER_FRAMES_PER_ROW,
+  PLAYER_FRAME_SIZE,
+  PLAYER_SPRITE_KEY
+} from '../../config/playerSprite';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -28,11 +27,17 @@ export class BootScene extends Phaser.Scene {
       frameWidth: PLAYER_FRAME_SIZE,
       frameHeight: PLAYER_FRAME_SIZE
     });
+    this.load.spritesheet(ENEMY_SPRITE_KEY, squirrelEnemySpriteSheetUrl, {
+      frameWidth: ENEMY_FRAME_SIZE,
+      frameHeight: ENEMY_FRAME_SIZE
+    });
   }
 
   create(): void {
     this.createPlaceholderTextures();
+    applyPlayerSpriteAdjustments(this);
     this.createPlayerAnimations();
+    this.createEnemyAnimations();
     this.scene.start('StartScene');
   }
 
@@ -49,6 +54,26 @@ export class BootScene extends Phaser.Scene {
         frames: this.anims.generateFrameNumbers(PLAYER_SPRITE_KEY, {
           start,
           end: start + PLAYER_FRAMES_PER_ROW - 1
+        }),
+        frameRate,
+        repeat: -1
+      });
+    }
+  }
+
+  private createEnemyAnimations(): void {
+    for (const [name, row, frameRate] of ENEMY_ANIMATION_ROWS) {
+      const key = `${ENEMY_ANIMATION_PREFIX}-${name}`;
+      if (this.anims.exists(key)) {
+        continue;
+      }
+
+      const start = row * ENEMY_FRAMES_PER_ROW;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers(ENEMY_SPRITE_KEY, {
+          start,
+          end: start + ENEMY_FRAMES_PER_ROW - 1
         }),
         frameRate,
         repeat: -1

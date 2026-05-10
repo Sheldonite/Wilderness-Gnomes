@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
+import { PLAYER_SPRITE_KEY } from '../config/playerSprite';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { clampToArena, normalize } from '../utils/math';
 
-const PLAYER_SPRITE_KEY = 'player-code-wizard';
 const PLAYER_IDLE_ANIMATION_KEY = 'player-idle-down';
 const PLAYER_SPRITE_SCALE = 0.75;
 
