@@ -91,6 +91,25 @@ canvas {
   font-weight: 800;
 }
 
+.hud-bottom-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.pause-button {
+  min-width: 78px;
+  padding: 8px 10px;
+  pointer-events: auto;
+  text-align: center;
+}
+
+.pause-button.active {
+  background: #58482d;
+  border-color: #d1ad62;
+}
+
 .overlay {
   align-items: center;
   background: rgba(9, 10, 8, 0.72);

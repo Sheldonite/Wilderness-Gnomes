@@ -58,6 +58,29 @@ export class GameManager {
     }
   }
 
+  pause(): void {
+    if (this.state === 'Playing') {
+      this.state = 'Paused';
+    }
+  }
+
+  resume(): void {
+    if (this.state === 'Paused') {
+      this.state = 'Playing';
+    }
+  }
+
+  togglePause(): void {
+    if (this.state === 'Playing') {
+      this.pause();
+      return;
+    }
+
+    if (this.state === 'Paused') {
+      this.resume();
+    }
+  }
+
   damagePlayer(amount: number): void {
     if (this.state !== 'Playing') {
       return;

@@ -10,9 +10,13 @@ export class UIManager {
   private readonly healthValue: HTMLElement;
   private readonly xpValue: HTMLElement;
   private readonly stats: HTMLElement;
+  private readonly pauseButton: HTMLButtonElement;
   private overlay?: HTMLElement;
 
-  constructor(private readonly gameManager: GameManager) {
+  constructor(
+    private readonly gameManager: GameManager,
+    private readonly onTogglePause: () => void
+  ) {
     const root = document.getElementById('ui-root');
     if (!root) {
       throw new Error('Missing #ui-root element.');
@@ -34,7 +38,10 @@ export class UIManager {
         <div class="bar"><div class="bar-fill xp"></div></div>
         <span class="hud-value xp-value"></span>
       </div>
-      <div class="hud-stats"></div>
+      <div class="hud-bottom-row">
+        <div class="hud-stats"></div>
+        <button type="button" class="pause-button">Pause</button>
+      </div>
     `;
 
     this.root.appendChild(this.hud);
@@ -44,6 +51,8 @@ export class UIManager {
     this.healthValue = this.mustQuery('.health-value');
     this.xpValue = this.mustQuery('.xp-value');
     this.stats = this.mustQuery('.hud-stats');
+    this.pauseButton = this.mustQuery<HTMLButtonElement>('.pause-button');
+    this.pauseButton.addEventListener('click', () => this.onTogglePause());
   }
 
   update(snapshot: HudSnapshot): void {
@@ -55,6 +64,26 @@ export class UIManager {
     this.healthValue.textContent = `${Math.ceil(snapshot.health)}/${snapshot.maxHealth}`;
     this.xpValue.textContent = `${snapshot.xp}/${snapshot.xpToNextLevel}`;
     this.stats.textContent = `Level ${snapshot.level}   Time ${formatTime(snapshot.elapsedSeconds)}   Kills ${snapshot.kills}`;
+  }
+
+  setPauseButtonState(isPaused: boolean): void {
+    this.pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
+    this.pauseButton.classList.toggle('active', isPaused);
+  }
+
+  showPaused(onResume: () => void): void {
+    this.clearOverlay();
+    this.overlay = this.createOverlay('Paused', 'The run is waiting. Press Escape or resume when ready.');
+    const list = this.overlay.querySelector('.choice-list');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Resume';
+    button.addEventListener('click', onResume);
+    list?.appendChild(button);
+  }
+
+  hideOverlay(): void {
+    this.clearOverlay();
   }
 
   showLevelUp(choices: UpgradeDefinition[], onChoose: (choice: UpgradeDefinition) => void): void {

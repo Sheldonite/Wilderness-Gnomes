@@ -29,11 +29,6 @@ export class DebugSpriteSheetMenu {
   private readonly inputs = new Map<Axis, HTMLInputElement>();
   private readonly frameDefinitions = getPlayerSpriteFrameDefinitions();
   private readonly toggleWithKeyboard = () => this.toggle();
-  private readonly closeWithKeyboard = () => {
-    if (this.open) {
-      this.close();
-    }
-  };
   private adjustments: PlayerSpriteAdjustmentMap = loadPlayerSpriteAdjustments();
   private selectedFrame: PlayerSpriteFrameDefinition = this.frameDefinitions[0];
   private open = false;
@@ -65,7 +60,6 @@ export class DebugSpriteSheetMenu {
 
   destroy(): void {
     this.scene.input.keyboard?.off('keydown-F2', this.toggleWithKeyboard);
-    this.scene.input.keyboard?.off('keydown-ESC', this.closeWithKeyboard);
     this.toggleButton.remove();
     this.overlay.remove();
   }
@@ -287,7 +281,6 @@ export class DebugSpriteSheetMenu {
   private bindKeyboardToggle(): void {
     const keyboard = this.scene.input.keyboard;
     keyboard?.on('keydown-F2', this.toggleWithKeyboard);
-    keyboard?.on('keydown-ESC', this.closeWithKeyboard);
   }
 
   private toggle(): void {
@@ -306,7 +299,7 @@ export class DebugSpriteSheetMenu {
     this.selectFrame(this.selectedFrame);
   }
 
-  private close(): void {
+  close(): void {
     this.open = false;
     this.overlay.classList.remove('open');
     this.toggleButton.classList.remove('active');

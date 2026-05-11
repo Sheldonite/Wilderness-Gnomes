@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
+import groundForestTileUrl from '../../../assets/terrain/ground-forest-tile.png';
+import forestPropsSheetUrl from '../../../assets/terrain/forest-props-sheet.png';
+import waterBridgeSheetUrl from '../../../assets/terrain/water-bridge-sheet.png';
 import {
   ENEMY_ANIMATION_PREFIX,
   ENEMY_ANIMATION_ROWS,
@@ -16,6 +19,12 @@ import {
   PLAYER_FRAME_SIZE,
   PLAYER_SPRITE_KEY
 } from '../../config/playerSprite';
+import {
+  TERRAIN_FEATURE_FRAME_SIZE,
+  TERRAIN_GROUND_KEY,
+  TERRAIN_PROPS_KEY,
+  TERRAIN_WATER_KEY
+} from '../../config/terrainSprites';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -30,6 +39,15 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet(ENEMY_SPRITE_KEY, squirrelEnemySpriteSheetUrl, {
       frameWidth: ENEMY_FRAME_SIZE,
       frameHeight: ENEMY_FRAME_SIZE
+    });
+    this.load.image(TERRAIN_GROUND_KEY, groundForestTileUrl);
+    this.load.spritesheet(TERRAIN_PROPS_KEY, forestPropsSheetUrl, {
+      frameWidth: TERRAIN_FEATURE_FRAME_SIZE,
+      frameHeight: TERRAIN_FEATURE_FRAME_SIZE
+    });
+    this.load.spritesheet(TERRAIN_WATER_KEY, waterBridgeSheetUrl, {
+      frameWidth: TERRAIN_FEATURE_FRAME_SIZE,
+      frameHeight: TERRAIN_FEATURE_FRAME_SIZE
     });
   }
 

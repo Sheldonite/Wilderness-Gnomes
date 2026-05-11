@@ -9,6 +9,7 @@ import { XPOrb } from '../../entities/XPOrb';
 import { CameraController } from '../camera/CameraController';
 import { CollisionSystem } from '../../systems/CollisionSystem';
 import { EnemySpawner } from '../../systems/EnemySpawner';
+import { ScenerySystem } from '../../systems/ScenerySystem';
 import { UpgradeSystem } from '../../systems/UpgradeSystem';
 import { WeaponSystem } from '../../systems/WeaponSystem';
 import { DebugSpriteSheetMenu } from '../../ui/DebugSpriteSheetMenu';
@@ -19,6 +20,7 @@ export class GameScene extends Phaser.Scene {
   private player!: PlayerController;
   private cameraController!: CameraController;
   private enemySpawner!: EnemySpawner;
+  private scenerySystem!: ScenerySystem;
   private weaponSystem!: WeaponSystem;
   private upgradeSystem!: UpgradeSystem;
   private collisionSystem!: CollisionSystem;
@@ -29,7 +31,9 @@ export class GameScene extends Phaser.Scene {
   private projectiles: Projectile[] = [];
   private xpOrbs: XPOrb[] = [];
   private levelUpDisplayed = false;
+  private pausedDisplayed = false;
   private gameOverDisplayed = false;
+  private readonly handleEscape = () => this.handleEscapePressed();
 
   constructor() {
     super('GameScene');
@@ -38,14 +42,15 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.gameManager = new GameManager();
     this.enemySpawner = new EnemySpawner(this);
+    this.scenerySystem = new ScenerySystem(this);
     this.weaponSystem = new WeaponSystem(this);
     this.upgradeSystem = new UpgradeSystem();
     this.collisionSystem = new CollisionSystem();
     this.cameraController = new CameraController(this.cameras.main);
-    this.uiManager = new UIManager(this.gameManager);
+    this.uiManager = new UIManager(this.gameManager, () => this.togglePause());
     this.debugSpriteSheetMenu = new DebugSpriteSheetMenu(this);
 
-    this.createArenaBackdrop();
+    this.scenerySystem.create();
 
     this.player = new PlayerController(
       this,
@@ -62,10 +67,12 @@ export class GameScene extends Phaser.Scene {
     };
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyRunObjects());
+    this.input.keyboard?.on('keydown-ESC', this.handleEscape);
   }
 
   update(timeMs: number, deltaMs: number): void {
     this.uiManager.update(this.gameManager.getHudSnapshot());
+    this.uiManager.setPauseButtonState(this.gameManager.state === 'Paused');
 
     if (this.debugSpriteSheetMenu.isOpen) {
       return;
@@ -76,12 +83,18 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.gameManager.state === 'Paused') {
+      this.showPausedOnce();
+      return;
+    }
+
     if (this.gameManager.state === 'LevelUpPaused') {
       this.showLevelUpOnce();
       return;
     }
 
     this.levelUpDisplayed = false;
+    this.pausedDisplayed = false;
     this.gameManager.update(deltaMs);
     this.player.update(deltaMs, this.keys);
     this.cameraController.update(this.player.position);
@@ -121,24 +134,6 @@ export class GameScene extends Phaser.Scene {
     this.cleanupDeadObjects();
   }
 
-  private createArenaBackdrop(): void {
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0x171a13, 1);
-    graphics.fillRect(0, 0, GAME_CONFIG.arena.width, GAME_CONFIG.arena.height);
-
-    graphics.lineStyle(1, 0x24291e, 0.8);
-    for (let x = 0; x <= GAME_CONFIG.arena.width; x += 160) {
-      graphics.lineBetween(x, 0, x, GAME_CONFIG.arena.height);
-    }
-    for (let y = 0; y <= GAME_CONFIG.arena.height; y += 160) {
-      graphics.lineBetween(0, y, GAME_CONFIG.arena.width, y);
-    }
-
-    graphics.lineStyle(8, 0x554936, 1);
-    graphics.strokeRect(0, 0, GAME_CONFIG.arena.width, GAME_CONFIG.arena.height);
-    graphics.setDepth(-20);
-  }
-
   private killEnemy(enemy: EnemyController): void {
     if (!this.enemies.includes(enemy)) {
       return;
@@ -167,6 +162,47 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private showPausedOnce(): void {
+    if (this.pausedDisplayed) {
+      return;
+    }
+
+    this.pausedDisplayed = true;
+    this.uiManager.showPaused(() => this.resumeFromPause());
+  }
+
+  private togglePause(): void {
+    if (this.debugSpriteSheetMenu.isOpen) {
+      return;
+    }
+
+    if (this.gameManager.state === 'GameOver' || this.gameManager.state === 'LevelUpPaused') {
+      return;
+    }
+
+    if (this.gameManager.state === 'Paused') {
+      this.resumeFromPause();
+      return;
+    }
+
+    this.gameManager.pause();
+  }
+
+  private resumeFromPause(): void {
+    this.gameManager.resume();
+    this.pausedDisplayed = false;
+    this.uiManager.hideOverlay();
+  }
+
+  private handleEscapePressed(): void {
+    if (this.debugSpriteSheetMenu.isOpen) {
+      this.debugSpriteSheetMenu.close();
+      return;
+    }
+
+    this.togglePause();
+  }
+
   private showGameOverOnce(): void {
     if (this.gameOverDisplayed) {
       return;
@@ -193,6 +229,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private destroyRunObjects(): void {
+    this.input.keyboard?.off('keydown-ESC', this.handleEscape);
     this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
     for (const enemy of this.enemies) {

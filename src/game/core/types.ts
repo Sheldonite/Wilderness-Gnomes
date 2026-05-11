@@ -1,4 +1,4 @@
-export type GameRunState = 'Start' | 'Playing' | 'LevelUpPaused' | 'GameOver';
+export type GameRunState = 'Start' | 'Playing' | 'Paused' | 'LevelUpPaused' | 'GameOver';
 
 export type UpgradeId =
   | 'projectile-damage'
