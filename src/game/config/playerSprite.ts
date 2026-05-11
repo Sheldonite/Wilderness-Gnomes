@@ -49,19 +49,19 @@ export const PLAYER_DEFAULT_SPRITE_ADJUSTMENTS: PlayerSpriteAdjustmentMap = {
   'idle-down-2': {
     sourceX: 96,
     sourceY: 0,
-    offsetX: 9,
+    offsetX: 5,
     offsetY: 0
   },
   'idle-down-3': {
     sourceX: 192,
     sourceY: 0,
-    offsetX: 14,
+    offsetX: 8,
     offsetY: 0
   },
   'idle-down-4': {
     sourceX: 288,
     sourceY: 0,
-    offsetX: 19,
+    offsetX: 11,
     offsetY: 0
   },
   'walk-down-1': {

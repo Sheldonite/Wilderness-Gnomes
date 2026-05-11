@@ -17,7 +17,12 @@ export class GameManager {
       speed: BALANCE.player.speed,
       projectileDamage: BALANCE.weapon.projectileDamage,
       weaponCooldownMs: BALANCE.weapon.cooldownMs,
-      projectileCount: BALANCE.weapon.projectileCount
+      projectileCount: BALANCE.weapon.projectileCount,
+      hasMysteryCompanion: false,
+      mysteryDamage: BALANCE.companion.mysteryDamage,
+      mysteryCooldownMs: BALANCE.companion.mysteryCooldownMs,
+      mysteryPounceRange: BALANCE.companion.mysteryPounceRange,
+      mysteryReturnSpeed: BALANCE.companion.mysteryReturnSpeed
     };
   }
 

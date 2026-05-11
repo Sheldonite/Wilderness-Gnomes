@@ -32,6 +32,16 @@ export const BALANCE = {
     projectileCount: 1,
     spreadRadians: 0.22
   },
+  companion: {
+    mysteryDamage: 16,
+    mysteryCooldownMs: 2200,
+    mysteryPounceRange: 420,
+    mysteryPounceSpeed: 620,
+    mysteryReturnSpeed: 260,
+    mysteryHitRadius: 24,
+    mysteryFollowDistance: 46,
+    mysteryPounceTimeoutMs: 650
+  },
   xp: {
     radius: 7,
     maxOrbs: 220,

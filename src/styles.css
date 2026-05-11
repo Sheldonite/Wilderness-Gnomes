@@ -247,6 +247,33 @@ button:focus-visible {
   padding-top: 16px;
 }
 
+.debug-sheet-row {
+  border-bottom: 1px solid #3d3528;
+  padding: 12px 0 0;
+}
+
+.debug-sheet-row label {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.debug-sheet-row span {
+  color: #d8c89d;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.debug-sheet-select {
+  background: #0f110d;
+  border: 1px solid #5c4f3c;
+  color: #f7f0dc;
+  font: inherit;
+  min-width: 240px;
+  padding: 8px 10px;
+}
+
 .debug-frame-column,
 .debug-control-column {
   min-height: 0;

@@ -7,6 +7,7 @@ import { PlayerController } from '../../entities/PlayerController';
 import { Projectile } from '../../entities/Projectile';
 import { XPOrb } from '../../entities/XPOrb';
 import { CameraController } from '../camera/CameraController';
+import { CompanionSystem } from '../../systems/CompanionSystem';
 import { CollisionSystem } from '../../systems/CollisionSystem';
 import { EnemySpawner } from '../../systems/EnemySpawner';
 import { ScenerySystem } from '../../systems/ScenerySystem';
@@ -21,6 +22,7 @@ export class GameScene extends Phaser.Scene {
   private cameraController!: CameraController;
   private enemySpawner!: EnemySpawner;
   private scenerySystem!: ScenerySystem;
+  private companionSystem!: CompanionSystem;
   private weaponSystem!: WeaponSystem;
   private upgradeSystem!: UpgradeSystem;
   private collisionSystem!: CollisionSystem;
@@ -43,6 +45,7 @@ export class GameScene extends Phaser.Scene {
     this.gameManager = new GameManager();
     this.enemySpawner = new EnemySpawner(this);
     this.scenerySystem = new ScenerySystem(this);
+    this.companionSystem = new CompanionSystem(this, this.gameManager.playerStats);
     this.weaponSystem = new WeaponSystem(this);
     this.upgradeSystem = new UpgradeSystem();
     this.collisionSystem = new CollisionSystem();
@@ -113,6 +116,10 @@ export class GameScene extends Phaser.Scene {
       enemy.update(deltaMs, this.player.position, difficulty);
     }
 
+    this.companionSystem.update(deltaMs, this.player.position, this.enemies, (enemy) =>
+      this.killEnemy(enemy)
+    );
+
     for (const projectile of this.projectiles) {
       projectile.update(deltaMs);
     }
@@ -155,7 +162,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.levelUpDisplayed = true;
-    const choices = this.upgradeSystem.getChoices();
+    const choices = this.upgradeSystem.getChoices(this.gameManager.playerStats);
     this.uiManager.showLevelUp(choices, (choice) => {
       this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
       this.gameManager.resumeAfterUpgrade();
@@ -232,6 +239,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.off('keydown-ESC', this.handleEscape);
     this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
+    this.companionSystem?.destroy();
     for (const enemy of this.enemies) {
       enemy.destroy();
     }

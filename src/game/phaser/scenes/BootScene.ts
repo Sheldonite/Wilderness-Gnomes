@@ -1,9 +1,21 @@
 import Phaser from 'phaser';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
+import familiarCatSpriteSheetUrl from '../../../assets/sprites/familiar-cat-spritesheet.png';
+import familiarCatPounceSpriteSheetUrl from '../../../assets/sprites/familiar-cat-pounce-spritesheet.png';
 import groundForestTileUrl from '../../../assets/terrain/ground-forest-tile.png';
 import forestPropsSheetUrl from '../../../assets/terrain/forest-props-sheet.png';
 import waterBridgeSheetUrl from '../../../assets/terrain/water-bridge-sheet.png';
+import {
+  MYSTERY_ANIMATION_PREFIX,
+  MYSTERY_FRAMES_PER_ROW,
+  MYSTERY_FRAME_SIZE,
+  getMysteryDefaultFrameAdjustment,
+  MYSTERY_MOVEMENT_ANIMATION_ROWS,
+  MYSTERY_POUNCE_ANIMATION_ROWS,
+  MYSTERY_POUNCE_SPRITE_KEY,
+  MYSTERY_SPRITE_KEY
+} from '../../config/companionSprite';
 import {
   ENEMY_ANIMATION_PREFIX,
   ENEMY_ANIMATION_ROWS,
@@ -40,6 +52,14 @@ export class BootScene extends Phaser.Scene {
       frameWidth: ENEMY_FRAME_SIZE,
       frameHeight: ENEMY_FRAME_SIZE
     });
+    this.load.spritesheet(MYSTERY_SPRITE_KEY, familiarCatSpriteSheetUrl, {
+      frameWidth: MYSTERY_FRAME_SIZE,
+      frameHeight: MYSTERY_FRAME_SIZE
+    });
+    this.load.spritesheet(MYSTERY_POUNCE_SPRITE_KEY, familiarCatPounceSpriteSheetUrl, {
+      frameWidth: MYSTERY_FRAME_SIZE,
+      frameHeight: MYSTERY_FRAME_SIZE
+    });
     this.load.image(TERRAIN_GROUND_KEY, groundForestTileUrl);
     this.load.spritesheet(TERRAIN_PROPS_KEY, forestPropsSheetUrl, {
       frameWidth: TERRAIN_FEATURE_FRAME_SIZE,
@@ -54,8 +74,10 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     this.createPlaceholderTextures();
     applyPlayerSpriteAdjustments(this);
+    this.applyMysteryWalkAdjustments();
     this.createPlayerAnimations();
     this.createEnemyAnimations();
+    this.createMysteryAnimations();
     this.scene.start('StartScene');
   }
 
@@ -96,6 +118,65 @@ export class BootScene extends Phaser.Scene {
         frameRate,
         repeat: -1
       });
+    }
+  }
+
+  private createMysteryAnimations(): void {
+    for (const [name, row, frameRate] of MYSTERY_MOVEMENT_ANIMATION_ROWS) {
+      const key = `${MYSTERY_ANIMATION_PREFIX}-${name}`;
+      if (this.anims.exists(key)) {
+        continue;
+      }
+
+      const start = row * MYSTERY_FRAMES_PER_ROW;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers(MYSTERY_SPRITE_KEY, {
+          start,
+          end: start + MYSTERY_FRAMES_PER_ROW - 1
+        }),
+        frameRate,
+        repeat: -1
+      });
+    }
+
+    for (const [name, row, frameRate] of MYSTERY_POUNCE_ANIMATION_ROWS) {
+      const key = `${MYSTERY_ANIMATION_PREFIX}-${name}`;
+      if (this.anims.exists(key)) {
+        continue;
+      }
+
+      const start = row * MYSTERY_FRAMES_PER_ROW;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers(MYSTERY_POUNCE_SPRITE_KEY, {
+          start,
+          end: start + MYSTERY_FRAMES_PER_ROW - 1
+        }),
+        frameRate,
+        repeat: -1
+      });
+    }
+  }
+
+  private applyMysteryWalkAdjustments(): void {
+    for (const [name, row] of MYSTERY_MOVEMENT_ANIMATION_ROWS) {
+      for (let frameInAnimation = 0; frameInAnimation < MYSTERY_FRAMES_PER_ROW; frameInAnimation += 1) {
+        const frameIndex = row * MYSTERY_FRAMES_PER_ROW + frameInAnimation;
+        const frame = this.textures.getFrame(MYSTERY_SPRITE_KEY, frameIndex);
+        if (!frame) {
+          continue;
+        }
+
+        const adjustment = getMysteryDefaultFrameAdjustment(
+          `${name}-${frameInAnimation + 1}`,
+          frameInAnimation * MYSTERY_FRAME_SIZE,
+          row * MYSTERY_FRAME_SIZE
+        );
+        frame.setCutPosition(adjustment.sourceX, adjustment.sourceY);
+        frame.x = adjustment.offsetX;
+        frame.y = adjustment.offsetY;
+      }
     }
   }
 

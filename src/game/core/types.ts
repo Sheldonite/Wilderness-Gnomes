@@ -5,7 +5,8 @@ export type UpgradeId =
   | 'fire-rate'
   | 'move-speed'
   | 'max-health'
-  | 'projectile-count';
+  | 'projectile-count'
+  | 'gain-companion-mystery';
 
 export interface Vector2Like {
   x: number;
@@ -19,12 +20,18 @@ export interface PlayerStats {
   projectileDamage: number;
   weaponCooldownMs: number;
   projectileCount: number;
+  hasMysteryCompanion: boolean;
+  mysteryDamage: number;
+  mysteryCooldownMs: number;
+  mysteryPounceRange: number;
+  mysteryReturnSpeed: number;
 }
 
 export interface UpgradeDefinition {
   id: UpgradeId;
   title: string;
   description: string;
+  isAvailable?: (stats: PlayerStats) => boolean;
   apply: (stats: PlayerStats) => void;
 }
 

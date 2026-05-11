@@ -44,11 +44,22 @@ export class UpgradeSystem {
       apply: (stats) => {
         stats.projectileCount += 1;
       }
+    },
+    {
+      id: 'gain-companion-mystery',
+      title: 'Gain a Companion: Mystery',
+      description: 'Mystery joins you and pounces at nearby enemies.',
+      isAvailable: (stats) => !stats.hasMysteryCompanion,
+      apply: (stats) => {
+        stats.hasMysteryCompanion = true;
+      }
     }
   ];
 
-  getChoices(): UpgradeDefinition[] {
-    const pool = Phaser.Utils.Array.Shuffle([...this.upgrades]);
+  getChoices(stats: PlayerStats): UpgradeDefinition[] {
+    const pool = Phaser.Utils.Array.Shuffle(
+      this.upgrades.filter((upgrade) => !upgrade.isAvailable || upgrade.isAvailable(stats))
+    );
     return pool.slice(0, BALANCE.leveling.choices);
   }
 
