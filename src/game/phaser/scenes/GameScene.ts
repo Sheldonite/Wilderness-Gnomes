@@ -116,8 +116,12 @@ export class GameScene extends Phaser.Scene {
       enemy.update(deltaMs, this.player.position, difficulty);
     }
 
-    this.companionSystem.update(deltaMs, this.player.position, this.enemies, (enemy) =>
-      this.killEnemy(enemy)
+    this.companionSystem.update(
+      deltaMs,
+      this.player.position,
+      this.player.currentMovementDirection,
+      this.enemies,
+      (enemy) => this.killEnemy(enemy)
     );
 
     for (const projectile of this.projectiles) {

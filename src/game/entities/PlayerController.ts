@@ -22,6 +22,7 @@ const PLAYER_WALK_ANIMATION_BY_DIRECTION: Record<string, string> = {
 export class PlayerController {
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly radius = BALANCE.player.radius;
+  private movementDirection: Vector2Like = { x: 0, y: 0 };
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -39,6 +40,7 @@ export class PlayerController {
     const horizontal = Number(keys.d.isDown) - Number(keys.a.isDown);
     const vertical = Number(keys.s.isDown) - Number(keys.w.isDown);
     const direction = normalize(horizontal, vertical);
+    this.movementDirection = direction;
     const dt = deltaMs / 1000;
 
     const next = clampToArena(
@@ -65,6 +67,10 @@ export class PlayerController {
 
   get position(): Vector2Like {
     return { x: this.sprite.x, y: this.sprite.y };
+  }
+
+  get currentMovementDirection(): Vector2Like {
+    return this.movementDirection;
   }
 
   resetToCenter(): void {

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig';
 import {
+  TERRAIN_FEATURE_FRAME_SIZE,
   TERRAIN_GROUND_KEY,
   TERRAIN_PROP_FRAMES,
   TERRAIN_PROPS_KEY,
@@ -8,8 +9,19 @@ import {
   TERRAIN_WATER_KEY
 } from '../config/terrainSprites';
 
-const SCENERY_SEED = 'wilderness-gnomes-forest-v1';
+const SCENERY_SEED = 'wilderness-gnomes-forest-v2-connected';
 const SAFE_CENTER_RADIUS = 320;
+const GRID_SIZE = TERRAIN_FEATURE_FRAME_SIZE;
+const GRID_COLUMNS = Math.floor(GAME_CONFIG.arena.width / GRID_SIZE);
+const GRID_ROWS = Math.floor(GAME_CONFIG.arena.height / GRID_SIZE);
+
+type Direction = 'north' | 'east' | 'south' | 'west';
+type ConnectionMask = Partial<Record<Direction, boolean>>;
+
+interface GridPoint {
+  col: number;
+  row: number;
+}
 
 interface PlacedFeature {
   x: number;
@@ -17,18 +29,34 @@ interface PlacedFeature {
   radius: number;
 }
 
+interface TerrainRouteTile {
+  point: GridPoint;
+  connections: ConnectionMask;
+}
+
+interface RenderedRouteTile extends TerrainRouteTile {
+  x: number;
+  y: number;
+}
+
 export class ScenerySystem {
   private readonly random = new Phaser.Math.RandomDataGenerator([SCENERY_SEED]);
   private readonly waterFeatures: PlacedFeature[] = [];
+  private readonly blockedFeatureKeys = new Set<string>();
+  private riverTiles: RenderedRouteTile[] = [];
+  private bridgeKeys = new Set<string>();
 
   constructor(private readonly scene: Phaser.Scene) {}
 
   create(): void {
     this.createGround();
-    this.createWaterFeatures();
-    this.createPathPatches();
-    this.createRockClusters();
-    this.createTrees();
+    const riverPlan = this.generateRiverPlan();
+    this.renderRiverPlan(riverPlan);
+    this.placeLakes();
+    this.placeBridgesOnRiver();
+    const pathPlan = this.generatePathPlan();
+    this.renderPathPlan(pathPlan);
+    this.createRocksAndTreesAvoidingWater();
     this.createArenaBorder();
   }
 
@@ -57,33 +85,168 @@ export class ScenerySystem {
     }
   }
 
-  private createWaterFeatures(): void {
-    for (let i = 0; i < 7; i += 1) {
-      this.placeWaterFeature(TERRAIN_WATER_FRAMES.ponds, 1.25, 110);
+  private generateRiverPlan(): TerrainRouteTile[] {
+    const vertical = this.random.frac() > 0.35;
+    const route = vertical ? this.generateVerticalRiverRoute() : this.generateHorizontalRiverRoute();
+    return this.buildRouteTiles(route, true);
+  }
+
+  private generateVerticalRiverRoute(): GridPoint[] {
+    const leftSide = this.random.frac() > 0.5;
+    const minCol = leftSide ? 2 : Math.floor(GRID_COLUMNS * 0.62);
+    const maxCol = leftSide ? Math.floor(GRID_COLUMNS * 0.38) : GRID_COLUMNS - 3;
+    let col = this.random.between(minCol, maxCol);
+    const route: GridPoint[] = [{ col, row: 0 }];
+
+    for (let row = 1; row < GRID_ROWS; row += 1) {
+      if (this.random.frac() < 0.34) {
+        const drift = this.random.pick([-1, 1]);
+        const nextCol = Phaser.Math.Clamp(col + drift, minCol, maxCol);
+        if (nextCol !== col) {
+          col = nextCol;
+          this.pushUniquePoint(route, { col, row: row - 1 });
+        }
+      }
+
+      this.pushUniquePoint(route, { col, row });
     }
 
-    for (let i = 0; i < 6; i += 1) {
-      const feature = this.placeWaterFeature(TERRAIN_WATER_FRAMES.rivers, 1.35, 125);
-      if (feature) {
-        this.placeBridgeNear(feature);
+    return route;
+  }
+
+  private generateHorizontalRiverRoute(): GridPoint[] {
+    const topSide = this.random.frac() > 0.5;
+    const minRow = topSide ? 2 : Math.floor(GRID_ROWS * 0.62);
+    const maxRow = topSide ? Math.floor(GRID_ROWS * 0.38) : GRID_ROWS - 3;
+    let row = this.random.between(minRow, maxRow);
+    const route: GridPoint[] = [{ col: 0, row }];
+
+    for (let col = 1; col < GRID_COLUMNS; col += 1) {
+      if (this.random.frac() < 0.34) {
+        const drift = this.random.pick([-1, 1]);
+        const nextRow = Phaser.Math.Clamp(row + drift, minRow, maxRow);
+        if (nextRow !== row) {
+          row = nextRow;
+          this.pushUniquePoint(route, { col: col - 1, row });
+        }
       }
+
+      this.pushUniquePoint(route, { col, row });
+    }
+
+    return route;
+  }
+
+  private renderRiverPlan(riverPlan: TerrainRouteTile[]): void {
+    this.riverTiles = [];
+
+    for (const tile of riverPlan) {
+      const { x, y } = this.gridToWorld(tile.point);
+      const sprite = this.scene.add.sprite(x, y, TERRAIN_WATER_KEY);
+      sprite.setDepth(-38);
+      sprite.setScale(1.04);
+      this.applyWaterSprite(sprite, tile.connections);
+
+      this.riverTiles.push({ ...tile, x, y });
+      this.blockArea(x, y, 92);
     }
   }
 
-  private createPathPatches(): void {
-    for (let i = 0; i < 18; i += 1) {
-      const point = this.randomOpenPoint(90);
+  private placeLakes(): void {
+    for (let i = 0; i < 5; i += 1) {
+      const point = this.randomOpenPoint(130);
       const sprite = this.scene.add.sprite(
         point.x,
         point.y,
         TERRAIN_WATER_KEY,
-        this.pickFrame(TERRAIN_WATER_FRAMES.paths)
+        this.pickFrame(TERRAIN_WATER_FRAMES.ponds)
       );
-      sprite.setDepth(-35);
-      sprite.setScale(this.random.realInRange(0.75, 1.2));
-      sprite.setRotation(this.random.realInRange(-0.28, 0.28));
-      sprite.setAlpha(0.88);
+      sprite.setDepth(-39);
+      sprite.setScale(this.random.realInRange(0.9, 1.25));
+      sprite.setRotation(this.random.realInRange(-0.08, 0.08));
+      this.blockArea(point.x, point.y, 130);
     }
+  }
+
+  private placeBridgesOnRiver(): void {
+    const candidates = this.riverTiles.filter((tile) => this.isStraight(tile.connections));
+    const bridgeCount = Math.min(3, Math.max(1, Math.floor(candidates.length / 9)));
+    const shuffled = Phaser.Utils.Array.Shuffle([...candidates]);
+    let placed = 0;
+
+    for (const tile of shuffled) {
+      if (placed >= bridgeCount) {
+        return;
+      }
+
+      if (this.isNearCenter(tile.x, tile.y, SAFE_CENTER_RADIUS + 80)) {
+        continue;
+      }
+
+      const sprite = this.scene.add.sprite(tile.x, tile.y, TERRAIN_WATER_KEY, this.pickBridgeFrame(tile.connections));
+      sprite.setDepth(-24);
+      sprite.setScale(0.96);
+      sprite.setRotation(0);
+      this.bridgeKeys.add(this.keyOf(tile.point));
+      placed += 1;
+    }
+  }
+
+  private generatePathPlan(): TerrainRouteTile[] {
+    const route = this.generatePathRouteAvoidingRiver();
+    return this.buildRouteTiles(route, true);
+  }
+
+  private generatePathRouteAvoidingRiver(): GridPoint[] {
+    const route: GridPoint[] = [];
+    let col = 1;
+    let row = GRID_ROWS - 4;
+    const targetCol = GRID_COLUMNS - 2;
+    const targetRow = 3;
+    route.push({ col, row });
+
+    while (col !== targetCol || row !== targetRow) {
+      const preferHorizontal = Math.abs(targetCol - col) >= Math.abs(targetRow - row);
+
+      if (preferHorizontal && col !== targetCol) {
+        col += Math.sign(targetCol - col);
+      } else if (row !== targetRow) {
+        row += Math.sign(targetRow - row);
+      } else {
+        col += Math.sign(targetCol - col);
+      }
+
+      const next = { col, row };
+      if (this.isRiverPoint(next) && !this.bridgeKeys.has(this.keyOf(next))) {
+        const detourRow = Phaser.Math.Clamp(row + (row < GRID_ROWS / 2 ? 1 : -1), 1, GRID_ROWS - 2);
+        this.pushUniquePoint(route, { col: col - Math.sign(targetCol - col || 1), row: detourRow });
+        row = detourRow;
+      }
+
+      this.pushUniquePoint(route, next);
+    }
+
+    return route;
+  }
+
+  private renderPathPlan(pathPlan: TerrainRouteTile[]): void {
+    for (const tile of pathPlan) {
+      if (this.isRiverPoint(tile.point) && !this.bridgeKeys.has(this.keyOf(tile.point))) {
+        continue;
+      }
+
+      const { x, y } = this.gridToWorld(tile.point);
+      const sprite = this.scene.add.sprite(x, y, TERRAIN_WATER_KEY);
+      sprite.setDepth(-35);
+      sprite.setScale(0.9);
+      this.applyPathSprite(sprite, tile.connections);
+      this.blockArea(x, y, 46);
+    }
+  }
+
+  private createRocksAndTreesAvoidingWater(): void {
+    this.createRockClusters();
+    this.createTrees();
   }
 
   private createRockClusters(): void {
@@ -123,32 +286,157 @@ export class ScenerySystem {
     graphics.strokeRect(0, 0, GAME_CONFIG.arena.width, GAME_CONFIG.arena.height);
   }
 
-  private placeWaterFeature(
-    frames: readonly number[],
-    scale: number,
-    radius: number
-  ): PlacedFeature | null {
-    const point = this.randomOpenPoint(radius);
-    const sprite = this.scene.add.sprite(point.x, point.y, TERRAIN_WATER_KEY, this.pickFrame(frames));
-    sprite.setDepth(-38);
-    sprite.setScale(scale * this.random.realInRange(0.82, 1.25));
-    sprite.setRotation(this.random.realInRange(-0.12, 0.12));
+  private buildRouteTiles(route: GridPoint[], connectRouteEdges: boolean): TerrainRouteTile[] {
+    return route.map((point, index) => {
+      const previous = route[index - 1];
+      const next = route[index + 1];
+      const connections: ConnectionMask = {};
 
-    const feature = { x: point.x, y: point.y, radius: radius * scale };
-    this.waterFeatures.push(feature);
-    return feature;
+      if (previous) {
+        connections[this.directionBetween(point, previous)] = true;
+      } else if (connectRouteEdges) {
+        this.addEdgeConnection(point, connections);
+      }
+
+      if (next) {
+        connections[this.directionBetween(point, next)] = true;
+      } else if (connectRouteEdges) {
+        this.addEdgeConnection(point, connections);
+      }
+
+      return { point, connections };
+    });
   }
 
-  private placeBridgeNear(feature: PlacedFeature): void {
-    const sprite = this.scene.add.sprite(
-      feature.x + this.random.between(-18, 18),
-      feature.y + this.random.between(-18, 18),
-      TERRAIN_WATER_KEY,
-      this.pickFrame(TERRAIN_WATER_FRAMES.bridges)
+  private applyWaterSprite(sprite: Phaser.GameObjects.Sprite, connections: ConnectionMask): void {
+    if (this.hasConnections(connections, ['east', 'west'])) {
+      sprite.setFrame(4);
+      sprite.setRotation(0);
+      return;
+    }
+
+    if (this.hasConnections(connections, ['north', 'south'])) {
+      sprite.setFrame(5);
+      sprite.setRotation(0);
+      return;
+    }
+
+    sprite.setFrame(6);
+    sprite.setRotation(this.bendRotation(connections));
+  }
+
+  private applyPathSprite(sprite: Phaser.GameObjects.Sprite, connections: ConnectionMask): void {
+    if (this.hasConnections(connections, ['east', 'west'])) {
+      sprite.setFrame(13);
+      sprite.setRotation(Math.PI / 2);
+      return;
+    }
+
+    if (this.hasConnections(connections, ['north', 'south'])) {
+      sprite.setFrame(13);
+      sprite.setRotation(0);
+      return;
+    }
+
+    sprite.setFrame(12);
+    sprite.setRotation(this.bendRotation(connections));
+  }
+
+  private pickBridgeFrame(connections: ConnectionMask): number {
+    if (this.hasConnections(connections, ['east', 'west'])) {
+      return 9;
+    }
+
+    return 8;
+  }
+
+  private bendRotation(connections: ConnectionMask): number {
+    if (this.hasConnections(connections, ['east', 'south'])) {
+      return 0;
+    }
+    if (this.hasConnections(connections, ['south', 'west'])) {
+      return Math.PI / 2;
+    }
+    if (this.hasConnections(connections, ['west', 'north'])) {
+      return Math.PI;
+    }
+    if (this.hasConnections(connections, ['north', 'east'])) {
+      return -Math.PI / 2;
+    }
+
+    return 0;
+  }
+
+  private addEdgeConnection(point: GridPoint, connections: ConnectionMask): void {
+    if (point.row === 0) {
+      connections.north = true;
+    }
+    if (point.row === GRID_ROWS - 1) {
+      connections.south = true;
+    }
+    if (point.col === 0) {
+      connections.west = true;
+    }
+    if (point.col === GRID_COLUMNS - 1) {
+      connections.east = true;
+    }
+  }
+
+  private directionBetween(from: GridPoint, to: GridPoint): Direction {
+    if (to.col > from.col) {
+      return 'east';
+    }
+    if (to.col < from.col) {
+      return 'west';
+    }
+    if (to.row > from.row) {
+      return 'south';
+    }
+
+    return 'north';
+  }
+
+  private hasConnections(connections: ConnectionMask, directions: Direction[]): boolean {
+    return directions.every((direction) => connections[direction]);
+  }
+
+  private isStraight(connections: ConnectionMask): boolean {
+    return (
+      this.hasConnections(connections, ['east', 'west']) ||
+      this.hasConnections(connections, ['north', 'south'])
     );
-    sprite.setDepth(-24);
-    sprite.setScale(this.random.realInRange(0.82, 1.12));
-    sprite.setRotation(this.random.realInRange(-0.18, 0.18));
+  }
+
+  private pushUniquePoint(route: GridPoint[], point: GridPoint): void {
+    const last = route[route.length - 1];
+    if (last && last.col === point.col && last.row === point.row) {
+      return;
+    }
+
+    route.push(point);
+  }
+
+  private gridToWorld(point: GridPoint): { x: number; y: number } {
+    return {
+      x: point.col * GRID_SIZE + GRID_SIZE / 2,
+      y: point.row * GRID_SIZE + GRID_SIZE / 2
+    };
+  }
+
+  private keyOf(point: GridPoint): string {
+    return `${point.col},${point.row}`;
+  }
+
+  private isRiverPoint(point: GridPoint): boolean {
+    return this.riverTiles.some((tile) => tile.point.col === point.col && tile.point.row === point.row);
+  }
+
+  private blockArea(x: number, y: number, radius: number): void {
+    this.waterFeatures.push({ x, y, radius });
+    this.blockedFeatureKeys.add(this.keyOf({
+      col: Math.floor(x / GRID_SIZE),
+      row: Math.floor(y / GRID_SIZE)
+    }));
   }
 
   private randomOpenPoint(radius: number): { x: number; y: number } {
@@ -157,13 +445,22 @@ export class ScenerySystem {
       y: GAME_CONFIG.arena.height / 2
     };
 
-    for (let attempt = 0; attempt < 80; attempt += 1) {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
       const point = {
         x: this.random.between(radius, GAME_CONFIG.arena.width - radius),
         y: this.random.between(radius, GAME_CONFIG.arena.height - radius)
       };
 
-      if (Phaser.Math.Distance.Between(point.x, point.y, center.x, center.y) < SAFE_CENTER_RADIUS) {
+      const gridPoint = {
+        col: Math.floor(point.x / GRID_SIZE),
+        row: Math.floor(point.y / GRID_SIZE)
+      };
+
+      if (this.isNearCenter(point.x, point.y, SAFE_CENTER_RADIUS)) {
+        continue;
+      }
+
+      if (this.blockedFeatureKeys.has(this.keyOf(gridPoint))) {
         continue;
       }
 
@@ -180,6 +477,15 @@ export class ScenerySystem {
       x: this.random.between(radius, GAME_CONFIG.arena.width - radius),
       y: this.random.between(radius, GAME_CONFIG.arena.height - radius)
     };
+  }
+
+  private isNearCenter(x: number, y: number, radius: number): boolean {
+    return Phaser.Math.Distance.Between(
+      x,
+      y,
+      GAME_CONFIG.arena.width / 2,
+      GAME_CONFIG.arena.height / 2
+    ) < radius;
   }
 
   private pickFrame(frames: readonly number[]): number {

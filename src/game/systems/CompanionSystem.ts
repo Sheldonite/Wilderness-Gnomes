@@ -14,6 +14,7 @@ export class CompanionSystem {
   update(
     deltaMs: number,
     playerPosition: Vector2Like,
+    playerMovementDirection: Vector2Like,
     enemies: EnemyController[],
     onEnemyKilled: (enemy: EnemyController) => void
   ): void {
@@ -21,7 +22,7 @@ export class CompanionSystem {
       this.mystery = new MysteryCompanion(this.scene, this.stats, playerPosition);
     }
 
-    this.mystery?.update(deltaMs, playerPosition, enemies, onEnemyKilled);
+    this.mystery?.update(deltaMs, playerPosition, playerMovementDirection, enemies, onEnemyKilled);
   }
 
   destroy(): void {

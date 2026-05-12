@@ -38,6 +38,7 @@ export class MysteryCompanion {
   update(
     deltaMs: number,
     playerPosition: Vector2Like,
+    playerMovementDirection: Vector2Like,
     enemies: EnemyController[],
     onEnemyKilled: (enemy: EnemyController) => void
   ): void {
@@ -48,9 +49,9 @@ export class MysteryCompanion {
 
     const followTarget = this.getFollowTarget(playerPosition);
     this.moveToward(followTarget, this.stats.mysteryReturnSpeed, deltaMs);
-    this.updateWalkAnimation();
 
     if (this.state === 'returning') {
+      this.updateWalkAnimation(this.lastMoveDirection);
       if (distanceSq(this.position, followTarget) <= ARRIVAL_DISTANCE * ARRIVAL_DISTANCE) {
         this.state = 'following';
       }
@@ -58,7 +59,7 @@ export class MysteryCompanion {
     }
 
     this.cooldownRemainingMs -= deltaMs;
-    this.updateWalkAnimation();
+    this.updateWalkAnimation(playerMovementDirection);
 
     if (this.cooldownRemainingMs > 0) {
       return;
@@ -138,13 +139,18 @@ export class MysteryCompanion {
     );
   }
 
-  private updateWalkAnimation(): void {
-    if (Math.abs(this.lastMoveDirection.x) < 0.05 && Math.abs(this.lastMoveDirection.y) < 0.05) {
+  private updateWalkAnimation(preferredDirection: Vector2Like): void {
+    const direction =
+      Math.abs(preferredDirection.x) > 0.05 || Math.abs(preferredDirection.y) > 0.05
+        ? preferredDirection
+        : this.lastMoveDirection;
+
+    if (Math.abs(direction.x) < 0.05 && Math.abs(direction.y) < 0.05) {
       this.sprite.play(MYSTERY_IDLE_ANIMATION_KEY, true);
       return;
     }
 
-    this.playDirectionalAnimation(MYSTERY_WALK_ANIMATION_BY_DIRECTION, this.lastMoveDirection);
+    this.playDirectionalAnimation(MYSTERY_WALK_ANIMATION_BY_DIRECTION, direction);
   }
 
   private playDirectionalAnimation(animationMap: Record<string, string>, direction: Vector2Like): void {
