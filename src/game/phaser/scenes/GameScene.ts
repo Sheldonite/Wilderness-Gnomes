@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BALANCE } from '../../config/balance';
 import { GAME_CONFIG } from '../../config/gameConfig';
+import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config/playerCharacters';
 import { GameManager } from '../../core/GameManager';
 import { EnemyController } from '../../entities/EnemyController';
 import { PlayerController } from '../../entities/PlayerController';
@@ -36,12 +37,14 @@ export class GameScene extends Phaser.Scene {
   private pausedDisplayed = false;
   private gameOverDisplayed = false;
   private readonly handleEscape = () => this.handleEscapePressed();
+  private selectedCharacter!: PlayerCharacterDefinition;
 
   constructor() {
     super('GameScene');
   }
 
-  create(): void {
+  create(data: { characterId?: string }): void {
+    this.selectedCharacter = getPlayerCharacter(data.characterId);
     this.gameManager = new GameManager();
     this.enemySpawner = new EnemySpawner(this);
     this.scenerySystem = new ScenerySystem(this);
@@ -58,6 +61,7 @@ export class GameScene extends Phaser.Scene {
     this.player = new PlayerController(
       this,
       this.gameManager.playerStats,
+      this.selectedCharacter,
       GAME_CONFIG.arena.width / 2,
       GAME_CONFIG.arena.height / 2
     );
@@ -244,6 +248,7 @@ export class GameScene extends Phaser.Scene {
     this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
     this.companionSystem?.destroy();
+    this.player?.destroy();
     for (const enemy of this.enemies) {
       enemy.destroy();
     }

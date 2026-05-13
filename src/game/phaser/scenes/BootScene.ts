@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
+import haileySpriteSheetUrl from '../../../assets/sprites/Hailey-Walk.png';
 import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
 import familiarCatSpriteSheetUrl from '../../../assets/sprites/familiar-cat-spritesheet.png';
 import familiarCatPounceSpriteSheetUrl from '../../../assets/sprites/familiar-cat-pounce-spritesheet.png';
@@ -16,6 +17,12 @@ import {
   MYSTERY_POUNCE_SPRITE_KEY,
   MYSTERY_SPRITE_KEY
 } from '../../config/companionSprite';
+import {
+  HAILEY_ANIMATION_PREFIX,
+  HAILEY_FRAME_HEIGHT,
+  HAILEY_FRAME_WIDTH,
+  HAILEY_SPRITE_KEY
+} from '../../config/playerCharacters';
 import {
   ENEMY_ANIMATION_PREFIX,
   ENEMY_ANIMATION_ROWS,
@@ -48,6 +55,12 @@ export class BootScene extends Phaser.Scene {
       frameWidth: PLAYER_FRAME_SIZE,
       frameHeight: PLAYER_FRAME_SIZE
     });
+    this.load.spritesheet(HAILEY_SPRITE_KEY, haileySpriteSheetUrl, {
+      frameWidth: HAILEY_FRAME_WIDTH,
+      frameHeight: HAILEY_FRAME_HEIGHT,
+      spacing: 0,
+      margin: 0
+    });
     this.load.spritesheet(ENEMY_SPRITE_KEY, squirrelEnemySpriteSheetUrl, {
       frameWidth: ENEMY_FRAME_SIZE,
       frameHeight: ENEMY_FRAME_SIZE
@@ -76,6 +89,7 @@ export class BootScene extends Phaser.Scene {
     applyPlayerSpriteAdjustments(this);
     this.applyMysteryWalkAdjustments();
     this.createPlayerAnimations();
+    this.createHaileyAnimations();
     this.createEnemyAnimations();
     this.createMysteryAnimations();
     this.scene.start('StartScene');
@@ -115,6 +129,31 @@ export class BootScene extends Phaser.Scene {
           start,
           end: start + ENEMY_FRAMES_PER_ROW - 1
         }),
+        frameRate,
+        repeat: -1
+      });
+    }
+  }
+
+  private createHaileyAnimations(): void {
+    const animations = [
+      ['idle-down', 0, 0, 4],
+      ['walk-down', 0, 3, 8],
+      ['idle-right', 4, 4, 4],
+      ['walk-right', 4, 7, 8],
+      ['idle-up', 8, 8, 4],
+      ['walk-up', 8, 11, 8]
+    ] as const;
+
+    for (const [name, start, end, frameRate] of animations) {
+      const key = `${HAILEY_ANIMATION_PREFIX}-${name}`;
+      if (this.anims.exists(key)) {
+        continue;
+      }
+
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers(HAILEY_SPRITE_KEY, { start, end }),
         frameRate,
         repeat: -1
       });
