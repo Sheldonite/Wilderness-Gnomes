@@ -46,6 +46,7 @@ export class Projectile {
 
   destroy(): void {
     this.sprite.destroy();
+    this.hitEnemyIds.clear();
   }
 
   get position(): Vector2Like {

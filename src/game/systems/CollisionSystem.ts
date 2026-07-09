@@ -1,5 +1,6 @@
 import { BALANCE } from '../config/balance';
 import { GameManager } from '../core/GameManager';
+import { Quadtree } from '../core/Quadtree';
 import { EnemyController } from '../entities/EnemyController';
 import { PlayerController } from '../entities/PlayerController';
 import { Projectile } from '../entities/Projectile';
@@ -7,6 +8,9 @@ import { XPOrb } from '../entities/XPOrb';
 import { distanceSq, normalize } from '../utils/math';
 
 export class CollisionSystem {
+  private enemyQuadtree: Quadtree<EnemyController> | null = null;
+  private readonly worldBounds = { x: -1000, y: -1000, width: 2000, height: 2000 };
+
   update(
     timeMs: number,
     player: PlayerController,
@@ -16,10 +20,22 @@ export class CollisionSystem {
     xpOrbs: XPOrb[],
     onEnemyKilled: (enemy: EnemyController) => void
   ): void {
+    this.buildEnemyQuadtree(enemies);
     this.handleEnemySeparation(enemies);
     this.handlePlayerEnemyContact(timeMs, player, gameManager, enemies);
     this.handleProjectileEnemyHits(enemies, projectiles, onEnemyKilled);
     this.handleXpCollection(player, gameManager, xpOrbs);
+    this.enemyQuadtree?.clear();
+    this.enemyQuadtree = null;
+  }
+
+  private buildEnemyQuadtree(enemies: EnemyController[]): void {
+    this.enemyQuadtree = new Quadtree<EnemyController>(0, this.worldBounds);
+    for (const enemy of enemies) {
+      if (!enemy.isDead) {
+        this.enemyQuadtree.insert(enemy);
+      }
+    }
   }
 
   private handlePlayerEnemyContact(
@@ -52,12 +68,18 @@ export class CollisionSystem {
     projectiles: Projectile[],
     onEnemyKilled: (enemy: EnemyController) => void
   ): void {
+    if (!this.enemyQuadtree) {
+      return;
+    }
+
     for (const projectile of projectiles) {
       if (projectile.isDead) {
         continue;
       }
 
-      for (const enemy of enemies) {
+      const nearbyEnemies = this.enemyQuadtree.retrieveInRadius(projectile.position, projectile.radius + BALANCE.enemy.separationRadius);
+      
+      for (const enemy of nearbyEnemies) {
         if (enemy.isDead) {
           continue;
         }
@@ -101,17 +123,32 @@ export class CollisionSystem {
   }
 
   private handleEnemySeparation(enemies: EnemyController[]): void {
+    if (!this.enemyQuadtree) {
+      return;
+    }
+
     const separationRadius = BALANCE.enemy.separationRadius;
     const separationRadiusSq = separationRadius * separationRadius;
+    const processedPairs = new Set<string>();
 
     for (let i = 0; i < enemies.length; i += 1) {
-      for (let j = i + 1; j < enemies.length; j += 1) {
-        const a = enemies[i];
-        const b = enemies[j];
+      const a = enemies[i];
+      if (a.isDead) {
+        continue;
+      }
 
-        if (a.isDead || b.isDead) {
+      const nearbyEnemies = this.enemyQuadtree.retrieveInRadius(a.position, separationRadius);
+      
+      for (const b of nearbyEnemies) {
+        if (b.isDead || a === b) {
           continue;
         }
+
+        const pairKey = a.id < b.id ? `${a.id}-${b.id}` : `${b.id}-${a.id}`;
+        if (processedPairs.has(pairKey)) {
+          continue;
+        }
+        processedPairs.add(pairKey);
 
         const distance = distanceSq(a.position, b.position);
 
