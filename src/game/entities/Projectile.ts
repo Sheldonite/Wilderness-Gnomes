@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
 import type { Vector2Like } from '../core/types';
 
@@ -11,6 +12,7 @@ export class Projectile {
   readonly hitEnemyIds = new Set<number>();
   ageMs = 0;
   isDead = false;
+  private trailMs = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -20,7 +22,7 @@ export class Projectile {
     private readonly lifetimeMs: number,
     readonly damage: number
   ) {
-    this.sprite = scene.add.sprite(x, y, 'projectile-placeholder');
+    this.sprite = scene.add.sprite(x, y, LOOK.texture.bolt).setDisplaySize(30, 30);
     this.sprite.setDepth(15);
     this.sprite.setRotation(Math.atan2(velocity.y, velocity.x));
   }
@@ -33,6 +35,8 @@ export class Projectile {
     const dt = deltaMs / 1000;
     this.sprite.setPosition(this.sprite.x + this.velocity.x * dt, this.sprite.y + this.velocity.y * dt);
     this.ageMs += deltaMs;
+    this.trailMs += deltaMs;
+    if (this.trailMs >= 45) { this.trailMs = 0; this.sprite.scene.events.emit('presentation:trail', this.position); }
 
     if (this.ageMs >= this.lifetimeMs) {
       this.isDead = true;

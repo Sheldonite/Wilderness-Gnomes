@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
 import {
   MYSTERY_POUNCE_ANIMATION_BY_DIRECTION,
@@ -22,6 +23,7 @@ export class MysteryCompanion {
   private pounceAgeMs = 0;
   private target?: EnemyController;
   private hasHitThisPounce = false;
+  private trailMs = 0;
   private lastMoveDirection: Vector2Like = { x: 0, y: 1 };
 
   constructor(
@@ -33,6 +35,7 @@ export class MysteryCompanion {
     this.sprite.setDepth(19);
     this.sprite.setScale(MYSTERY_SPRITE_SCALE);
     this.sprite.play(MYSTERY_IDLE_ANIMATION_KEY);
+    scene.events.emit('presentation:actor', this.sprite);
   }
 
   update(
@@ -78,6 +81,8 @@ export class MysteryCompanion {
   }
 
   private updatePounce(deltaMs: number, onEnemyKilled: (enemy: EnemyController) => void): void {
+    this.trailMs += deltaMs;
+    if (this.trailMs >= 55) { this.trailMs = 0; this.scene.events.emit('presentation:trail', this.position, LOOK.color.gold); }
     this.pounceAgeMs += deltaMs;
 
     if (!this.target || this.target.isDead || this.pounceAgeMs >= BALANCE.companion.mysteryPounceTimeoutMs) {

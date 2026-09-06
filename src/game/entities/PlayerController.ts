@@ -23,6 +23,7 @@ export class PlayerController {
     this.sprite.setDepth(20);
     this.sprite.setScale(character.scale);
     this.playAnimation(character.idleAnimation);
+    scene.events.emit('presentation:actor', this.sprite);
 
     if (character.aura) {
       this.aura = new PlayerAura(scene, this.position);

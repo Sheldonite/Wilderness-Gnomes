@@ -93,6 +93,7 @@ export class DebugSpriteSheetMenu {
 
     this.root = root;
     this.toggleButton = this.createToggleButton();
+    this.toggleButton.hidden = true;
     this.overlay = this.createOverlay();
     this.sheetSelect = this.mustQuery<HTMLSelectElement>('.debug-sheet-select');
     this.frameGrid = this.mustQuery('.debug-frame-grid');
@@ -182,7 +183,9 @@ export class DebugSpriteSheetMenu {
           MYSTERY_POUNCE_ANIMATION_ROWS,
           MYSTERY_FRAMES_PER_ROW,
           MYSTERY_FRAME_SIZE
-        )
+        ),
+        getDefaultAdjustment: (frame) =>
+          getMysteryDefaultFrameAdjustment(frame.key, frame.defaultSourceX, frame.defaultSourceY)
       }
     ];
   }

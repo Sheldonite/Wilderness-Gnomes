@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
 import type { Vector2Like } from '../core/types';
 import { distanceSq, normalize } from '../utils/math';
@@ -14,7 +15,7 @@ export class XPOrb {
     y: number,
     readonly value: number
   ) {
-    this.sprite = scene.add.sprite(x, y, 'xp-placeholder');
+    this.sprite = scene.add.sprite(x, y, LOOK.texture.crystal).setDisplaySize(21, 21);
     this.sprite.setDepth(5);
   }
 
@@ -37,6 +38,7 @@ export class XPOrb {
   }
 
   collect(): void {
+    this.sprite.scene.events.emit('presentation:collect', this.position);
     this.isCollected = true;
   }
 

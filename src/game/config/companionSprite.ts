@@ -1,3 +1,5 @@
+import type Phaser from 'phaser';
+
 export const MYSTERY_SPRITE_KEY = 'companion-mystery';
 export const MYSTERY_POUNCE_SPRITE_KEY = 'companion-mystery-pounce';
 export const MYSTERY_ANIMATION_PREFIX = 'mystery';
@@ -260,4 +262,36 @@ export function getMysteryDefaultFrameAdjustment(
       offsetY: 0
     }
   );
+}
+
+/** The original illustrations have unequal row spacing; only frame metadata changes. */
+export function alignMysteryFrames(scene: Phaser.Scene): void {
+  const sheets = [
+    { key: MYSTERY_SPRITE_KEY, rows: MYSTERY_MOVEMENT_ANIMATION_ROWS, bands: [[13, 64], [73, 140], [150, 207], [220, 272], [292, 334], [350, 402], [419, 462], [477, 521], [529, 570]] },
+    { key: MYSTERY_POUNCE_SPRITE_KEY, rows: MYSTERY_POUNCE_ANIMATION_ROWS, bands: [[13, 68], [81, 131], [153, 192], [217, 259], [272, 320], [340, 385], [405, 442], [453, 504]] }
+  ];
+  for (const sheet of sheets) {
+    const texture = scene.textures.get(sheet.key);
+    const source = texture.getSourceImage() as HTMLImageElement;
+    const canvas = document.createElement('canvas'); canvas.width = source.width; canvas.height = source.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true })!;
+    context.drawImage(source, 0, 0);
+    const pixels = context.getImageData(0, 0, source.width, source.height).data;
+    sheet.rows.forEach(([name, row]) => {
+      const [y0, y1] = sheet.bands[row];
+      for (let col = 0; col < 4; col++) {
+        let left = (col + 1) * 64, right = col * 64, top = y1, bottom = y0;
+        for (let y = y0; y <= y1; y++) for (let x = col * 64; x < (col + 1) * 64; x++) {
+          if (pixels[(y * source.width + x) * 4 + 3] > 16) {
+            left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+          }
+        }
+        const width = right - left + 1, height = bottom - top + 1;
+        const frame = texture.get(row * 4 + col);
+        frame.setSize(width, height, left, top);
+        frame.setTrim(64, 80, Math.round((64 - width) / 2), 72 - height, width, height);
+        MYSTERY_WALK_DEFAULT_ADJUSTMENTS[`${name}-${col + 1}`] = { sourceX: left, sourceY: top, offsetX: frame.x, offsetY: frame.y };
+      }
+    });
+  }
 }

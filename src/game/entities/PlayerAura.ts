@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { reducedMotion } from '../config/presentation';
 import type { Vector2Like } from '../core/types';
 
 export class PlayerAura {
@@ -30,7 +31,7 @@ export class PlayerAura {
   }
 
   update(deltaMs: number, position: Vector2Like): void {
-    this.elapsedMs += deltaMs;
+    if (!reducedMotion()) this.elapsedMs += deltaMs;
     this.container.setPosition(position.x, position.y + 8);
 
     const t = this.elapsedMs / 1000;

@@ -16,6 +16,9 @@ import { UpgradeSystem } from '../../systems/UpgradeSystem';
 import { WeaponSystem } from '../../systems/WeaponSystem';
 import { DebugSpriteSheetMenu } from '../../ui/DebugSpriteSheetMenu';
 import { UIManager } from '../../ui/UIManager';
+import { PresentationSystem } from '../../systems/PresentationSystem';
+import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
+import type { UpgradeDefinition } from '../../core/types';
 
 export class GameScene extends Phaser.Scene {
   private gameManager!: GameManager;
@@ -28,7 +31,10 @@ export class GameScene extends Phaser.Scene {
   private upgradeSystem!: UpgradeSystem;
   private collisionSystem!: CollisionSystem;
   private uiManager!: UIManager;
-  private debugSpriteSheetMenu!: DebugSpriteSheetMenu;
+  private debugSpriteSheetMenu?: DebugSpriteSheetMenu;
+  private presentation!: PresentationSystem;
+  private visualsPaused = false;
+  private reviewChoices?: UpgradeDefinition[];
   private keys!: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
   private enemies: EnemyController[] = [];
   private projectiles: Projectile[] = [];
@@ -37,13 +43,21 @@ export class GameScene extends Phaser.Scene {
   private pausedDisplayed = false;
   private gameOverDisplayed = false;
   private readonly handleEscape = () => this.handleEscapePressed();
+  private readonly finishReviewRun = () => this.gameManager.damagePlayer(this.gameManager.playerStats.health);
   private selectedCharacter!: PlayerCharacterDefinition;
 
   constructor() {
     super('GameScene');
   }
 
-  create(data: { characterId?: string }): void {
+  create(data: { characterId?: string; skipReview?: boolean }): void {
+    this.levelUpDisplayed = false;
+    this.pausedDisplayed = false;
+    this.gameOverDisplayed = false;
+    this.visualsPaused = false;
+    this.reviewChoices = undefined;
+    this.anims.resumeAll();
+    document.getElementById('game-root')?.classList.add('in-run');
     this.selectedCharacter = getPlayerCharacter(data.characterId);
     this.gameManager = new GameManager();
     this.enemySpawner = new EnemySpawner(this);
@@ -53,8 +67,10 @@ export class GameScene extends Phaser.Scene {
     this.upgradeSystem = new UpgradeSystem();
     this.collisionSystem = new CollisionSystem();
     this.cameraController = new CameraController(this.cameras.main);
-    this.uiManager = new UIManager(this.gameManager, () => this.togglePause());
-    this.debugSpriteSheetMenu = new DebugSpriteSheetMenu(this);
+    this.uiManager = new UIManager(this.gameManager, () => this.togglePause(), this.selectedCharacter,
+      this.textures.getBase64(this.selectedCharacter.textureKey, 0), this.textures.getBase64(MYSTERY_SPRITE_KEY, 0));
+    this.debugSpriteSheetMenu = import.meta.env.DEV ? new DebugSpriteSheetMenu(this) : undefined;
+    this.presentation = new PresentationSystem(this);
 
     this.scenerySystem.create();
 
@@ -75,13 +91,57 @@ export class GameScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyRunObjects());
     this.input.keyboard?.on('keydown-ESC', this.handleEscape);
+    if (import.meta.env.DEV && new URLSearchParams(location.search).get('review') === 'gameover') this.input.keyboard?.on('keydown-F10', this.finishReviewRun);
+    if (import.meta.env.DEV && !data.skipReview) this.setupReview();
+    this.cameras.main.centerOn(this.player.position.x, this.player.position.y);
+    this.presentation.update(0);
+    this.scenerySystem.update(100, [this.player.position]);
+  }
+
+  private setupReview(): void {
+    const review = new URLSearchParams(location.search).get('review');
+    if (review === 'crowd') {
+      this.gameManager.playerStats.health = 100000;
+      this.gameManager.playerStats.maxHealth = 100000;
+      this.gameManager.xpToNextLevel = 100000;
+      for (let i = 0; i < 180; i++) {
+        const angle = i * 2.39996;
+        const radius = 240 + (i % 10) * 24;
+        this.enemies.push(new EnemyController(this, 1600 + Math.cos(angle) * radius, 1600 + Math.sin(angle) * radius, 0));
+      }
+      for (let i = 0; i < 220; i++) this.xpOrbs.push(new XPOrb(this, 1600 + Math.cos(i * 2.4) * (220 + i % 20 * 12), 1600 + Math.sin(i * 2.4) * (220 + i % 20 * 12), 8));
+    } else if (review === 'upgrades') {
+      this.gameManager.level = 2;
+      this.gameManager.xpToNextLevel = 33;
+      this.gameManager.state = 'LevelUpPaused';
+      this.reviewChoices = this.upgradeSystem.getReviewChoices();
+    } else if (review === 'gameover') {
+      this.gameManager.elapsedMs = 187000; this.gameManager.kills = 42; this.gameManager.level = 6;
+      this.gameManager.xpToNextLevel = Math.ceil(BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, 5));
+      this.gameManager.playerStats.health = 0; this.gameManager.state = 'GameOver';
+    } else if (review === 'companion') {
+      this.gameManager.level = 2; this.gameManager.xpToNextLevel = 33;
+      this.gameManager.playerStats.hasMysteryCompanion = true;
+      this.enemies.push(new EnemyController(this, 1870, 1600, 0));
+    } else if (review === 'river') {
+      this.player.sprite.setPosition(2350, 1280);
+    } else if (review === 'pond') {
+      this.player.sprite.setPosition(720, 2460);
+    } else if (review === 'edge') {
+      this.player.sprite.setPosition(40, 40);
+    }
   }
 
   update(timeMs: number, deltaMs: number): void {
+    if (import.meta.env.DEV) {
+      const readout = document.getElementById('performance-readout');
+      if (readout) { readout.dataset.enemies = String(this.enemies.length); readout.dataset.pickups = String(this.xpOrbs.length); }
+    }
     this.uiManager.update(this.gameManager.getHudSnapshot());
     this.uiManager.setPauseButtonState(this.gameManager.state === 'Paused');
 
-    if (this.debugSpriteSheetMenu.isOpen) {
+    this.setPresentationPaused(this.gameManager.state !== 'Playing' || Boolean(this.debugSpriteSheetMenu?.isOpen));
+    if (this.debugSpriteSheetMenu?.isOpen) {
       return;
     }
 
@@ -136,6 +196,7 @@ export class GameScene extends Phaser.Scene {
       orb.update(deltaMs, this.player.position);
     }
 
+    const healthBefore = this.gameManager.playerStats.health;
     this.collisionSystem.update(
       timeMs,
       this.player,
@@ -145,6 +206,12 @@ export class GameScene extends Phaser.Scene {
       this.xpOrbs,
       (enemy) => this.killEnemy(enemy)
     );
+    if (this.gameManager.playerStats.health < healthBefore) this.events.emit('presentation:hit', this.player.sprite);
+    this.presentation.update(deltaMs);
+    const subjects = [this.player.position, ...this.enemies.map(e => e.position), ...this.xpOrbs.map(o => o.position)];
+    const companion = this.companionSystem.position;
+    if (companion) subjects.push(companion);
+    this.scenerySystem.update(deltaMs, subjects);
 
     this.cleanupDeadObjects();
   }
@@ -155,6 +222,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     enemy.isDead = true;
+    this.events.emit('presentation:defeat', enemy.position);
     this.gameManager.addKill();
     if (this.xpOrbs.length < BALANCE.xp.maxOrbs) {
       this.xpOrbs.push(new XPOrb(this, enemy.sprite.x, enemy.sprite.y, BALANCE.enemy.xpValue));
@@ -170,10 +238,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.levelUpDisplayed = true;
-    const choices = this.upgradeSystem.getChoices(this.gameManager.playerStats);
+    const choices = this.reviewChoices ?? this.upgradeSystem.getChoices(this.gameManager.playerStats);
+    this.reviewChoices = undefined;
     this.uiManager.showLevelUp(choices, (choice) => {
       this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
       this.gameManager.resumeAfterUpgrade();
+      this.events.emit('presentation:level', this.player.position);
     });
   }
 
@@ -187,7 +257,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private togglePause(): void {
-    if (this.debugSpriteSheetMenu.isOpen) {
+    if (this.debugSpriteSheetMenu?.isOpen) {
       return;
     }
 
@@ -210,7 +280,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleEscapePressed(): void {
-    if (this.debugSpriteSheetMenu.isOpen) {
+    if (this.debugSpriteSheetMenu?.isOpen) {
       this.debugSpriteSheetMenu.close();
       return;
     }
@@ -224,7 +294,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameOverDisplayed = true;
-    this.uiManager.showGameOver(() => this.scene.restart());
+    this.uiManager.showGameOver(() => this.scene.restart({ characterId: this.selectedCharacter.id, skipReview: true }), () => this.scene.start('StartScene', { skipReview: true }));
+  }
+
+  private setPresentationPaused(paused: boolean): void {
+    if (paused === this.visualsPaused) return;
+    this.visualsPaused = paused;
+    if (paused) this.anims.pauseAll(); else this.anims.resumeAll();
   }
 
   private cleanupDeadObjects(): void {
@@ -244,7 +320,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private destroyRunObjects(): void {
+    this.anims.resumeAll();
     this.input.keyboard?.off('keydown-ESC', this.handleEscape);
+    this.input.keyboard?.off('keydown-F10', this.finishReviewRun);
     this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
     this.companionSystem?.destroy();
@@ -261,5 +339,6 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.projectiles = [];
     this.xpOrbs = [];
+    this.presentation?.destroy();
   }
 }

@@ -1,17 +1,16 @@
 import Phaser from 'phaser';
+import { ART } from '../../config/presentation';
+import { createStorybookTextures } from '../storybookTextures';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import haileySpriteSheetUrl from '../../../assets/sprites/Hailey-Walk.png';
 import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
 import familiarCatSpriteSheetUrl from '../../../assets/sprites/familiar-cat-spritesheet.png';
 import familiarCatPounceSpriteSheetUrl from '../../../assets/sprites/familiar-cat-pounce-spritesheet.png';
-import groundForestTileUrl from '../../../assets/terrain/ground-forest-tile.png';
-import forestPropsSheetUrl from '../../../assets/terrain/forest-props-sheet.png';
-import waterBridgeSheetUrl from '../../../assets/terrain/water-bridge-sheet.png';
 import {
   MYSTERY_ANIMATION_PREFIX,
+  alignMysteryFrames,
   MYSTERY_FRAMES_PER_ROW,
   MYSTERY_FRAME_SIZE,
-  getMysteryDefaultFrameAdjustment,
   MYSTERY_MOVEMENT_ANIMATION_ROWS,
   MYSTERY_POUNCE_ANIMATION_ROWS,
   MYSTERY_POUNCE_SPRITE_KEY,
@@ -38,12 +37,6 @@ import {
   PLAYER_FRAME_SIZE,
   PLAYER_SPRITE_KEY
 } from '../../config/playerSprite';
-import {
-  TERRAIN_FEATURE_FRAME_SIZE,
-  TERRAIN_GROUND_KEY,
-  TERRAIN_PROPS_KEY,
-  TERRAIN_WATER_KEY
-} from '../../config/terrainSprites';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -51,6 +44,16 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    const root = document.getElementById('ui-root')!;
+    root.innerHTML = '<div class="loading-screen"><span class="loading-leaf">❧</span><h1>Wilderness Gnomes</h1><p>Waking the woodland…</p><div class="loading-track"><span></span></div></div>';
+    const fill = root.querySelector<HTMLElement>('.loading-track span')!;
+    this.load.on('progress', (value: number) => { fill.style.transform = `scaleX(${value})`; });
+    this.load.on('loaderror', () => { root.querySelector('p')!.textContent = 'A woodland asset could not load. Please refresh to try again.'; });
+    this.load.image('storybook-title', ART.title);
+    this.load.image('storybook-ground-source', ART.ground);
+    this.load.image('storybook-props-source', ART.props);
+    this.load.image('storybook-water-source', ART.water);
+    this.load.image('storybook-bridge-source', ART.bridge);
     this.load.spritesheet(PLAYER_SPRITE_KEY, playerSpriteSheetUrl, {
       frameWidth: PLAYER_FRAME_SIZE,
       frameHeight: PLAYER_FRAME_SIZE
@@ -73,21 +76,13 @@ export class BootScene extends Phaser.Scene {
       frameWidth: MYSTERY_FRAME_SIZE,
       frameHeight: MYSTERY_FRAME_SIZE
     });
-    this.load.image(TERRAIN_GROUND_KEY, groundForestTileUrl);
-    this.load.spritesheet(TERRAIN_PROPS_KEY, forestPropsSheetUrl, {
-      frameWidth: TERRAIN_FEATURE_FRAME_SIZE,
-      frameHeight: TERRAIN_FEATURE_FRAME_SIZE
-    });
-    this.load.spritesheet(TERRAIN_WATER_KEY, waterBridgeSheetUrl, {
-      frameWidth: TERRAIN_FEATURE_FRAME_SIZE,
-      frameHeight: TERRAIN_FEATURE_FRAME_SIZE
-    });
   }
 
   create(): void {
-    this.createPlaceholderTextures();
+    createStorybookTextures(this);
+    [PLAYER_SPRITE_KEY, HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
     applyPlayerSpriteAdjustments(this);
-    this.applyMysteryWalkAdjustments();
+    alignMysteryFrames(this);
     this.createPlayerAnimations();
     this.createHaileyAnimations();
     this.createEnemyAnimations();
@@ -198,63 +193,4 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  private applyMysteryWalkAdjustments(): void {
-    for (const [name, row] of MYSTERY_MOVEMENT_ANIMATION_ROWS) {
-      for (let frameInAnimation = 0; frameInAnimation < MYSTERY_FRAMES_PER_ROW; frameInAnimation += 1) {
-        const frameIndex = row * MYSTERY_FRAMES_PER_ROW + frameInAnimation;
-        const frame = this.textures.getFrame(MYSTERY_SPRITE_KEY, frameIndex);
-        if (!frame) {
-          continue;
-        }
-
-        const adjustment = getMysteryDefaultFrameAdjustment(
-          `${name}-${frameInAnimation + 1}`,
-          frameInAnimation * MYSTERY_FRAME_SIZE,
-          row * MYSTERY_FRAME_SIZE
-        );
-        frame.setCutPosition(adjustment.sourceX, adjustment.sourceY);
-        frame.x = adjustment.offsetX;
-        frame.y = adjustment.offsetY;
-      }
-    }
-  }
-
-  private createPlaceholderTextures(): void {
-    const graphics = this.add.graphics();
-
-    graphics.clear();
-    graphics.fillStyle(0x26321f, 1);
-    graphics.lineStyle(3, 0xd9c08f, 1);
-    graphics.fillEllipse(24, 26, 30, 40);
-    graphics.strokeEllipse(24, 26, 30, 40);
-    graphics.fillStyle(0xf3e2b3, 1);
-    graphics.fillCircle(30, 17, 4);
-    graphics.generateTexture('player-placeholder', 48, 52);
-
-    graphics.clear();
-    graphics.fillStyle(0x3a201f, 1);
-    graphics.lineStyle(3, 0x8d5b45, 1);
-    graphics.fillEllipse(18, 18, 30, 28);
-    graphics.strokeEllipse(18, 18, 30, 28);
-    graphics.lineStyle(2, 0x17100e, 1);
-    graphics.lineBetween(9, 13, 2, 8);
-    graphics.lineBetween(27, 13, 34, 8);
-    graphics.generateTexture('enemy-placeholder', 36, 36);
-
-    graphics.clear();
-    graphics.fillStyle(0x86d8e6, 1);
-    graphics.lineStyle(2, 0xe8fbff, 1);
-    graphics.fillCircle(8, 8, 7);
-    graphics.strokeCircle(8, 8, 7);
-    graphics.generateTexture('projectile-placeholder', 16, 16);
-
-    graphics.clear();
-    graphics.fillStyle(0x79c6cf, 1);
-    graphics.lineStyle(2, 0xd6fbff, 1);
-    graphics.fillCircle(8, 8, 6);
-    graphics.strokeCircle(8, 8, 6);
-    graphics.generateTexture('xp-placeholder', 16, 16);
-
-    graphics.destroy();
-  }
 }

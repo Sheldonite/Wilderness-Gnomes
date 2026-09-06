@@ -29,4 +29,6 @@ export class CompanionSystem {
     this.mystery?.destroy();
     this.mystery = undefined;
   }
+
+  get position(): Vector2Like | undefined { return this.mystery?.position; }
 }

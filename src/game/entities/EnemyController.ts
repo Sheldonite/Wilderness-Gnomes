@@ -23,6 +23,7 @@ export class EnemyController {
     this.sprite.setDepth(10);
     this.sprite.setScale(ENEMY_SPRITE_SCALE);
     this.sprite.play('enemy-walk-down');
+    scene.events.emit('presentation:actor', this.sprite);
     this.health = Math.round(BALANCE.enemy.health + difficultyMinutes * 8);
   }
 
@@ -58,8 +59,7 @@ export class EnemyController {
     }
 
     this.health -= amount;
-    this.sprite.setTint(0xffffff);
-    this.sprite.scene.time.delayedCall(70, () => this.sprite.clearTint());
+    this.sprite.scene.events.emit('presentation:hit', this.sprite);
     this.isDead = this.health <= 0;
     return this.isDead;
   }

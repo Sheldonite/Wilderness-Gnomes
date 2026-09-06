@@ -66,4 +66,8 @@ export class UpgradeSystem {
   applyUpgrade(upgrade: UpgradeDefinition, stats: PlayerStats): void {
     upgrade.apply(stats);
   }
+
+  getReviewChoices(): UpgradeDefinition[] {
+    return this.upgrades.filter(upgrade => ['projectile-damage', 'move-speed', 'gain-companion-mystery'].includes(upgrade.id));
+  }
 }
