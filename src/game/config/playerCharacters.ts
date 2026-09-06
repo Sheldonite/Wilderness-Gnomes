@@ -42,13 +42,13 @@ const WIZARD_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> 
 
 const HAILEY_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> = {
   '0,1': { key: 'hailey-walk-down' },
-  '1,1': { key: 'hailey-walk-down' },
-  '1,0': { key: 'hailey-walk-right' },
-  '1,-1': { key: 'hailey-walk-up' },
+  '1,1': { key: 'hailey-walk-down', flipX: true },
+  '1,0': { key: 'hailey-walk-right', flipX: true },
+  '1,-1': { key: 'hailey-walk-up', flipX: true },
   '0,-1': { key: 'hailey-walk-up' },
-  '-1,-1': { key: 'hailey-walk-up', flipX: true },
-  '-1,0': { key: 'hailey-walk-right', flipX: true },
-  '-1,1': { key: 'hailey-walk-down', flipX: true }
+  '-1,-1': { key: 'hailey-walk-up' },
+  '-1,0': { key: 'hailey-walk-right' },
+  '-1,1': { key: 'hailey-walk-down' }
 };
 
 export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinition> = {
@@ -66,7 +66,7 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
     id: 'hailey',
     name: 'Hailey',
     textureKey: HAILEY_SPRITE_KEY,
-    scale: 0.42,
+    scale: 0.315,
     idleAnimation: { key: 'hailey-idle-down' },
     aura: true,
     animationForDirection: (direction) =>
