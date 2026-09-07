@@ -135,6 +135,8 @@ export class UpgradeSystem {
   }
 
   private flavor(upgrade: UpgradeDefinition, stats: PlayerStats): UpgradeDefinition {
+    if (upgrade.id === 'gain-companion-mystery') return { ...upgrade,
+      description: `Mystery joins you with powerful pounces: ${Number(stats.mysteryDamage.toFixed(2))} damage per hit, with a ${stats.mysteryCooldownMs / 1000}s recovery between hunts.` };
     if (stats.weaponId !== 'crossbow') return upgrade;
     const copy = CROSSBOW_STAT_UPGRADES[upgrade.id];
     return copy ? { ...upgrade, title: copy.title, description: copy.description } : upgrade;

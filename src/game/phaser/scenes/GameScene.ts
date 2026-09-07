@@ -21,6 +21,7 @@ import { ChestSystem } from '../../systems/ChestSystem';
 import { BossPowerSystem } from '../../systems/BossPowerSystem';
 import { BOSS_ARENA_RADIUS, insideBossArena, type BossId } from '../../core/BossGate';
 import { BOSS_ABILITY_IDS } from '../../config/bossAbilities';
+import { marketProgress, emptyMarketProfile } from '../../core/MarketProgress';
 import type { Vector2Like } from '../../core/types';
 import { CollisionSystem } from '../../systems/CollisionSystem';
 import { EnemySpawner } from '../../systems/EnemySpawner';
@@ -78,6 +79,7 @@ export class GameScene extends Phaser.Scene {
   private reviewPathMs = 0;
   private reviewKeepCrowdPickups = false;
   private reviewNoEnemies = false;
+  private practiceRun = false;
 
   constructor() {
     super('GameScene');
@@ -101,7 +103,8 @@ export class GameScene extends Phaser.Scene {
       ? new URLSearchParams(location.search).get('weapon')
       : null;
     this.selectedWeaponId = getWeapon(reviewWeapon ?? data.weaponId).id;
-    this.gameManager = new GameManager(this.selectedWeaponId);
+    this.practiceRun = import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review');
+    this.gameManager = new GameManager(this.selectedWeaponId, this.practiceRun ? emptyMarketProfile() : marketProgress.refresh());
     this.scenerySystem = new ScenerySystem(this);
     this.enemySpawner = new EnemySpawner(this, this.scenerySystem.navigation);
     this.companionSystem = new CompanionSystem(this, this.gameManager.playerStats, this.scenerySystem.navigation);
@@ -672,7 +675,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameOverDisplayed = true;
-    this.uiManager.showGameOver(() => this.scene.restart({ characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId, skipReview: true }), () => this.scene.start('StartScene', { skipReview: true }));
+    const settlement = this.practiceRun ? undefined : marketProgress.settleRun(this.gameManager.runId, this.gameManager.level);
+    this.uiManager.showGameOver(() => this.scene.restart({ characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId, skipReview: true }), () => this.scene.start('StartScene', { skipReview: true }), settlement ? {
+      earned: settlement.goldEarned, balance: settlement.balance, saved: settlement.saved,
+      onVisit: () => this.scene.start('MarketScene', { characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId })
+    } : undefined);
   }
 
   private setPresentationPaused(paused: boolean): void {

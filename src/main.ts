@@ -3,7 +3,9 @@ import { GAME_CONFIG } from './game/config/gameConfig';
 import { BootScene } from './game/phaser/scenes/BootScene';
 import { GameScene } from './game/phaser/scenes/GameScene';
 import { StartScene } from './game/phaser/scenes/StartScene';
+import { MarketScene } from './game/phaser/scenes/MarketScene';
 import './styles.css';
+import './game/ui/market.css';
 import { installPerformanceReadout } from './game/ui/PerformanceReadout';
 
 installPerformanceReadout();
@@ -23,5 +25,5 @@ new Phaser.Game({
     width: GAME_CONFIG.viewport.width,
     height: GAME_CONFIG.viewport.height
   },
-  scene: [BootScene, StartScene, GameScene]
+  scene: [BootScene, StartScene, GameScene, MarketScene]
 });

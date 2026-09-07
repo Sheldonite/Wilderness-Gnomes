@@ -1,6 +1,8 @@
 import type { UpgradeId } from '../core/types';
 
 const paths: Record<string, string> = {
+  gold: '<ellipse cx="16" cy="16" rx="11" ry="13"/><ellipse cx="16" cy="16" rx="7" ry="10"/><path d="M19 10h-5l-2 6h7l-2 6h-5m4-14v16"/>',
+  market: '<path d="M4 14v14h24V14M2 13l4-9h20l4 9M2 13c0 5 7 5 7 0 0 5 7 5 7 0 0 5 7 5 7 0 0 5 7 5 7 0M11 28V18h10v10"/>',
   crownfire: '<path d="m3 14 7 5 6-8 6 8 7-5-3 14H6ZM12 9c-3-5 3-6 4-9 1 4 7 5 4 9"/>',
   stormcall: '<path d="M7 13C0 12 3 4 9 6 10-2 23 1 23 6c9-1 11 9 3 10H9m8-5-7 11h8l-4 9 12-14h-9Z"/>',
   phoenix: '<path d="M16 28C4 25 1 15 3 6l9 10-2-13 6 8 6-8-2 13L29 6c2 9-1 19-13 22ZM16 16v8m-4-4h8"/>',

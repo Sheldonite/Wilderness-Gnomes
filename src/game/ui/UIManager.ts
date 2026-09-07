@@ -147,10 +147,14 @@ export class UIManager {
     this.focusFirst();
   }
 
-  showGameOver(onRestart: () => void, onTitle: () => void): void {
+  showGameOver(onRestart: () => void, onTitle: () => void, market?: { earned: number; balance: number; saved: boolean; onVisit: () => void }): void {
     const snapshot = this.gameManager.getHudSnapshot();
     const list = this.createOverlay('Every wanderer finds a way', 'Your story in the woods isn’t over yet.', 'UNTIL THE NEXT ADVENTURE', 'leaf', 'gameover-panel');
     list.innerHTML = `<div class="result-stats"><span><b>${formatTime(snapshot.elapsedSeconds)}</b>TIME IN THE WOODS</span><span><b>${snapshot.kills}</b>FOES DEFEATED</span><span><b>${snapshot.level}</b>LEVEL REACHED</span></div>`;
+    if (market) {
+      list.insertAdjacentHTML('beforeend', `<div class="run-gold-reward">${icon('gold')}<span><strong>+${market.earned} gold earned</strong><small>${market.balance} gold in your purse${market.saved ? '' : ' · Saved for this session'}</small></span></div><p class="gold-milestones">Level 10: 5 gold · Level 20: 10 gold<br>+1 gold for each level beyond 20</p>`);
+      this.addButton(list, 'Visit Market Day', market.onVisit, true);
+    }
     this.addButton(list, 'Wander again', onRestart, true); this.addButton(list, 'Choose a wanderer', onTitle, false); this.focusFirst();
   }
 

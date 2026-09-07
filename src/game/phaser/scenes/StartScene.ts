@@ -6,6 +6,7 @@ import type { WeaponId } from '../../core/types';
 import { icon } from '../../ui/icons';
 import { showSpriteReview } from '../../ui/SpriteReview';
 import { showMidnightReview } from '../../ui/MidnightReview';
+import { marketProgress } from '../../core/MarketProgress';
 
 export class StartScene extends Phaser.Scene {
   private selectedCharacterId: PlayerCharacterId = 'wizard';
@@ -27,17 +28,21 @@ export class StartScene extends Phaser.Scene {
   constructor() { super('StartScene'); }
 
   create(data: { skipReview?: boolean } = {}): void {
+    if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'market') {
+      this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId, review: true }); return;
+    }
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'midnight-sprites') { showMidnightReview(this); return; }
     this.reviewActive = import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review');
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'sprites') { showSpriteReview(this); return; }
     this.starting = false;
+    marketProgress.refresh();
     document.getElementById('game-root')?.classList.remove('in-run');
     this.root = document.getElementById('ui-root')!;
     this.root.innerHTML = `
       <main class="title-screen" style="--title-art: url('${ART.title}')">
         <header class="title-masthead">
           <span class="brand-mark">${icon('leaf')} <span>WILDERNESS GNOMES</span></span>
-          <span class="chapter-label">A WOODLAND ADVENTURE</span>
+          <button class="title-market-link" type="button">${icon('gold')} <span>${marketProgress.profile.gold} gold</span> <i></i> ${icon('market')} Market Day</button>
         </header>
         <section class="title-content" aria-label="Start your adventure">
           <div class="eyebrow title-eyebrow"><span></span> A LITTLE MAGIC. A WILD ADVENTURE. <span></span></div>
@@ -69,6 +74,10 @@ export class StartScene extends Phaser.Scene {
     this.root.querySelectorAll<HTMLButtonElement>('[data-character]').forEach(button => button.addEventListener('click', () => this.selectCharacter(button.dataset.character as PlayerCharacterId)));
     this.root.querySelectorAll<HTMLButtonElement>('[data-weapon]').forEach(button => button.addEventListener('click', () => this.selectWeapon(button.dataset.weapon as WeaponId)));
     this.root.querySelector('.begin-button')!.addEventListener('click', () => this.startGame());
+    this.root.querySelector('.title-market-link')!.addEventListener('click', () => {
+      if (this.starting) return; this.starting = true;
+      this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId });
+    });
     window.addEventListener('keydown', this.keyboardHandler);
     this.selectCharacter(this.selectedCharacterId);
     this.selectWeapon(this.selectedWeaponId);

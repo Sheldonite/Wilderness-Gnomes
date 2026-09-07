@@ -42,12 +42,12 @@ export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
     case 'barkskin-ward': return `${ABILITIES.ward.rechargeMs[rank] / 1000}s shield recharge`;
     case 'woodland-magnet': return `${ABILITIES.magnet.cooldownMs[rank] / 1000}s interval · ${ABILITIES.magnet.range[rank]} range`;
     case 'mystery-double-pounce': return `${Math.round(ABILITIES.pounce.damageScale[rank] * 100)}% second-pounce damage`;
-    case 'projectile-damage': return `${stats.projectileDamage} damage per shot`;
+    case 'projectile-damage': return `${Number(stats.projectileDamage.toFixed(2))} damage per shot`;
     case 'fire-rate': return `${(stats.weaponCooldownMs / 1000).toFixed(2)}s between shots`;
     case 'projectile-count': return `${stats.projectileCount} shots per volley`;
     case 'max-health': return `${stats.maxHealth} maximum health`;
-    case 'move-speed': return `${stats.speed} movement speed`;
-    case 'gain-companion-mystery': return rank ? 'Pouncing companion' : 'Not recruited yet';
+    case 'move-speed': return `${Number(stats.speed.toFixed(2))} movement speed`;
+    case 'gain-companion-mystery': return rank ? `${Number(stats.mysteryDamage.toFixed(2))} damage per pounce` : 'Not recruited yet';
     case 'gain-companion-midnight': return rank ? 'Swatting companion' : 'Not recruited yet';
   }
 }

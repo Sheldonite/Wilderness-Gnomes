@@ -3,6 +3,7 @@ import { ABILITIES, awakeningTier, emptyAbilityRanks } from '../config/abilities
 import { getWeapon } from '../config/weapons';
 import type { GameRunState, HudSnapshot, PlayerStats, WeaponId, UpgradeSource } from './types';
 import { BossGate } from './BossGate';
+import { createRunId, marketBonuses, type MarketProfile } from './MarketProgress';
 
 /** XP needed to finish the given level: exponential early, then a fixed step per level. */
 export function xpThreshold(level: number): number {
@@ -13,6 +14,8 @@ export function xpThreshold(level: number): number {
 }
 
 export class GameManager {
+  readonly runId = createRunId();
+  readonly marketBonuses: ReturnType<typeof marketBonuses>;
   state: GameRunState = 'Playing';
   upgradeSource: UpgradeSource = 'level';
   readonly bossGate = new BossGate();
@@ -31,24 +34,26 @@ export class GameManager {
   private nextLeafAt = 0;
   private barkBurstPending = false;
 
-  constructor(weaponId: WeaponId = 'spell') {
+  constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile) {
     const arm = getWeapon(weaponId);
+    this.marketBonuses = marketBonuses(marketProfile);
+    const bonuses = this.marketBonuses;
     this.playerStats = {
       level: 1,
       upgradeCounts: {},
       abilityRanks: emptyAbilityRanks(),
       bossAbilityRanks: { crownfire: 0, stormcall: 0, 'phoenix-heart': 0 },
       weaponId: arm.id,
-      maxHealth: BALANCE.player.maxHealth,
-      health: BALANCE.player.maxHealth,
-      speed: BALANCE.player.speed,
-      projectileDamage: arm.projectileDamage,
-      weaponCooldownMs: arm.cooldownMs,
-      projectileCount: arm.projectileCount,
+      maxHealth: BALANCE.player.maxHealth + bonuses.extraHealth,
+      health: BALANCE.player.maxHealth + bonuses.extraHealth,
+      speed: BALANCE.player.speed * bonuses.speedMultiplier,
+      projectileDamage: arm.projectileDamage * bonuses.damageMultiplier,
+      weaponCooldownMs: arm.cooldownMs * bonuses.cooldownMultiplier,
+      projectileCount: arm.projectileCount + bonuses.extraProjectiles,
       harvestBonus: 0,
       hasMysteryCompanion: false,
       hasMidnightCompanion: false,
-      mysteryDamage: BALANCE.companion.mysteryDamage,
+      mysteryDamage: BALANCE.companion.mysteryDamage * bonuses.mysteryDamageMultiplier,
       mysteryCooldownMs: BALANCE.companion.mysteryCooldownMs,
       mysteryPounceRange: BALANCE.companion.mysteryPounceRange,
       mysteryReturnSpeed: BALANCE.companion.mysteryReturnSpeed
@@ -61,6 +66,10 @@ export class GameManager {
     }
 
     this.elapsedMs += deltaMs;
+    if (this.marketBonuses.regenerationPerSecond > 0 && deltaMs > 0) {
+      this.playerStats.health = Math.min(this.playerStats.maxHealth,
+        this.playerStats.health + this.marketBonuses.regenerationPerSecond * deltaMs / 1000);
+    }
     if (this.playerStats.abilityRanks['barkskin-ward'] > 0) this.wardWasUnlocked = true;
     const bark = this.bark;
     if (bark) {
@@ -179,7 +188,7 @@ export class GameManager {
         return;
       }
     }
-    this.playerStats.health = Math.max(0, this.playerStats.health - amount);
+    this.playerStats.health = Math.max(0, this.playerStats.health - amount * this.marketBonuses.damageTakenMultiplier);
     if (this.playerStats.health <= 0) {
       this.state = 'GameOver';
     }
