@@ -7,9 +7,16 @@ import { distanceSq, normalize } from '../utils/math';
 
 export class WeaponSystem {
   private cooldownRemainingMs = 350;
+  private shotThisFrame = false;
   aimAngle = 0;
 
   constructor(private readonly scene: Phaser.Scene) {}
+
+  consumeShot(): boolean {
+    const fired = this.shotThisFrame;
+    this.shotThisFrame = false;
+    return fired;
+  }
 
   update(
     deltaMs: number,
@@ -18,6 +25,7 @@ export class WeaponSystem {
     enemies: EnemyController[],
     projectiles: Projectile[]
   ): void {
+    this.shotThisFrame = false;
     this.cooldownRemainingMs -= deltaMs;
     const target = this.findClosestEnemy(playerPosition, enemies);
     if (target) {
@@ -28,6 +36,7 @@ export class WeaponSystem {
     }
 
     this.cooldownRemainingMs = stats.weaponCooldownMs;
+    this.shotThisFrame = true;
     this.fireProjectiles(playerPosition, target.position, stats, projectiles);
   }
 
@@ -62,6 +71,7 @@ export class WeaponSystem {
     const spread = arm.spreadRadians;
     const startOffset = count > 1 ? -((count - 1) * spread) / 2 : 0;
     const extraTargets = arm.baseExtraTargets + stats.abilityRanks['ricochet-charm'];
+    const muzzle = arm.muzzleOffset ?? 0;
 
     for (let i = 0; i < count; i += 1) {
       const angle = baseAngle + startOffset + i * spread;
@@ -69,8 +79,8 @@ export class WeaponSystem {
       projectiles.push(
         new Projectile(
           this.scene,
-          playerPosition.x,
-          playerPosition.y,
+          playerPosition.x + direction.x * muzzle,
+          playerPosition.y + direction.y * muzzle,
           {
             x: direction.x * arm.projectileSpeed,
             y: direction.y * arm.projectileSpeed

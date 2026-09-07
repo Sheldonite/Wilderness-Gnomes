@@ -11,6 +11,13 @@ export function distanceSq(a: Vector2Like, b: Vector2Like): number {
   return dx * dx + dy * dy;
 }
 
+export function lerpAngle(from: number, to: number, t: number): number {
+  let delta = to - from;
+  while (delta > Math.PI) delta -= Math.PI * 2;
+  while (delta < -Math.PI) delta += Math.PI * 2;
+  return from + delta * t;
+}
+
 export function normalize(x: number, y: number): Vector2Like {
   const length = Math.hypot(x, y);
   if (length === 0) {
