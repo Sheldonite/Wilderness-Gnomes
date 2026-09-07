@@ -23,6 +23,10 @@ export interface WeaponDefinition {
   displaySize: number;
   trailColor: number;
   armTexture?: string;
+  overlayTexture?: string;
+  overlayOrigin?: { x: number; y: number };
+  overlayWidth?: number;
+  muzzleOffset?: number;
 }
 
 export const WEAPON_IDS: WeaponId[] = ['spell', 'crossbow'];
@@ -69,7 +73,11 @@ export const WEAPONS: Record<WeaponId, WeaponDefinition> = {
     texture: 'crossbow-bolt',
     displaySize: 38,
     trailColor: 0xd5a35c,
-    armTexture: 'heartwood-crossbow'
+    armTexture: 'heartwood-crossbow',
+    overlayTexture: 'heartwood-crossbow-top',
+    overlayOrigin: { x: 0.39, y: 0.5 },
+    overlayWidth: 46,
+    muzzleOffset: 30
   }
 };
 

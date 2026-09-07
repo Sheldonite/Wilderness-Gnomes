@@ -64,6 +64,7 @@ export class BootScene extends Phaser.Scene {
     this.load.on('loaderror', () => { root.querySelector('p')!.textContent = 'A woodland asset could not load. Please refresh to try again.'; });
     this.load.image('storybook-title', ART.title);
     this.load.image('heartwood-crossbow', ART.crossbow);
+    this.load.image('heartwood-crossbow-top', ART.crossbowTop);
     this.load.image(MIDNIGHT_SOURCE_KEY, MIDNIGHT_SOURCE_URL);
     this.load.image(OVEN_TEXTURE, ovenSourceUrl);
     this.load.image('storybook-ground-source', ART.ground);
@@ -104,6 +105,7 @@ export class BootScene extends Phaser.Scene {
     // The wizard sheet is authored at 192px and drawn at ~40%; linear filtering keeps the downscale smooth.
     this.textures.get(PLAYER_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get('heartwood-crossbow').setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.textures.get('heartwood-crossbow-top').setFilter(Phaser.Textures.FilterMode.LINEAR);
     applyPlayerSpriteAdjustments(this);
     alignMysteryFrames(this);
     this.createPlayerAnimations();
