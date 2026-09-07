@@ -22,6 +22,7 @@ export interface Vector2Like {
 }
 
 export interface PlayerStats {
+  upgradeCounts: Partial<Record<UpgradeId, number>>;
   abilityRanks: AbilityRanks;
   weaponId: WeaponId;
   maxHealth: number;

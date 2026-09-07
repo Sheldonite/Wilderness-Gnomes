@@ -18,6 +18,7 @@ export class GameManager {
   constructor(weaponId: WeaponId = 'spell') {
     const arm = getWeapon(weaponId);
     this.playerStats = {
+      upgradeCounts: {},
       abilityRanks: emptyAbilityRanks(),
       weaponId: arm.id,
       maxHealth: BALANCE.player.maxHealth,

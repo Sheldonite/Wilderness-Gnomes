@@ -1,3 +1,4 @@
+import { ownedUpgrades, upgradeRank, upgradeName, upgradeBenefit, upgradePreview, isAbility } from '../core/UpgradeProgress';
 import type { GameManager } from '../core/GameManager';
 import type { HudSnapshot, UpgradeDefinition } from '../core/types';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
@@ -19,6 +20,8 @@ export class UIManager {
   private overlay?: HTMLElement;
   private previousFocus?: HTMLElement;
   private choices: (() => void)[] = [];
+  private buildFingerprint = "";
+  private receiptUntil = 0;
   private lastSnapshot = '';
   private readonly onKey = (event: KeyboardEvent) => {
     if (!this.overlay) return;
@@ -54,7 +57,7 @@ export class UIManager {
         <div class="xp-hud"><span class="level-seal">1</span><div class="xp-meta"><span>WOODLAND WISDOM</span><span class="xp-value"></span></div>
           <div class="xp-track" role="progressbar" aria-label="Experience" aria-valuemin="0"><div class="xp-fill"></div></div>
         </div>
-        <div class="run-location">THE GOLDEN WOODS <span>•</span> WANDER & WONDER</div>
+        <div class="build-strip" role="list" aria-label="Your current upgrades" hidden></div><div class="upgrade-receipt" role="status" hidden></div><div class="run-location">THE GOLDEN WOODS <span>•</span> WANDER & WONDER</div>
       </div>`;
     this.healthFill = this.query('.health-fill'); this.xpFill = this.query('.xp-fill');
     this.healthValue = this.query('.health-value'); this.xpValue = this.query('.xp-value');
@@ -65,9 +68,11 @@ export class UIManager {
   }
 
   update(snapshot: HudSnapshot): void {
+    if (this.receiptUntil && this.gameManager.elapsedMs >= this.receiptUntil) { this.query('.upgrade-receipt').hidden = true; this.receiptUntil = 0; }
     const fingerprint = JSON.stringify(snapshot);
     if (fingerprint === this.lastSnapshot) return;
     this.lastSnapshot = fingerprint;
+    this.refreshBuild();
     this.healthFill.style.transform = `scaleX(${Math.max(0, Math.min(1, snapshot.health / snapshot.maxHealth))})`;
     this.xpFill.style.transform = `scaleX(${Math.max(0, Math.min(1, snapshot.xp / snapshot.xpToNextLevel))})`;
     this.healthValue.textContent = `${Math.ceil(snapshot.health)} / ${snapshot.maxHealth}`;
@@ -94,10 +99,10 @@ export class UIManager {
     const friends = [this.gameManager.playerStats.hasMysteryCompanion ? 'Mystery · pounce' : '',
       this.gameManager.playerStats.hasMidnightCompanion ? 'Midnight · swat' : ''].filter(Boolean);
     if (friends.length) list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${friends.join(' &nbsp; / &nbsp; ')}</p>`);
-    const ranks = this.gameManager.playerStats.abilityRanks;
-    const owned = ABILITY_IDS.filter(id => ranks[id] > 0);
-    if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your abilities">${owned.map(id =>
-      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${ABILITY_NAMES[id]}</strong><small>Rank ${ranks[id]} of 3</small><span class="journal-description">${describeAbility(id, ranks[id], this.gameManager.playerStats.weaponId)}</span></span></div>`).join('')}</div>`);
+    const stats = this.gameManager.playerStats;
+    const owned = ownedUpgrades(stats).filter(id => !id.startsWith('gain-companion'));
+    if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your upgrades">${owned.map(id =>
+      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${upgradeName(id, stats)}</strong><small>${isAbility(id) ? `Rank ${upgradeRank(id, stats)} of 3${upgradeRank(id, stats) === 3 ? ' · MAX' : ''}` : `Upgraded ${upgradeRank(id, stats)} times`}</small><span class="journal-description">${upgradeBenefit(id, stats)}</span></span></div>`).join('')}</div>`);
     this.addButton(list, 'Back to the woods', onResume, true);
     list.insertAdjacentHTML('beforeend', '<p class="overlay-hint">PRESS <kbd>ESC</kbd> TO RESUME</p>');
     this.focusFirst();
@@ -108,8 +113,10 @@ export class UIManager {
   showLevelUp(choices: UpgradeDefinition[], onChoose: (choice: UpgradeDefinition) => void): void {
     const list = this.createOverlay('A little more magic', 'The woods have a gift for you. Choose your next blessing.', `LEVEL ${this.gameManager.level} · WOODLAND WISDOM`, 'star', 'upgrade-panel');
     list.classList.add('upgrade-grid');
+    let selected = false;
     choices.forEach((choice, index) => {
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'upgrade-card';
+      const progress = upgradePreview(choice, this.gameManager.playerStats);
+      const button = document.createElement('button'); button.type = 'button'; button.className = `upgrade-card ${progress.current ? 'owned-upgrade' : 'new-upgrade'}`;
       const isMystery = choice.id === 'gain-companion-mystery';
       const isMidnight = choice.id === 'gain-companion-midnight';
       const isCompanion = isMystery || isMidnight;
@@ -118,10 +125,18 @@ export class UIManager {
       const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
         ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
         : UPGRADE_ICONS[choice.id];
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(artIcon)}</span><span class="upgrade-category">${choice.category ?? (isCompanion ? 'A FAMILIAR FRIEND' : 'WOODLAND BLESSING')}</span><strong>${choice.title}</strong><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">Choose blessing ${icon('arrow')}</span>`;
-      const select = () => { this.choices = []; onChoose(choice); this.clearOverlay(); };
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(artIcon)}</span><span class="upgrade-category">${progress.current ? 'STRENGTHEN OWNED UPGRADE' : isCompanion ? 'NEW COMPANION' : 'NEW UPGRADE'}</span><strong>${choice.title}</strong><span class="upgrade-rank">${progress.current ? `Rank ${progress.current} &rarr; ${progress.next}` : `Unlock rank 1`}${progress.capped ? ' / 3' : ''}${progress.capped && progress.next === 3 ? ' · MAX' : ''}</span>${progress.capped ? `<span class="rank-pips" aria-hidden="true">${[1,2,3].map(rank => `<i class="${rank <= progress.current ? 'filled' : rank === progress.next ? 'next' : ''}"></i>`).join('')}</span>` : ''}<span class="upgrade-comparison"><span><small>NOW</small>${progress.before}</span><span><small>AFTER THIS PICK</small><b>${progress.after}</b></span></span><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">${progress.current ? 'Make it stronger' : 'Add to your build'} ${icon('arrow')}</span>`;
+      const select = () => {
+        if (selected) return; selected = true;
+        this.clearOverlay(); onChoose(choice); this.refreshBuild();
+        const receipt = this.query('.upgrade-receipt');
+        receipt.innerHTML = `<strong>${choice.title} · Rank ${progress.next}${progress.capped ? '/3' : ''}</strong><span>${progress.before} &rarr; ${progress.after}</span>`;
+        receipt.hidden = false; this.receiptUntil = this.gameManager.elapsedMs + 4000;
+      };
       button.addEventListener('click', select); this.choices.push(select); list.append(button);
     });
+    const owned = ownedUpgrades(this.gameManager.playerStats);
+    if (owned.length) list.insertAdjacentHTML('afterend', `<div class="upgrade-owned-list" aria-label="Already in your build"><strong>ALREADY IN YOUR BUILD</strong>${owned.map(id => `<span>${upgradeName(id, this.gameManager.playerStats)} <b>${upgradeRank(id, this.gameManager.playerStats)}${isAbility(id) ? '/3' : '×'}</b></span>`).join('')}</div>`);
     list.insertAdjacentHTML('afterend', '<p class="overlay-hint">CHOOSE WITH <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> OR CLICK A CARD</p>');
     this.focusFirst();
   }
@@ -134,6 +149,16 @@ export class UIManager {
   }
 
   destroy(): void { window.removeEventListener('keydown', this.onKey); this.root.innerHTML = ''; this.root.classList.remove('run-frozen', 'low-health'); }
+
+  private refreshBuild(): void {
+    const stats = this.gameManager.playerStats;
+    const key = JSON.stringify([stats.abilityRanks, stats.upgradeCounts, stats.hasMysteryCompanion, stats.hasMidnightCompanion]);
+    if (key === this.buildFingerprint) return;
+    this.buildFingerprint = key;
+    const owned = ownedUpgrades(stats), strip = this.query('.build-strip');
+    strip.hidden = !owned.length;
+    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isAbility(id) ? ' of 3' : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isAbility(id) ? '/3' : '×'}</b></span>`).join('');
+  }
 
   private createOverlay(title: string, body: string, eyebrow: string, emblem: string, className: string): HTMLElement {
     this.clearOverlay(); this.previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;

@@ -398,3 +398,25 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 .boss-caption { font-size:12px; text-align:center; min-height:16px; }
 .boss-track { margin-top:7px; height:7px; background:#201c16; border-radius:5px; overflow:hidden; }
 .boss-track i { display:block; height:100%; transform-origin:left; background:linear-gradient(90deg,#e56835,#ffc568); }
+.upgrade-panel .panel-emblem{display:none}
+.upgrade-panel .panel-intro{margin-bottom:12px}
+.upgrade-card.owned-upgrade{border:2px solid #a98539;background:linear-gradient(#fff8dd,#e8e5c6)}
+.upgrade-rank{font:bold 17px Georgia,serif;color:#74521f;margin-top:8px}
+.rank-pips{display:flex;gap:5px;margin:7px 0}
+.rank-pips i{width:20px;height:7px;border-radius:5px;background:#cbd0b2}
+.rank-pips .filled{background:#587344}.rank-pips .next{background:#c7973c;outline:1px solid #8b6329}
+.upgrade-comparison{display:grid;gap:7px;width:100%;margin:10px 0;text-align:left;font-size:13px;line-height:1.25}
+.upgrade-comparison>span{display:flex;flex-direction:column;gap:3px}
+.upgrade-comparison small{font-size:9px;letter-spacing:1px;color:#697453}
+.upgrade-comparison>span:last-child{background:#dde6c7;padding:7px;border-radius:6px;color:#294c31}
+.upgrade-description{font-size:12px}
+.upgrade-owned-list{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:10px;max-height:68px;overflow:auto;font-size:11px}
+.upgrade-owned-list>strong{width:100%;font-size:9px;letter-spacing:1px;color:#687b52}
+.upgrade-owned-list>span{padding:4px 7px;border-radius:5px;background:#dde4cb}.upgrade-owned-list b{color:#79602a}
+.build-strip{position:absolute;bottom:76px;left:50%;transform:translateX(-50%);display:flex;gap:5px;max-width:calc(100% - 40px);overflow:auto;padding:5px 8px;border-radius:10px;background:#203c2ddb;pointer-events:auto}
+.build-strip[hidden],.upgrade-receipt[hidden]{display:none}
+.build-item{display:flex;align-items:center;gap:3px;flex-shrink:0;color:#fff0c4;padding:3px;font-size:11px}.build-item svg{width:22px;height:22px}
+.upgrade-receipt{position:absolute;bottom:132px;left:50%;transform:translateX(-50%);width:max-content;max-width:90%;padding:12px 18px;border:1px solid #e0bb63;border-radius:10px;background:#203c2df5;color:#fff1c6;text-align:center;pointer-events:none;z-index:14}
+.upgrade-receipt strong,.upgrade-receipt span{display:block}.upgrade-receipt span{font-size:12px;margin-top:5px}
+.upgrade-panel .upgrade-art{height:50px;margin-bottom:5px}.upgrade-panel .upgrade-art svg{height:44px}
+@media(max-height:700px){.upgrade-panel{padding:16px 22px}.upgrade-panel h2{font-size:27px}.upgrade-panel .eyebrow{margin-bottom:5px}.upgrade-panel .panel-intro{font-size:12px;margin-bottom:8px}.upgrade-panel .upgrade-card{min-height:0;padding:12px 10px}.upgrade-panel .upgrade-art{height:30px}.upgrade-panel .upgrade-art svg{height:28px}.upgrade-panel .upgrade-art img{height:35px}.upgrade-panel .upgrade-card strong{font-size:18px}.upgrade-panel .upgrade-description{font-size:11px;margin:4px 0}.upgrade-panel .upgrade-select{margin-top:7px;padding-top:7px}.upgrade-panel .overlay-hint{margin-top:8px!important}.upgrade-panel .upgrade-comparison{margin:5px 0}.upgrade-panel .upgrade-rank{font-size:15px;margin-top:5px}}

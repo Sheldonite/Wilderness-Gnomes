@@ -11,7 +11,8 @@ export class ScenerySystem {
   private readonly random = new Phaser.Math.RandomDataGenerator(['storybook-golden-woodland-1']);
   private readonly trees: Phaser.GameObjects.Image[] = [];
   private readonly ripples: Phaser.GameObjects.Ellipse[] = [];
-  readonly navigation = new SceneryNavigation();
+  // Scenery is decorative; direct movement avoids obstacle searches for every actor.
+  readonly navigation = new SceneryNavigation(false, false);
   private elapsed = 0;
   private fadeClock = 0;
   constructor(private readonly scene: Phaser.Scene) {}
@@ -19,7 +20,6 @@ export class ScenerySystem {
   create(): void {
     this.scene.add.tileSprite(SIZE / 2, SIZE / 2, SIZE + LOOK.worldPadding * 2, SIZE + LOOK.worldPadding * 2, LOOK.texture.ground).setDepth(LOOK.depth.ground).setTint(0xc5d09e);
     this.createTerrain(); this.createPlanting(); this.createLight();
-    for (const radius of [12, 15, 22]) this.navigation.prepare(radius);
   }
 
   update(deltaMs: number, subjects: Vector2Like[]): void {

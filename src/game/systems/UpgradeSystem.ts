@@ -91,6 +91,7 @@ export class UpgradeSystem {
     if (upgrade.rank !== undefined && stats.abilityRanks[upgrade.id as AbilityId] !== upgrade.rank - 1) return;
     if (upgrade.isAvailable && !upgrade.isAvailable(stats)) return;
     upgrade.apply(stats);
+    stats.upgradeCounts[upgrade.id] = (stats.upgradeCounts[upgrade.id] ?? 0) + 1;
   }
 
   getAvailable(stats: PlayerStats): UpgradeDefinition[] {

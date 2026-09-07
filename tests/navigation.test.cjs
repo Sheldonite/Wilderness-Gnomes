@@ -3,6 +3,18 @@ const assert = require('node:assert/strict');
 const { SceneryNavigation, createNavigationRoute, riverX, pathY } = require('../artifacts/ability-tests/game/core/SceneryNavigation.js');
 const { MidnightBehavior } = require('../artifacts/ability-tests/game/core/MidnightBehavior.js');
 
+test('decorative scenery allows direct movement without route searches and retains arena boundaries', () => {
+  const nav = new SceneryNavigation(true, false);
+  nav.addCircle(500, 500, 50);
+  nav.prepare = () => { throw new Error('Decorative scenery must not build navigation grids'); };
+  assert.deepEqual(nav.move({x:300,y:500}, {x:700,y:500}, 12), {x:700,y:500});
+  assert.equal(nav.blocked({x:riverX(1800),y:1800},12), false);
+  assert.equal(nav.clear({x:300,y:500},{x:700,y:500},12),true);
+  assert.deepEqual(nav.toward({x:300,y:500},{x:700,y:500},400,12,createNavigationRoute()),{x:700,y:500});
+  assert.deepEqual(nav.move({x:20,y:20},{x:-100,y:4000},12),{x:12,y:3188});
+  assert.deepEqual(nav.nearest({x:-100,y:4000},12),{x:12,y:3188});
+});
+
 function follow(nav, start, target, radius = 12, limit = 3000) {
   let p = start;
   const route = createNavigationRoute();
@@ -56,6 +68,19 @@ test('reusing a route avoids full route checks on every movement frame', () => {
   for(let i=0;i<120;i++)p=nav.toward(p,{x:1200,y:300},1.5,12,route);
   assert.ok(checks<10,`${checks} full-route checks`);
   assert.equal(p.x,480);
+});
+
+test('unreachable routes wait briefly instead of repeating a full search every frame', () => {
+  const nav = new SceneryNavigation(false), route = createNavigationRoute();
+  for(let i=0;i<20;i++)nav.addCircle(900+Math.cos(i*Math.PI/10)*100,900+Math.sin(i*Math.PI/10)*100,30);
+  nav.prepare(12);
+  let checks=0;const clear=nav.clear.bind(nav);nav.clear=(...args)=>{checks++;return clear(...args);};
+  const start={x:600,y:900}, target={x:900,y:900};
+  nav.toward(start,target,2,12,route);const first=checks;
+  assert.ok(first>0);
+  for(let i=0;i<8;i++)assert.deepEqual(nav.toward(start,target,2,12,route),start);
+  assert.equal(checks,first);
+  assert.ok(nav.toward(start,{x:500,y:900},2,12,route).x<600,'a changed target can immediately recover');
 });
 
 test('autonomous movement routes around single and overlapping footprints', () => {
