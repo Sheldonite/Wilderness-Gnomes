@@ -1,4 +1,6 @@
+import { createNavigationRoute, type SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
+import type { ActorShadow } from '../systems/PresentationSystem';
 import { BALANCE } from '../config/balance';
 import {
   BUCK_SPRITE_KEY,
@@ -18,8 +20,16 @@ import { clampToArena, normalize } from '../utils/math';
 
 let nextEnemyId = 1;
 
-/** Brown squirrels charge, grey squirrels throw acorns, and from level 10 the woods send does and fawns. */
+/** Brown squirrels charge, grey squirrels throw acorns, and from level 10 the woods send does, fawns and bucks. */
 export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck';
+
+export interface EnemyAppearance {
+  texture: string;
+  radius: number;
+  scale: number;
+  animation: string;
+  shadow?: ActorShadow;
+}
 
 interface VariantProfile {
   textureKey: string;
@@ -46,6 +56,7 @@ const VARIANTS: Record<EnemyVariant, VariantProfile> = {
 };
 
 export class EnemyController {
+  protected readonly route = createNavigationRoute();
   readonly id = nextEnemyId++;
   readonly radius: number;
   readonly contactDamage: number;
@@ -58,17 +69,23 @@ export class EnemyController {
   private readonly profile: VariantProfile;
   private readonly walkAnimations: Record<string, string>;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, difficultyMinutes: number, readonly variant: EnemyVariant = 'brown') {
+  /**
+   * `appearance` lets a subclass (the boss) bring its own texture and collision size;
+   * ordinary spawns pick everything from their `variant`.
+   */
+  constructor(scene: Phaser.Scene, x: number, y: number, difficultyMinutes: number, protected readonly navigation?: SceneryNavigation,
+    appearance?: EnemyAppearance, readonly variant: EnemyVariant = 'brown') {
     const profile = VARIANTS[variant];
     this.profile = profile;
-    this.radius = profile.radius;
+    this.radius = appearance?.radius ?? profile.radius;
     this.contactDamage = profile.contactDamage;
-    this.sprite = scene.add.sprite(x, y, profile.textureKey, 0);
+    const spawn = navigation?.nearest({ x, y }, this.radius) ?? { x, y };
+    this.sprite = scene.add.sprite(spawn.x, spawn.y, appearance?.texture ?? profile.textureKey, 0);
     this.walkAnimations = profile.walkAnimations;
     this.sprite.setDepth(10);
-    this.sprite.setScale(profile.scale);
-    this.sprite.play(this.walkAnimations['0,1']);
-    scene.events.emit('presentation:actor', this.sprite);
+    this.sprite.setScale(appearance?.scale ?? profile.scale);
+    this.sprite.play(appearance?.animation ?? this.walkAnimations['0,1']);
+    scene.events.emit('presentation:actor', this.sprite, appearance?.shadow);
     this.health = Math.round(profile.health + difficultyMinutes * 8);
     if (profile.ranged) this.ranged = new RangedSquirrelBehavior();
   }
@@ -85,6 +102,14 @@ export class EnemyController {
       : normalize(target.x - this.sprite.x, target.y - this.sprite.y);
     this.ranged?.tick(deltaMs);
     const dt = deltaMs / 1000;
+
+    if (direction.x === 0 && direction.y === 0) {
+      // holding position: face the player and freeze the walk
+      this.updateAnimation(normalize(target.x - this.sprite.x, target.y - this.sprite.y));
+      this.sprite.anims.pause();
+      return;
+    }
+
     const next = clampToArena(
       {
         x: this.sprite.x + direction.x * speed * dt,
@@ -92,15 +117,12 @@ export class EnemyController {
       },
       this.radius
     );
-
-    this.sprite.setPosition(next.x, next.y);
-    if (direction.x === 0 && direction.y === 0) {
-      // face the player while holding position
-      this.updateAnimation(normalize(target.x - this.sprite.x, target.y - this.sprite.y));
-      this.sprite.anims.pause();
-    } else {
-      this.updateAnimation(direction);
-    }
+    // Ranged squirrels steer away from the player at times, so route toward their chosen point rather than the player.
+    const goal = this.ranged ? next : target;
+    const safe = this.navigation?.toward(this.position, goal, speed * dt, this.radius, this.route) ?? next;
+    const actual = normalize(safe.x - this.sprite.x, safe.y - this.sprite.y);
+    this.sprite.setPosition(safe.x, safe.y);
+    this.updateAnimation(actual.x === 0 && actual.y === 0 ? direction : actual);
   }
 
   /** Returns a launch velocity when this squirrel is ready to throw at the target, else undefined. */
@@ -129,6 +151,12 @@ export class EnemyController {
     this.sprite.scene.events.emit('presentation:hit', this.sprite);
     this.isDead = this.health <= 0;
     return this.isDead;
+  }
+
+  displace(x: number, y: number): void {
+    const target = { x: this.sprite.x + x, y: this.sprite.y + y };
+    const safe = this.navigation?.move(this.position, target, this.radius) ?? clampToArena(target, this.radius);
+    this.sprite.setPosition(safe.x, safe.y);
   }
 
   destroy(): void {

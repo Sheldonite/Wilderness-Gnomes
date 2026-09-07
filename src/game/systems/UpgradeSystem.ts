@@ -1,5 +1,6 @@
 import { BALANCE } from '../config/balance';
 import { ABILITY_IDS, ABILITY_NAMES, describeAbility } from '../config/abilities';
+import { CROSSBOW_STAT_UPGRADES } from '../config/weapons';
 import type { AbilityId, AbilityRank, PlayerStats, UpgradeDefinition } from '../core/types';
 
 export class UpgradeSystem {
@@ -97,13 +98,19 @@ export class UpgradeSystem {
       (id !== 'mystery-double-pounce' || stats.hasMysteryCompanion)).map(id => {
       const rank = (stats.abilityRanks[id] + 1) as AbilityRank;
       return {
-        id, rank, title: ABILITY_NAMES[id], description: describeAbility(id, rank),
+        id, rank, title: ABILITY_NAMES[id], description: describeAbility(id, rank, stats.weaponId),
         category: rank === 1 ? 'NEW ABILITY' : `RANK ${rank} OF 3`,
         isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && (id !== 'mystery-double-pounce' || s.hasMysteryCompanion),
         apply: (s: PlayerStats) => { s.abilityRanks[id] = rank; }
       };
     });
-    return [...this.upgrades.filter(u => !u.isAvailable || u.isAvailable(stats)), ...abilities];
+    return [...this.upgrades.filter(u => !u.isAvailable || u.isAvailable(stats)).map(u => this.flavor(u, stats)), ...abilities];
+  }
+
+  private flavor(upgrade: UpgradeDefinition, stats: PlayerStats): UpgradeDefinition {
+    if (stats.weaponId !== 'crossbow') return upgrade;
+    const copy = CROSSBOW_STAT_UPGRADES[upgrade.id];
+    return copy ? { ...upgrade, title: copy.title, description: copy.description } : upgrade;
   }
 
   getReviewChoices(): UpgradeDefinition[] {

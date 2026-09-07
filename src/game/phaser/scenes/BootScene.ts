@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { OVEN_TEXTURE, ovenSourceUrl, createOvenFrames } from '../../config/ovenSprite';
 import { ART } from '../../config/presentation';
 import { createStorybookTextures } from '../storybookTextures';
 import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } from '../../config/midnightSprite';
@@ -62,7 +63,9 @@ export class BootScene extends Phaser.Scene {
     this.load.on('progress', (value: number) => { fill.style.transform = `scaleX(${value})`; });
     this.load.on('loaderror', () => { root.querySelector('p')!.textContent = 'A woodland asset could not load. Please refresh to try again.'; });
     this.load.image('storybook-title', ART.title);
+    this.load.image('heartwood-crossbow', ART.crossbow);
     this.load.image(MIDNIGHT_SOURCE_KEY, MIDNIGHT_SOURCE_URL);
+    this.load.image(OVEN_TEXTURE, ovenSourceUrl);
     this.load.image('storybook-ground-source', ART.ground);
     this.load.image('storybook-props-source', ART.props);
     this.load.image('storybook-water-source', ART.water);
@@ -100,6 +103,7 @@ export class BootScene extends Phaser.Scene {
     [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, DOE_SPRITE_KEY, FAWN_SPRITE_KEY, BUCK_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
     // The wizard sheet is authored at 192px and drawn at ~40%; linear filtering keeps the downscale smooth.
     this.textures.get(PLAYER_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.textures.get('heartwood-crossbow').setFilter(Phaser.Textures.FilterMode.LINEAR);
     applyPlayerSpriteAdjustments(this);
     alignMysteryFrames(this);
     this.createPlayerAnimations();
@@ -107,6 +111,7 @@ export class BootScene extends Phaser.Scene {
     this.createEnemyAnimations();
     this.createMysteryAnimations();
     createMidnightAnimations(this);
+    createOvenFrames(this);
     this.scene.start('StartScene');
   }
 

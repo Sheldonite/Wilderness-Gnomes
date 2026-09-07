@@ -1,3 +1,4 @@
+import { createNavigationRoute, type SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
@@ -20,6 +21,7 @@ const MYSTERY_SPRITE_SCALE = 0.72;
 const ARRIVAL_DISTANCE = 8;
 
 export class MysteryCompanion {
+  protected readonly route = createNavigationRoute();
   readonly sprite: Phaser.GameObjects.Sprite;
   private state: MysteryState = 'following';
   private cooldownRemainingMs = 600;
@@ -33,9 +35,11 @@ export class MysteryCompanion {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly stats: PlayerStats,
-    playerPosition: Vector2Like
+    playerPosition: Vector2Like,
+    private readonly navigation?: SceneryNavigation
   ) {
-    this.sprite = scene.add.sprite(playerPosition.x - 34, playerPosition.y + 28, MYSTERY_SPRITE_KEY, 0);
+    const spawn = navigation?.nearest({ x: playerPosition.x - 34, y: playerPosition.y + 28 }, 12) ?? { x: playerPosition.x - 34, y: playerPosition.y + 28 };
+    this.sprite = scene.add.sprite(spawn.x, spawn.y, MYSTERY_SPRITE_KEY, 0);
     this.sprite.setDepth(19);
     this.sprite.setScale(MYSTERY_SPRITE_SCALE);
     this.sprite.play(MYSTERY_IDLE_ANIMATION_KEY);
@@ -45,7 +49,7 @@ export class MysteryCompanion {
   update(
     deltaMs: number,
     playerPosition: Vector2Like,
-    playerMovementDirection: Vector2Like,
+    _playerMovementDirection: Vector2Like,
     enemies: EnemyController[],
     damage: DealDamage
   ): void {
@@ -54,11 +58,12 @@ export class MysteryCompanion {
       return;
     }
 
-    const followTarget = this.getFollowTarget(playerPosition);
+    const followTarget = this.navigation?.nearest(this.getFollowTarget(playerPosition), 12) ?? this.getFollowTarget(playerPosition);
+    const before = this.position;
     this.moveToward(followTarget, this.stats.mysteryReturnSpeed, deltaMs);
 
     if (this.state === 'returning') {
-      this.updateWalkAnimation(this.lastMoveDirection);
+      this.updateWalkAnimation({ x: this.sprite.x - before.x, y: this.sprite.y - before.y });
       if (distanceSq(this.position, followTarget) <= ARRIVAL_DISTANCE * ARRIVAL_DISTANCE) {
         this.state = 'following';
       }
@@ -66,7 +71,7 @@ export class MysteryCompanion {
     }
 
     this.cooldownRemainingMs -= deltaMs;
-    this.updateWalkAnimation(playerMovementDirection);
+    this.updateWalkAnimation({ x: this.sprite.x - before.x, y: this.sprite.y - before.y });
 
     if (this.cooldownRemainingMs > 0) {
       return;
@@ -98,7 +103,7 @@ export class MysteryCompanion {
 
     const hitDistance = BALANCE.companion.mysteryHitRadius + this.target.radius;
     if (
-      !this.hasHitThisPounce &&
+      !this.hasHitThisPounce && (!this.navigation || this.navigation.clear(this.position, this.target.position, 2)) &&
       distanceSq(this.position, this.target.position) <= hitDistance * hitDistance
     ) {
       this.hasHitThisPounce = true;
@@ -136,7 +141,8 @@ export class MysteryCompanion {
   private moveToward(target: Vector2Like, speed: number, deltaMs: number): void {
     const distanceToTarget = Math.hypot(target.x - this.sprite.x, target.y - this.sprite.y);
     if (distanceToTarget <= ARRIVAL_DISTANCE) {
-      this.sprite.setPosition(target.x, target.y);
+      const safe = this.navigation?.move(this.position, target, 12) ?? target;
+      this.sprite.setPosition(safe.x, safe.y);
       return;
     }
 
@@ -147,20 +153,20 @@ export class MysteryCompanion {
 
     const dt = deltaMs / 1000;
     const travelDistance = Math.min(speed * dt, distanceToTarget);
-    this.sprite.setPosition(
-      this.sprite.x + direction.x * travelDistance,
-      this.sprite.y + direction.y * travelDistance
-    );
+    const next = this.navigation?.toward(this.position, target, travelDistance, 12, this.route) ?? {
+      x: this.sprite.x + direction.x * travelDistance, y: this.sprite.y + direction.y * travelDistance
+    };
+    this.lastMoveDirection = normalize(next.x - this.sprite.x, next.y - this.sprite.y);
+    this.sprite.setPosition(next.x, next.y);
+    if (this.state === 'pouncing') this.playDirectionalAnimation(MYSTERY_POUNCE_ANIMATION_BY_DIRECTION, this.lastMoveDirection);
   }
 
   private updateWalkAnimation(preferredDirection: Vector2Like): void {
-    const direction =
-      Math.abs(preferredDirection.x) > 0.05 || Math.abs(preferredDirection.y) > 0.05
-        ? preferredDirection
-        : this.lastMoveDirection;
+    const direction = normalize(preferredDirection.x, preferredDirection.y);
 
     if (Math.abs(direction.x) < 0.05 && Math.abs(direction.y) < 0.05) {
-      this.sprite.play(MYSTERY_IDLE_ANIMATION_KEY, true);
+      this.sprite.anims.stop();
+      this.sprite.setTexture(MYSTERY_SPRITE_KEY, 0);
       return;
     }
 

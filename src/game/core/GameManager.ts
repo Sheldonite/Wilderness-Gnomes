@@ -1,6 +1,7 @@
 import { BALANCE } from '../config/balance';
 import { ABILITIES, emptyAbilityRanks } from '../config/abilities';
-import type { GameRunState, HudSnapshot, PlayerStats } from './types';
+import { getWeapon } from '../config/weapons';
+import type { GameRunState, HudSnapshot, PlayerStats, WeaponId } from './types';
 
 export class GameManager {
   state: GameRunState = 'Playing';
@@ -14,15 +15,17 @@ export class GameManager {
   private wardReadyAt = 0;
   private wardProtectedUntil = 0;
 
-  constructor() {
+  constructor(weaponId: WeaponId = 'spell') {
+    const arm = getWeapon(weaponId);
     this.playerStats = {
       abilityRanks: emptyAbilityRanks(),
+      weaponId: arm.id,
       maxHealth: BALANCE.player.maxHealth,
       health: BALANCE.player.maxHealth,
       speed: BALANCE.player.speed,
-      projectileDamage: BALANCE.weapon.projectileDamage,
-      weaponCooldownMs: BALANCE.weapon.cooldownMs,
-      projectileCount: BALANCE.weapon.projectileCount,
+      projectileDamage: arm.projectileDamage,
+      weaponCooldownMs: arm.cooldownMs,
+      projectileCount: arm.projectileCount,
       hasMysteryCompanion: false,
       hasMidnightCompanion: false,
       mysteryDamage: BALANCE.companion.mysteryDamage,

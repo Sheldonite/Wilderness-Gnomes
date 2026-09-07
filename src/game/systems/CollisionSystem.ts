@@ -39,8 +39,7 @@ export class CollisionSystem {
         continue;
       }
 
-      const minDistance = player.radius + enemy.radius;
-      if (distanceSq(player.position, enemy.position) > minDistance * minDistance) {
+      if (distanceSq(player.position, enemy.position) > (player.radius + enemy.radius) ** 2) {
         continue;
       }
 
@@ -89,7 +88,7 @@ export class CollisionSystem {
 
         damage(enemy, projectile.damage);
         projectile.markHit(enemy.id, enemies);
-        break;
+        if (projectile.isDead) break;
       }
     }
   }
@@ -135,10 +134,8 @@ export class CollisionSystem {
 
         const push = normalize(a.position.x - b.position.x, a.position.y - b.position.y);
         const amount = 0.45;
-        a.sprite.x += push.x * amount;
-        a.sprite.y += push.y * amount;
-        b.sprite.x -= push.x * amount;
-        b.sprite.y -= push.y * amount;
+        a.displace(push.x * amount, push.y * amount);
+        b.displace(-push.x * amount, -push.y * amount);
       }
     }
   }

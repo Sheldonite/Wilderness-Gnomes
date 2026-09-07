@@ -1,3 +1,4 @@
+import type { SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
@@ -8,7 +9,7 @@ import { rollSpawnVariant } from '../core/SquirrelBehavior';
 export class EnemySpawner {
   private spawnTimerMs = 0;
 
-  constructor(private readonly scene: Phaser.Scene) {}
+  constructor(private readonly scene: Phaser.Scene, private readonly navigation?: SceneryNavigation) {}
 
   update(
     deltaMs: number,
@@ -70,6 +71,6 @@ export class EnemySpawner {
     x = Phaser.Math.Clamp(x, margin, GAME_CONFIG.arena.width - margin);
     y = Phaser.Math.Clamp(y, margin, GAME_CONFIG.arena.height - margin);
 
-    return new EnemyController(this.scene, x, y, difficultyMinutes, variant);
+    return new EnemyController(this.scene, x, y, difficultyMinutes, this.navigation, undefined, variant);
   }
 }

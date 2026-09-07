@@ -36,6 +36,7 @@ Production sprite atlas edit: KEEP exactly these six objects, their scale, color
 Additional final assets:
 - `src/assets/storybook/stream-water.png`
 - `src/assets/storybook/timber-bridge-source.png`
+- `src/assets/storybook/heartwood-crossbow.png`
 
 ## water
 
