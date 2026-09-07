@@ -12,7 +12,7 @@ export type UpgradeId =
 
 export type AbilityId = 'ricochet-charm' | 'firefly-orbit' | 'bramble-snare' | 'spore-trail'
   | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce';
-export type AbilityRank = 0 | 1 | 2 | 3 | 4 | 5;
+export type AbilityRank = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 export type AbilityRanks = Record<AbilityId, AbilityRank>;
 export type WeaponId = 'spell' | 'crossbow';
 
@@ -22,6 +22,8 @@ export interface Vector2Like {
 }
 
 export interface PlayerStats {
+  /** Current player level; ability ranks past the awakening are gated on it. */
+  level: number;
   upgradeCounts: Partial<Record<UpgradeId, number>>;
   abilityRanks: AbilityRanks;
   weaponId: WeaponId;

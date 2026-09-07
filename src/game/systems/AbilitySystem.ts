@@ -21,7 +21,7 @@ export class AbilitySystem {
     this.simulation = new AbilitySimulation(stats);
     this.ground = scene.add.graphics().setDepth(2);
     this.foreground = scene.add.graphics().setDepth(22);
-    for (let i = 0; i < ABILITIES.firefly.count[5]; i++) this.fireflies.push(scene.add.image(0, 0, LOOK.texture.spark)
+    for (let i = 0; i < Math.max(...ABILITIES.firefly.count); i++) this.fireflies.push(scene.add.image(0, 0, LOOK.texture.spark)
       .setDepth(LOOK.depth.spell).setTint(LOOK.color.gold).setDisplaySize(24, 24).setVisible(false));
   }
 

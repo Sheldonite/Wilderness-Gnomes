@@ -1,4 +1,4 @@
-import { ABILITIES, isAwakened } from '../config/abilities';
+import { ABILITIES, awakeningTier } from '../config/abilities';
 import type { CombatTarget } from './CombatResolver';
 import type { AbilityRank, Vector2Like } from './types';
 import { distanceSq } from '../utils/math';
@@ -6,7 +6,8 @@ import { distanceSq } from '../utils/math';
 /** How many extra pounces Mystery may chain after her first hit. */
 export function pounceChainLimit(rank: AbilityRank): number {
   if (!rank) return 0;
-  return isAwakened(rank) ? ABILITIES.pounce.frenzy.maxChain : 1;
+  const t = awakeningTier(rank);
+  return t >= 0 ? ABILITIES.pounce.frenzy[t].maxChain : 1;
 }
 
 /** Damage multiplier for a chained pounce. */
@@ -14,9 +15,12 @@ export function chainDamageScale(rank: AbilityRank): number {
   return ABILITIES.pounce.damageScale[rank];
 }
 
-/** Feral Frenzy: pounce cooldown multiplier for the player's current health. */
+/** Feral Frenzy / Bloodlust: pounce cooldown multiplier for the player's current health. */
 export function pounceCooldownScale(rank: AbilityRank, health: number, maxHealth: number): number {
-  return isAwakened(rank) && health > maxHealth * ABILITIES.pounce.frenzy.healthFraction ? ABILITIES.pounce.frenzy.cooldownScale : 1;
+  const t = awakeningTier(rank);
+  if (t < 0) return 1;
+  const f = ABILITIES.pounce.frenzy[t];
+  return health > maxHealth * f.healthFraction ? f.cooldownScale : 1;
 }
 
 export function nextPounceTarget<T extends CombatTarget>(rank: AbilityRank, hitIds: Set<number>, chainedSoFar: number,

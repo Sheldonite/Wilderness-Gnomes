@@ -1,5 +1,5 @@
 import { BALANCE } from '../config/balance';
-import { ABILITIES, emptyAbilityRanks, isAwakened } from '../config/abilities';
+import { ABILITIES, awakeningTier, emptyAbilityRanks } from '../config/abilities';
 import { getWeapon } from '../config/weapons';
 import type { GameRunState, HudSnapshot, PlayerStats, WeaponId } from './types';
 
@@ -22,6 +22,7 @@ export class GameManager {
   constructor(weaponId: WeaponId = 'spell') {
     const arm = getWeapon(weaponId);
     this.playerStats = {
+      level: 1,
       upgradeCounts: {},
       abilityRanks: emptyAbilityRanks(),
       weaponId: arm.id,
@@ -48,9 +49,10 @@ export class GameManager {
 
     this.elapsedMs += deltaMs;
     if (this.playerStats.abilityRanks['barkskin-ward'] > 0) this.wardWasUnlocked = true;
-    if (this.livingBark) {
-      if (!this.barkGrown) { this.barkGrown = true; this.wardLeaves = ABILITIES.ward.bark.leaves; }
-      if (this.wardLeaves < ABILITIES.ward.bark.leaves && this.elapsedMs >= this.nextLeafAt) {
+    const bark = this.bark;
+    if (bark) {
+      if (!this.barkGrown) { this.barkGrown = true; this.wardLeaves = bark.leaves; }
+      if (this.wardLeaves < bark.leaves && this.elapsedMs >= this.nextLeafAt) {
         this.wardLeaves++;
         this.nextLeafAt = this.elapsedMs + ABILITIES.ward.rechargeMs[this.playerStats.abilityRanks['barkskin-ward']];
       }
@@ -58,7 +60,11 @@ export class GameManager {
   }
 
   private barkGrown = false;
-  private get livingBark(): boolean { return isAwakened(this.playerStats.abilityRanks['barkskin-ward']); }
+  /** Living Bark / Heartwood settings for the current ward rank, or undefined below the awakening. */
+  get bark() {
+    const t = awakeningTier(this.playerStats.abilityRanks['barkskin-ward']);
+    return t >= 0 ? ABILITIES.ward.bark[t] : undefined;
+  }
 
   /** True once per Living Bark collapse; the scene turns it into a knockback. */
   consumeBarkBurst(): boolean {
@@ -88,6 +94,7 @@ export class GameManager {
   private advanceLevel(): void {
     this.xp -= this.xpToNextLevel;
     this.level += 1;
+    this.playerStats.level = this.level;
     this.xpToNextLevel = Math.ceil(
       BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, this.level - 1)
     );
@@ -130,11 +137,12 @@ export class GameManager {
     }
 
     if (amount <= 0) return;
-    if (source === 'contact' && this.livingBark) {
-      if (!this.barkGrown) { this.barkGrown = true; this.wardLeaves = ABILITIES.ward.bark.leaves; }
+    const bark = this.bark;
+    if (source === 'contact' && bark) {
+      if (!this.barkGrown) { this.barkGrown = true; this.wardLeaves = bark.leaves; }
       if (this.elapsedMs < this.wardProtectedUntil) return;
       if (this.wardLeaves > 0) {
-        if (this.wardLeaves === ABILITIES.ward.bark.leaves) this.nextLeafAt = this.elapsedMs + ABILITIES.ward.rechargeMs[this.playerStats.abilityRanks['barkskin-ward']];
+        if (this.wardLeaves === bark.leaves) this.nextLeafAt = this.elapsedMs + ABILITIES.ward.rechargeMs[this.playerStats.abilityRanks['barkskin-ward']];
         this.wardLeaves--;
         this.wardProtectedUntil = this.elapsedMs + ABILITIES.ward.protectionMs;
         if (this.wardLeaves === 0) this.barkBurstPending = true;
@@ -162,7 +170,7 @@ export class GameManager {
   get wardStatus(): 'locked' | 'ready' | 'protecting' | 'recharging' {
     if (!this.playerStats.abilityRanks['barkskin-ward']) return 'locked';
     if (this.elapsedMs < this.wardProtectedUntil) return 'protecting';
-    if (this.livingBark) return this.wardLeaves > 0 ? 'ready' : 'recharging';
+    if (this.bark) return this.wardLeaves > 0 ? 'ready' : 'recharging';
     return this.elapsedMs >= this.wardReadyAt ? 'ready' : 'recharging';
   }
 

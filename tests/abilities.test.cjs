@@ -31,7 +31,7 @@ test('three distinct choices reserve an unlock and a rank increase through many 
       if (available.some(c => c.rank === 1 || c.id.startsWith('gain-companion-'))) assert.ok(choices.some(c => c.rank === 1 || c.id.startsWith('gain-companion-')));
       if (available.some(c => c.rank > 1)) assert.ok(choices.some(c => c.rank > 1));
       upgrades.applyUpgrade(choices[level % 3], stats);
-      assert.ok(Object.values(stats.abilityRanks).every(rank => rank <= 5));
+      assert.ok(Object.values(stats.abilityRanks).every(rank => rank <= 10));
     }
   }
 });
@@ -45,12 +45,12 @@ test('Mystery gates Double Pounce, and recruitment disappears after selection', 
 });
 
 test('all ability ranks have real next-benefit descriptions; stale cards cannot apply twice', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true;
+  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true; stats.level = 10;
   for (const id of ABILITY_IDS) {
-    for (let rank = 1; rank <= 5; rank++) {
+    for (let rank = 1; rank <= 10; rank++) {
       const offer = upgrades.getAvailable(stats).find(c => c.id === id);
       assert.equal(offer.rank, rank); assert.ok(offer.description.length > 40);
-      assert.equal(offer.category, rank === 1 ? 'NEW ABILITY' : rank === 5 ? 'AWAKENING' : `RANK ${rank} OF 5`);
+      assert.equal(offer.category, rank === 1 ? 'NEW ABILITY' : rank === 5 ? 'AWAKENING' : rank === 10 ? 'ASCENSION' : `RANK ${rank} OF 10`);
       upgrades.applyUpgrade(offer, stats); upgrades.applyUpgrade(offer, stats);
       assert.equal(stats.abilityRanks[id], rank);
     }

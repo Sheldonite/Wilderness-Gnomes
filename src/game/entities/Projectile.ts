@@ -10,8 +10,8 @@ let nextProjectileId = 1;
 
 export interface ProjectileOptions {
   extraTargets?: number;
-  /** Chain Lightning: full retention and a seeking split after the last bounce. */
-  chain?: boolean;
+  /** Chain Lightning tier: -1 none, 0 awakened, 1 ascended. */
+  chainTier?: number;
   mode?: ExtraTargetMode;
   retention?: number;
   radius?: number;
@@ -51,7 +51,7 @@ export class Projectile {
       extraTargets,
       options.mode ?? 'bounce',
       options.retention,
-      options.chain ?? false
+      options.chainTier ?? -1
     );
     const size = options.displaySize ?? 30;
     this.sprite = scene.add.sprite(x, y, options.texture ?? LOOK.texture.bolt).setDisplaySize(size, size);
@@ -91,7 +91,7 @@ export class Projectile {
     const speed = Math.hypot(this.velocity.x, this.velocity.y);
     for (const direction of split.directions) {
       const child = new Projectile(this.sprite.scene, this.sprite.x, this.sprite.y,
-        { x: direction.x * speed, y: direction.y * speed }, this.lifetime, split.damage, 0, { ...this.options, chain: false });
+        { x: direction.x * speed, y: direction.y * speed }, this.lifetime, split.damage, split.bounces, { ...this.options, chainTier: -1, retention: 1 });
       for (const id of this.flight.hitEnemyIds) child.hitEnemyIds.add(id);
       child.sprite.setDisplaySize(this.sprite.displayWidth * .7, this.sprite.displayHeight * .7);
       projectiles.push(child);

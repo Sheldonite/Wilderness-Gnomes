@@ -1,5 +1,5 @@
 import { BALANCE } from '../config/balance';
-import { ABILITY_IDS, ABILITY_NAMES, AWAKENING_NAMES, AWAKENING_RANK, MAX_ABILITY_RANK, describeAbility } from '../config/abilities';
+import { ABILITY_IDS, ABILITY_NAMES, ASCENSION_RANK, AWAKENING_RANK, MAX_ABILITY_RANK, describeAbility, rankUnlocked, tierName } from '../config/abilities';
 import { CROSSBOW_STAT_UPGRADES } from '../config/weapons';
 import type { AbilityId, AbilityRank, PlayerStats, UpgradeDefinition } from '../core/types';
 
@@ -96,13 +96,15 @@ export class UpgradeSystem {
 
   getAvailable(stats: PlayerStats): UpgradeDefinition[] {
     const abilities = ABILITY_IDS.filter(id => stats.abilityRanks[id] < MAX_ABILITY_RANK &&
+      rankUnlocked(stats.abilityRanks[id] + 1, stats.level) &&
       (id !== 'mystery-double-pounce' || stats.hasMysteryCompanion)).map(id => {
       const rank = (stats.abilityRanks[id] + 1) as AbilityRank;
+      const tier = rank === AWAKENING_RANK || rank === ASCENSION_RANK ? tierName(id, rank) : undefined;
       return {
-        id, rank, title: rank === AWAKENING_RANK ? `${ABILITY_NAMES[id]}: ${AWAKENING_NAMES[id]}` : ABILITY_NAMES[id],
+        id, rank, title: tier ? `${ABILITY_NAMES[id]}: ${tier}` : ABILITY_NAMES[id],
         description: describeAbility(id, rank, stats.weaponId),
-        category: rank === 1 ? 'NEW ABILITY' : rank === AWAKENING_RANK ? 'AWAKENING' : `RANK ${rank} OF ${MAX_ABILITY_RANK}`,
-        isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && (id !== 'mystery-double-pounce' || s.hasMysteryCompanion),
+        category: rank === 1 ? 'NEW ABILITY' : rank === AWAKENING_RANK ? 'AWAKENING' : rank === ASCENSION_RANK ? 'ASCENSION' : `RANK ${rank} OF ${MAX_ABILITY_RANK}`,
+        isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && rankUnlocked(rank, s.level) && (id !== 'mystery-double-pounce' || s.hasMysteryCompanion),
         apply: (s: PlayerStats) => { s.abilityRanks[id] = rank; }
       };
     });

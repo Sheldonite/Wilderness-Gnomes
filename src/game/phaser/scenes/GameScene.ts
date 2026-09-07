@@ -24,7 +24,7 @@ import { UIManager } from '../../ui/UIManager';
 import { PresentationSystem } from '../../systems/PresentationSystem';
 import { AbilitySystem } from '../../systems/AbilitySystem';
 import { CombatResolver, type CombatTarget } from '../../core/CombatResolver';
-import { ABILITIES, ABILITY_IDS } from '../../config/abilities';
+import { ABILITY_IDS } from '../../config/abilities';
 import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
 import { MIDNIGHT_SPRITE_KEY } from '../../config/midnightSprite';
 import type { AbilityId, AbilityRank, UpgradeDefinition } from '../../core/types';
@@ -207,7 +207,7 @@ export class GameScene extends Phaser.Scene {
       const params = new URLSearchParams(location.search);
       const id = params.get('ability') as AbilityId | null;
       const requestedRank = Number(params.get('rank') ?? 3);
-      const rank = Math.min(5, Math.max(1, Number.isFinite(requestedRank) ? Math.floor(requestedRank) : 3)) as AbilityRank;
+      const rank = Math.min(10, Math.max(1, Number.isFinite(requestedRank) ? Math.floor(requestedRank) : 3)) as AbilityRank;
       const chosen = id && ABILITY_IDS.includes(id) ? [id] : ABILITY_IDS;
       if (review !== 'ability-baseline') {
         for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = rank;
@@ -233,6 +233,8 @@ export class GameScene extends Phaser.Scene {
       document.body.append(this.reviewControls);
       if (review === 'ability-cards') {
         const displayRank = rank;
+        this.gameManager.level = rank > 5 ? 10 : 2;
+        this.gameManager.playerStats.level = this.gameManager.level;
         for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = (displayRank - 1) as AbilityRank;
         this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u =>
           (id && ABILITY_IDS.includes(id)) ? u.id === id : ['ricochet-charm', 'firefly-orbit', 'mystery-double-pounce'].includes(u.id));
@@ -241,7 +243,6 @@ export class GameScene extends Phaser.Scene {
           if (this.reviewChoices.length >= 3) break;
           if (!this.reviewChoices.some(u => u.id === offer.id)) this.reviewChoices.push(offer);
         }
-        this.gameManager.level = 2;
         this.gameManager.state = 'LevelUpPaused';
       }
       return;
@@ -390,6 +391,11 @@ export class GameScene extends Phaser.Scene {
     );
     if (this.gameManager.playerStats.health < healthBefore) this.events.emit('presentation:hit', this.player.sprite);
     this.abilities.simulation.noteCollected(this.xpOrbs.filter(orb => orb.isCollected).length);
+    if (this.abilities.simulation.pendingHeal > 0) {
+      const stats = this.gameManager.playerStats;
+      stats.health = Math.min(stats.maxHealth, stats.health + this.abilities.simulation.pendingHeal);
+      this.abilities.simulation.pendingHeal = 0;
+    }
     if (this.gameManager.consumeBarkBurst()) this.livingBarkBurst();
     this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
     this.presentation.update(deltaMs);
@@ -408,7 +414,9 @@ export class GameScene extends Phaser.Scene {
 
   /** Living Bark: the last leaf falling throws every nearby foe back and roots them. */
   private livingBarkBurst(): void {
-    const { burstRange, knockback, rootMs } = ABILITIES.ward.bark;
+    const bark = this.gameManager.bark;
+    if (!bark) return;
+    const { burstRange, knockback, rootMs, burstDamage } = bark;
     const origin = this.player.position;
     for (const enemy of this.enemies) {
       if (enemy.isDead) continue;
@@ -418,6 +426,7 @@ export class GameScene extends Phaser.Scene {
       const push = d > 0 ? { x: dx / d, y: dy / d } : { x: 1, y: 0 };
       enemy.displace(push.x * knockback, push.y * knockback);
       enemy.root(rootMs);
+      this.combat.damage(enemy, burstDamage);
     }
     this.events.emit('presentation:level', origin);
   }

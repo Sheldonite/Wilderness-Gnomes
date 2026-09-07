@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { WEAPONS } from '../config/weapons';
-import { isAwakened } from '../config/abilities';
+import { awakeningTier } from '../config/abilities';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { EnemyController } from '../entities/EnemyController';
 import { Projectile } from '../entities/Projectile';
@@ -72,7 +72,7 @@ export class WeaponSystem {
     const spread = arm.spreadRadians;
     const startOffset = count > 1 ? -((count - 1) * spread) / 2 : 0;
     const extraTargets = arm.baseExtraTargets + stats.abilityRanks['ricochet-charm'];
-    const chain = isAwakened(stats.abilityRanks['ricochet-charm']);
+    const chainTier = awakeningTier(stats.abilityRanks['ricochet-charm']);
     const damage = stats.projectileDamage * (1 + (stats.harvestBonus ?? 0));
     const muzzle = arm.muzzleOffset ?? 0;
 
@@ -92,7 +92,7 @@ export class WeaponSystem {
           damage,
           extraTargets,
           {
-            chain,
+            chainTier,
             mode: arm.extraTargetMode,
             retention: arm.extraTargetRetention,
             radius: arm.projectileRadius,
