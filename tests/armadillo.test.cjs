@@ -12,8 +12,8 @@ test('armadillos only join the woods from level 20', () => {
   assert.equal(rollSpawnVariant(A.unlockLevel, () => 0.24), 'armadillo');
   assert.notEqual(rollSpawnVariant(A.unlockLevel, () => 0.26), 'armadillo');
   let n = 0;
-  for (let i = 0; i < 10000; i++) if (rollSpawnVariant(A.unlockLevel) === 'armadillo') n++;
-  assert.ok(n > 2200 && n < 2800, `expected ~25% armadillos, got ${n / 100}%`);
+  for (let i = 0; i < 10000; i++) if (rollSpawnVariant(A.unlockLevel, () => i / 10000) === 'armadillo') n++;
+  assert.equal(n, 10000 * A.spawnChance, '25% of the spawn roll range selects armadillos');
 });
 
 test('an armadillo walks in, curls, then rolls a locked line at the player', () => {

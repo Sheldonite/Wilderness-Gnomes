@@ -26,11 +26,11 @@ export const BALANCE = {
   armadillo: {
     unlockLevel: 20,
     spawnChance: 0.25,
-    health: 96,
+    health: 192,
     walkSpeed: 78,
     rollSpeed: 340,
     rollDistance: 260,
-    windupRange: 210,
+    windupRange: 250,
     curlMs: 380,
     recoverMs: 520,
     cooldownMs: 1600,
