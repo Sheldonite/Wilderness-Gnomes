@@ -68,7 +68,13 @@ def leg_mask(frame):
     core[: int(h * 0.55)] = False
     core = ndimage.binary_opening(core, iterations=1)
     dark = vis & (r + g + b < 180)                                   # ink outlines
-    grown = ndimage.binary_dilation(core, iterations=4) & vis          # outlines and soft edges
+    # Shadowed jeans on the far leg are nearly black, so grow the core into connected dark or
+    # blue pixels within a short radius, then take the soft edges and outlines around that.
+    near = ndimage.binary_dilation(core, iterations=8)
+    dusk = vis & ((r + g + b < 200) | ((b >= r) & (b >= g) & (b < 170)))
+    dusk[: int(h * 0.55)] = False
+    grown = ndimage.binary_propagation(core, mask=(core | dusk) & near)
+    grown = ndimage.binary_dilation(grown, iterations=3) & vis
     grown = ndimage.binary_fill_holes(grown)
     low_shoes = shoes.copy(); low_shoes[: int(h * 0.72)] = False       # hat and beard are red too
     shoe_rows = np.where(low_shoes.any(axis=1))[0]
