@@ -11,6 +11,8 @@ const paths: Record<string, string> = {
   pounce: '<path d="M3 24c4-20 17-20 26-7m-8-1 8 1-1-8"/><ellipse cx="19" cy="24" rx="5" ry="4"/><circle cx="12" cy="20" r="2"/><circle cx="18" cy="17" r="2"/><circle cx="24" cy="19" r="2"/>',
   leaf: '<path d="M27 5C11 3 4 11 7 21c9 5 19-2 20-16Z"/><path d="m5 28 17-17M11 22v-8m5 3h7"/>',
   spell: '<path d="m19 3-12 16h9l-3 10 13-17h-9Z"/>',
+  crossbow: '<path d="M4 16h18m-6-8 8 8-8 8"/><path d="M22 8v16M6 12v8"/><path d="M4 16h8"/>',
+  bolt: '<path d="m6 16 22-6-8 6 8 6Z"/><path d="M4 12v8l6-4Z"/>',
   clock: '<circle cx="16" cy="17" r="11"/><path d="M16 10v8l5 3M12 2h8"/>',
   boot: '<path d="M10 4h12l-3 14 7 4v6H5v-8l5-3Z"/><path d="M11 9h7m-8 5h7M5 24h21"/>',
   heart: '<path d="M16 28 4 16C-2 7 9 0 16 9 23 0 34 7 28 16Z"/>',

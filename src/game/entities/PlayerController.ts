@@ -14,6 +14,8 @@ export class PlayerController {
   private movementDirection: Vector2Like = { x: 0, y: 0 };
   private aura?: PlayerAura;
   private idleTime = 0;
+  private readonly arm?: Phaser.GameObjects.Image;
+  private aimAngle = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -32,6 +34,16 @@ export class PlayerController {
     if (character.aura) {
       this.aura = new PlayerAura(scene, this.position);
     }
+
+    if (stats.weaponId === 'crossbow') {
+      this.arm = scene.add.image(x, y, 'heartwood-crossbow');
+      this.arm.setDepth(21).setOrigin(0.28, 0.55).setScale(0.084);
+    }
+  }
+
+  setAim(angle: number): void {
+    this.aimAngle = angle;
+    this.updateArm();
   }
 
   update(deltaMs: number, keys: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>): void {
@@ -54,6 +66,7 @@ export class PlayerController {
     this.sprite.setPosition(safe.x, safe.y);
     this.updateAnimation(this.movementDirection);
     this.updateSecondaryMotion(deltaMs, direction);
+    this.updateArm();
     this.aura?.update(deltaMs, this.position);
   }
 
@@ -87,7 +100,18 @@ export class PlayerController {
 
   destroy(): void {
     this.aura?.destroy();
+    this.arm?.destroy();
     this.sprite.destroy();
+  }
+
+  private updateArm(): void {
+    if (!this.arm) return;
+    const hold = 14;
+    this.arm.setPosition(
+      this.sprite.x + Math.cos(this.aimAngle) * hold,
+      this.sprite.y + Math.sin(this.aimAngle) * hold + 8
+    );
+    this.arm.setRotation(this.aimAngle + 0.22);
   }
 
   private updateAnimation(direction: Vector2Like): void {

@@ -73,7 +73,7 @@ export class CollisionSystem {
 
         damage(enemy, projectile.damage);
         projectile.markHit(enemy.id, enemies);
-        break;
+        if (projectile.isDead) break;
       }
     }
   }

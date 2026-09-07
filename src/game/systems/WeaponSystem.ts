@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BALANCE } from '../config/balance';
+import { WEAPONS } from '../config/weapons';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { EnemyController } from '../entities/EnemyController';
 import { Projectile } from '../entities/Projectile';
@@ -7,6 +7,7 @@ import { distanceSq, normalize } from '../utils/math';
 
 export class WeaponSystem {
   private cooldownRemainingMs = 350;
+  aimAngle = 0;
 
   constructor(private readonly scene: Phaser.Scene) {}
 
@@ -18,12 +19,11 @@ export class WeaponSystem {
     projectiles: Projectile[]
   ): void {
     this.cooldownRemainingMs -= deltaMs;
-    if (this.cooldownRemainingMs > 0 || enemies.length === 0) {
-      return;
-    }
-
     const target = this.findClosestEnemy(playerPosition, enemies);
-    if (!target) {
+    if (target) {
+      this.aimAngle = Math.atan2(target.position.y - playerPosition.y, target.position.x - playerPosition.x);
+    }
+    if (this.cooldownRemainingMs > 0 || !target) {
       return;
     }
 
@@ -56,10 +56,12 @@ export class WeaponSystem {
     stats: PlayerStats,
     projectiles: Projectile[]
   ): void {
+    const arm = WEAPONS[stats.weaponId];
     const baseAngle = Math.atan2(targetPosition.y - playerPosition.y, targetPosition.x - playerPosition.x);
     const count = stats.projectileCount;
-    const spread = BALANCE.weapon.spreadRadians;
+    const spread = arm.spreadRadians;
     const startOffset = count > 1 ? -((count - 1) * spread) / 2 : 0;
+    const extraTargets = arm.baseExtraTargets + stats.abilityRanks['ricochet-charm'];
 
     for (let i = 0; i < count; i += 1) {
       const angle = baseAngle + startOffset + i * spread;
@@ -70,12 +72,20 @@ export class WeaponSystem {
           playerPosition.x,
           playerPosition.y,
           {
-            x: direction.x * BALANCE.weapon.projectileSpeed,
-            y: direction.y * BALANCE.weapon.projectileSpeed
+            x: direction.x * arm.projectileSpeed,
+            y: direction.y * arm.projectileSpeed
           },
-          BALANCE.weapon.projectileLifetimeMs,
+          arm.projectileLifetimeMs,
           stats.projectileDamage,
-          stats.abilityRanks['ricochet-charm']
+          extraTargets,
+          {
+            mode: arm.extraTargetMode,
+            retention: arm.extraTargetRetention,
+            radius: arm.projectileRadius,
+            texture: arm.texture,
+            displaySize: arm.displaySize,
+            trailColor: arm.trailColor
+          }
         )
       );
     }

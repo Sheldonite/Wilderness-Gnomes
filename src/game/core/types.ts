@@ -14,6 +14,7 @@ export type AbilityId = 'ricochet-charm' | 'firefly-orbit' | 'bramble-snare' | '
   | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce';
 export type AbilityRank = 0 | 1 | 2 | 3;
 export type AbilityRanks = Record<AbilityId, AbilityRank>;
+export type WeaponId = 'spell' | 'crossbow';
 
 export interface Vector2Like {
   x: number;
@@ -22,6 +23,7 @@ export interface Vector2Like {
 
 export interface PlayerStats {
   abilityRanks: AbilityRanks;
+  weaponId: WeaponId;
   maxHealth: number;
   health: number;
   speed: number;

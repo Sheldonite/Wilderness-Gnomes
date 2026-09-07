@@ -84,6 +84,17 @@ export function createStorybookTextures(scene: Phaser.Scene): void {
     c.beginPath(); c.moveTo(43, 24); c.quadraticCurveTo(28, 10, 4, 24); c.quadraticCurveTo(28, 38, 43, 24); c.fill();
     c.fillStyle = '#f1ffff'; c.beginPath(); c.ellipse(29, 24, 10, 3, 0, 0, Math.PI * 2); c.fill();
   });
+  texture(LOOK.texture.quarrel, 48, (c) => {
+    c.fillStyle = '#c49a5c';
+    c.beginPath(); c.moveTo(10, 21); c.lineTo(34, 21); c.lineTo(34, 27); c.lineTo(10, 27); c.closePath(); c.fill();
+    c.fillStyle = '#6f746c';
+    c.beginPath(); c.moveTo(45, 24); c.lineTo(33, 18); c.lineTo(33, 30); c.closePath(); c.fill();
+    c.fillStyle = '#f3e6c4';
+    c.beginPath(); c.moveTo(11, 24); c.lineTo(3, 16); c.lineTo(14, 22); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(11, 24); c.lineTo(3, 32); c.lineTo(14, 26); c.closePath(); c.fill();
+    c.fillStyle = '#e8c57b';
+    c.fillRect(18, 22, 10, 4);
+  });
   texture(LOOK.texture.crystal, 32, (c) => {
     c.shadowColor = '#94ffd1'; c.shadowBlur = 5; c.fillStyle = '#5aaf82'; c.strokeStyle = '#caffde'; c.lineWidth = 1.5;
     c.beginPath(); c.moveTo(16, 4); c.lineTo(24, 16); c.lineTo(16, 28); c.lineTo(8, 16); c.closePath(); c.fill(); c.stroke();

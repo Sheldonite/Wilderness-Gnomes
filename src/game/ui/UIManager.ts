@@ -4,6 +4,7 @@ import type { PlayerCharacterDefinition } from '../config/playerCharacters';
 import { formatTime } from '../utils/math';
 import { icon, UPGRADE_ICONS } from './icons';
 import { ABILITY_IDS, ABILITY_NAMES, describeAbility } from '../config/abilities';
+import { CROSSBOW_STAT_UPGRADES, WEAPONS } from '../config/weapons';
 
 export class UIManager {
   private readonly root: HTMLElement;
@@ -88,13 +89,15 @@ export class UIManager {
   showPaused(onResume: () => void): void {
     const list = this.createOverlay('A moment of quiet', 'The woodland will wait for you.', 'ADVENTURE PAUSED', 'leaf', 'pause-panel');
     list.innerHTML = '<p class="pause-instruction">Take a breath. Your journey continues when you’re ready.</p>';
+    const arm = WEAPONS[this.gameManager.playerStats.weaponId];
+    list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon(arm.icon)} ${arm.name} · ${arm.shortTrait}</p>`);
     const friends = [this.gameManager.playerStats.hasMysteryCompanion ? 'Mystery · pounce' : '',
       this.gameManager.playerStats.hasMidnightCompanion ? 'Midnight · swat' : ''].filter(Boolean);
     if (friends.length) list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${friends.join(' &nbsp; / &nbsp; ')}</p>`);
     const ranks = this.gameManager.playerStats.abilityRanks;
     const owned = ABILITY_IDS.filter(id => ranks[id] > 0);
     if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your abilities">${owned.map(id =>
-      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${ABILITY_NAMES[id]}</strong><small>Rank ${ranks[id]} of 3</small><span class="journal-description">${describeAbility(id, ranks[id])}</span></span></div>`).join('')}</div>`);
+      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${ABILITY_NAMES[id]}</strong><small>Rank ${ranks[id]} of 3</small><span class="journal-description">${describeAbility(id, ranks[id], this.gameManager.playerStats.weaponId)}</span></span></div>`).join('')}</div>`);
     this.addButton(list, 'Back to the woods', onResume, true);
     list.insertAdjacentHTML('beforeend', '<p class="overlay-hint">PRESS <kbd>ESC</kbd> TO RESUME</p>');
     this.focusFirst();
@@ -112,7 +115,10 @@ export class UIManager {
       const isCompanion = isMystery || isMidnight;
       const portrait = isMidnight ? this.midnightPortrait : this.mysteryPortrait;
       const name = isMidnight ? 'Midnight' : 'Mystery';
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(UPGRADE_ICONS[choice.id])}</span><span class="upgrade-category">${choice.category ?? (isCompanion ? 'A FAMILIAR FRIEND' : 'WOODLAND BLESSING')}</span><strong>${choice.title}</strong><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">Choose blessing ${icon('arrow')}</span>`;
+      const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
+        ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
+        : UPGRADE_ICONS[choice.id];
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(artIcon)}</span><span class="upgrade-category">${choice.category ?? (isCompanion ? 'A FAMILIAR FRIEND' : 'WOODLAND BLESSING')}</span><strong>${choice.title}</strong><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">Choose blessing ${icon('arrow')}</span>`;
       const select = () => { this.choices = []; onChoose(choice); this.clearOverlay(); };
       button.addEventListener('click', select); this.choices.push(select); list.append(button);
     });

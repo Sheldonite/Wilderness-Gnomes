@@ -1,4 +1,5 @@
-import type { AbilityId, AbilityRank, AbilityRanks } from '../core/types';
+import type { AbilityId, AbilityRank, AbilityRanks, WeaponId } from '../core/types';
+import { WEAPONS } from './weapons';
 
 export const ABILITY_IDS: AbilityId[] = ['ricochet-charm', 'firefly-orbit', 'bramble-snare', 'spore-trail',
   'acorn-shower', 'barkskin-ward', 'woodland-magnet', 'mystery-double-pounce'];
@@ -22,9 +23,16 @@ export function emptyAbilityRanks(): AbilityRanks {
   return Object.fromEntries(ABILITY_IDS.map(id => [id, 0])) as AbilityRanks;
 }
 
-export function describeAbility(id: AbilityId, rank: AbilityRank): string {
+export function describeAbility(id: AbilityId, rank: AbilityRank, weaponId: WeaponId = 'spell'): string {
   switch (id) {
-    case 'ricochet-charm': return `Spell bolts bounce to ${rank} additional ${rank === 1 ? 'enemy' : 'enemies'}, retaining 70% damage each bounce.`;
+    case 'ricochet-charm': {
+      if (weaponId === 'crossbow') {
+        const extra = WEAPONS.crossbow.baseExtraTargets + rank;
+        const keep = Math.round(WEAPONS.crossbow.extraTargetRetention * 100);
+        return `Quarrels punch through ${extra} additional ${extra === 1 ? 'enemy' : 'enemies'}, retaining ${keep}% damage after each hit.`;
+      }
+      return `Spell bolts bounce to ${rank} additional ${rank === 1 ? 'enemy' : 'enemies'}, retaining 70% damage each bounce.`;
+    }
     case 'firefly-orbit': return `${ABILITIES.firefly.count[rank]} golden fireflies orbit you, dealing 8 contact damage. Each foe can be hit every 0.5s.`;
     case 'bramble-snare': return `Every 5s, grow roots that slow foes by ${Math.round(ABILITIES.bramble.slow[rank] * 100)}% for ${ABILITIES.bramble.lifeMs[rank] / 1000}s.`;
     case 'spore-trail': return `Moving leaves mushroom patches for 3s, dealing ${ABILITIES.spore.damagePerSecond[rank]} damage per second.`;
