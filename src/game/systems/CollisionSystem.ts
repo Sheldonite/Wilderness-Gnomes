@@ -1,13 +1,15 @@
+import { EnemySeparation } from '../core/EnemySeparation';
 import { BALANCE } from '../config/balance';
 import { GameManager } from '../core/GameManager';
 import { EnemyController } from '../entities/EnemyController';
 import { PlayerController } from '../entities/PlayerController';
 import { Projectile } from '../entities/Projectile';
 import { XPOrb } from '../entities/XPOrb';
-import { distanceSq, normalize } from '../utils/math';
+import { distanceSq } from '../utils/math';
 import type { DealDamage } from '../core/CombatResolver';
 
 export class CollisionSystem {
+  private readonly separation = new EnemySeparation();
   update(
     timeMs: number,
     player: PlayerController,
@@ -99,29 +101,11 @@ export class CollisionSystem {
   }
 
   private handleEnemySeparation(enemies: EnemyController[]): void {
-    const separationRadius = BALANCE.enemy.separationRadius;
-    const separationRadiusSq = separationRadius * separationRadius;
-
-    for (let i = 0; i < enemies.length; i += 1) {
-      for (let j = i + 1; j < enemies.length; j += 1) {
-        const a = enemies[i];
-        const b = enemies[j];
-
-        if (a.isDead || b.isDead) {
-          continue;
-        }
-
-        const distance = distanceSq(a.position, b.position);
-
-        if (distance <= 0 || distance > separationRadiusSq) {
-          continue;
-        }
-
-        const push = normalize(a.position.x - b.position.x, a.position.y - b.position.y);
-        const amount = 0.45;
-        a.displace(push.x * amount, push.y * amount);
-        b.displace(-push.x * amount, -push.y * amount);
-      }
-    }
+    const alive = enemies.filter(enemy => !enemy.isDead);
+    const offsets = this.separation.solve(alive.map(enemy => enemy.position), BALANCE.enemy.separationRadius);
+    alive.forEach((enemy, i) => {
+      const x = offsets[i * 2], y = offsets[i * 2 + 1];
+      if (x || y) enemy.displace(x, y);
+    });
   }
 }

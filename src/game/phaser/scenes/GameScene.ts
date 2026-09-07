@@ -131,6 +131,29 @@ export class GameScene extends Phaser.Scene {
 
   private setupReview(): void {
     const review = new URLSearchParams(location.search).get('review');
+    if (review === 'progression') {
+      for (const id of ['spore-trail', 'acorn-shower', 'acorn-shower', 'projectile-damage', 'projectile-damage', 'gain-companion-midnight']) {
+        const choice = this.upgradeSystem.getAvailable(this.gameManager.playerStats).find(u => u.id === id)!;
+        this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
+      }
+      this.gameManager.level = 7;
+      this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u => ['spore-trail', 'acorn-shower', 'projectile-damage'].includes(u.id));
+      this.gameManager.state = 'LevelUpPaused';
+      return;
+    }
+    if (review === 'scenery-crowd') {
+      this.player.sprite.setPosition(2200, 1800);
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      this.gameManager.playerStats.projectileDamage = 0;
+      this.gameManager.xpToNextLevel = 100000;
+      this.reviewNoEnemies = true; this.reviewWalking = true;
+      for (let i = 0; i < 180; i++) {
+        const angle = i * 2.39996, radius = 80 + i % 12 * 24;
+        const enemy = new EnemyController(this, 2200 + Math.cos(angle) * radius, 1800 + Math.sin(angle) * radius, 0, this.scenerySystem.navigation);
+        enemy.health = 100000; this.enemies.push(enemy);
+      }
+      return;
+    }
     if (review === 'oven') {
       this.reviewNoEnemies = true;
       this.gameManager.level = 9;

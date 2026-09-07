@@ -12,10 +12,10 @@ const pondCos = Math.cos(.2), pondSin = Math.sin(.2);
 const cellPoint = (i: number) => ({ x: (i % COUNT + .5) * CELL, y: (Math.floor(i / COUNT) + .5) * CELL });
 let routeSeed = 0;
 export interface NavigationRoute {
-  budget: number; generation: number; radius: number; direct: boolean;
+  retryFrames: number; budget: number; generation: number; radius: number; direct: boolean;
   goal: Vector2Like; waypoint: Vector2Like; seed: number;
 }
-export const createNavigationRoute = (): NavigationRoute => ({ budget: 0, generation: -1, radius: 0, direct: false,
+export const createNavigationRoute = (): NavigationRoute => ({ retryFrames: 0, budget: 0, generation: -1, radius: 0, direct: false,
   goal: { x: 0, y: 0 }, waypoint: { x: 0, y: 0 }, seed: routeSeed++ % 24 });
 const steps = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
@@ -26,9 +26,14 @@ export class SceneryNavigation {
   private grids = new Map<number, Uint8Array>();
   private edges = new Map<number, Uint8Array>();
   private fields = new Map<string, Int16Array>();
-  constructor(private readonly water = true) {}
+  constructor(private readonly water = true, private readonly sceneryCollision = true) {}
+
+  private clamp(p: Vector2Like, radius: number): Vector2Like {
+    return { x: Math.max(radius, Math.min(SIZE - radius, p.x)), y: Math.max(radius, Math.min(SIZE - radius, p.y)) };
+  }
 
   addCircle(x: number, y: number, radius: number): void {
+    if (!this.sceneryCollision) return;
     const solid = { x, y, radius };
     for (let bx = Math.floor((x - radius - 32) / 128); bx <= Math.floor((x + radius + 32) / 128); bx++)
       for (let by = Math.floor((y - radius - 32) / 128); by <= Math.floor((y + radius + 32) / 128); by++) {
@@ -40,6 +45,7 @@ export class SceneryNavigation {
 
   blocked(p: Vector2Like, radius: number): boolean {
     if (p.x < radius || p.y < radius || p.x > SIZE - radius || p.y > SIZE - radius) return true;
+    if (!this.sceneryCollision) return false;
     if (this.water) {
       if (p.x > 2180 - radius && p.x < 2640 + radius) {
         const dx = p.x - bridgeX, dy = p.y - bridgeY;
@@ -60,12 +66,14 @@ export class SceneryNavigation {
   }
 
   clear(a: Vector2Like, b: Vector2Like, radius: number): boolean {
+    if (!this.sceneryCollision) return !this.blocked(a, radius) && !this.blocked(b, radius);
     const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8));
     for (let i = 0; i <= n; i++) if (this.blocked({ x: a.x + (b.x - a.x) * i / n, y: a.y + (b.y - a.y) * i / n }, radius)) return false;
     return true;
   }
 
   nearest(p: Vector2Like, radius: number): Vector2Like {
+    if (!this.sceneryCollision) return this.clamp(p, radius);
     if (!this.blocked(p, radius)) return p;
     for (let ring = 8; ring <= SIZE; ring += 8) for (let i = 0; i < 32; i++) {
       const q = { x: p.x + Math.cos(i * Math.PI / 16) * ring, y: p.y + Math.sin(i * Math.PI / 16) * ring };
@@ -76,6 +84,7 @@ export class SceneryNavigation {
 
   /** Swept small steps prevent tunnelling and slide keyboard movement along edges. */
   move(from: Vector2Like, to: Vector2Like, radius: number): Vector2Like {
+    if (!this.sceneryCollision) return this.clamp(to, radius);
     let p = { ...this.nearest(from, radius) };
     const n = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 5));
     const dx = (to.x - from.x) / n, dy = (to.y - from.y) / n;
@@ -113,6 +122,19 @@ export class SceneryNavigation {
 
   toward(from: Vector2Like, target: Vector2Like, distance: number, radius: number, route?: NavigationRoute): Vector2Like {
     if (distance <= 0) return from;
+    if (!this.sceneryCollision) {
+      const dx = target.x - from.x, dy = target.y - from.y, length = Math.hypot(dx, dy);
+      const step = length > 0 ? Math.min(1, distance / length) : 0;
+      return this.clamp({ x: from.x + dx * step, y: from.y + dy * step }, radius);
+    }
+    if (route && route.retryFrames > 0 && route.generation === this.generation
+      && Math.hypot(target.x - route.goal.x, target.y - route.goal.y) < 48) {
+      route.retryFrames--; return from;
+    }
+    const waitForRoute = () => {
+      if (route) { route.retryFrames = 8 + route.seed % 8; route.generation = this.generation; route.goal = { ...target }; route.budget = 0; }
+      return from;
+    };
     if (route && route.generation === this.generation && route.radius === radius && route.budget > 0
       && Math.hypot(target.x - route.goal.x, target.y - route.goal.y) < 48
       && (route.direct || Math.hypot(from.x - route.waypoint.x, from.y - route.waypoint.y) > 8)) {
@@ -134,7 +156,7 @@ export class SceneryNavigation {
         const p = point(i), d = (p.x - goal.x) ** 2 + (p.y - goal.y) ** 2;
         if (d < best && this.clear(p, goal, clearance)) { best = d; end = i; }
       }
-      if (end < 0) return start;
+      if (end < 0) return waitForRoute();
       const key = `${clearance}:${end}`;
       let field = this.fields.get(key);
       if (!field) {
@@ -160,10 +182,10 @@ export class SceneryNavigation {
         const cost = field[i] * CELL + d * .9;
         if (field[i] >= 0 && cost < score && this.clear(start, p, radius)) { score = cost; waypoint = p; found = true; }
       }
-      if (!found) return start;
+      if (!found) return waitForRoute();
     }
     if (route) {
-      route.goal = { ...target }; route.waypoint = waypoint; route.direct = direct;
+      route.retryFrames = 0; route.goal = { ...target }; route.waypoint = waypoint; route.direct = direct;
       route.radius = radius; route.generation = this.generation; route.budget = 32 + route.seed;
     }
     return this.stepToward(start, waypoint, distance, radius, route);
