@@ -307,6 +307,8 @@ export class GameScene extends Phaser.Scene {
       this.projectiles
     );
     this.player.setAim(this.weaponSystem.aimAngle);
+    if (this.weaponSystem.consumeShot()) this.player.kickArm();
+    this.player.presentArm(deltaMs);
 
     this.abilities.update(deltaMs, this.player.position, this.enemies, this.xpOrbs, this.combat.damage);
     for (const enemy of this.enemies) {

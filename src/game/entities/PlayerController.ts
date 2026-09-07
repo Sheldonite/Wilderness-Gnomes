@@ -4,8 +4,9 @@ import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
 import { reducedMotion } from '../config/presentation';
+import { WEAPONS } from '../config/weapons';
 import type { PlayerStats, Vector2Like } from '../core/types';
-import { clampToArena, normalize } from '../utils/math';
+import { clampToArena, lerpAngle, normalize } from '../utils/math';
 import { PlayerAura } from './PlayerAura';
 
 export class PlayerController {
@@ -15,7 +16,11 @@ export class PlayerController {
   private aura?: PlayerAura;
   private idleTime = 0;
   private readonly arm?: Phaser.GameObjects.Image;
+  private readonly armWidth: number = 0;
+  private readonly armHeight: number = 0;
   private aimAngle = 0;
+  private displayedAim = 0;
+  private recoil = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -35,15 +40,24 @@ export class PlayerController {
       this.aura = new PlayerAura(scene, this.position);
     }
 
-    if (stats.weaponId === 'crossbow') {
-      this.arm = scene.add.image(x, y, 'heartwood-crossbow');
-      this.arm.setDepth(21).setOrigin(0.28, 0.55).setScale(0.084);
+    const arm = WEAPONS[stats.weaponId];
+    if (arm.overlayTexture) {
+      const width = character.id === 'hailey' ? Math.round((arm.overlayWidth ?? 46) * 0.88) : (arm.overlayWidth ?? 46);
+      this.arm = scene.add.image(x, y, arm.overlayTexture);
+      this.arm.setOrigin(arm.overlayOrigin?.x ?? 0.39, arm.overlayOrigin?.y ?? 0.5);
+      const source = this.arm.width / Math.max(1, this.arm.height);
+      this.armWidth = width;
+      this.armHeight = width / source;
+      this.arm.setDisplaySize(this.armWidth, this.armHeight).setDepth(21);
     }
   }
 
   setAim(angle: number): void {
     this.aimAngle = angle;
-    this.updateArm();
+  }
+
+  kickArm(): void {
+    this.recoil = 1;
   }
 
   update(deltaMs: number, keys: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>): void {
@@ -66,8 +80,11 @@ export class PlayerController {
     this.sprite.setPosition(safe.x, safe.y);
     this.updateAnimation(this.movementDirection);
     this.updateSecondaryMotion(deltaMs, direction);
-    this.updateArm();
     this.aura?.update(deltaMs, this.position);
+  }
+
+  presentArm(deltaMs: number): void {
+    this.updateArm(deltaMs);
   }
 
   /**
@@ -104,14 +121,24 @@ export class PlayerController {
     this.sprite.destroy();
   }
 
-  private updateArm(): void {
+  private updateArm(deltaMs: number): void {
     if (!this.arm) return;
-    const hold = 14;
+    const calm = reducedMotion();
+    const turn = calm ? 1 : 1 - Math.exp(-14 * (deltaMs / 1000));
+    this.displayedAim = lerpAngle(this.displayedAim, this.aimAngle, turn);
+    this.recoil = calm ? 0 : Math.max(0, this.recoil - deltaMs / 160);
+
+    const hold = 5;
+    const hands = this.character.id === 'hailey' ? 10 : 7;
+    const kick = this.recoil * this.recoil;
+    const along = hold - kick * 11;
     this.arm.setPosition(
-      this.sprite.x + Math.cos(this.aimAngle) * hold,
-      this.sprite.y + Math.sin(this.aimAngle) * hold + 8
+      this.sprite.x + Math.cos(this.displayedAim) * along,
+      this.sprite.y + Math.sin(this.displayedAim) * along + hands
     );
-    this.arm.setRotation(this.aimAngle + 0.22);
+    this.arm.setRotation(this.displayedAim - kick * 0.1);
+    this.arm.setDisplaySize(this.armWidth * (1 - kick * 0.06), this.armHeight);
+    this.arm.setDepth(Math.sin(this.displayedAim) >= 0.12 ? 21 : 19);
   }
 
   private updateAnimation(direction: Vector2Like): void {
