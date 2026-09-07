@@ -9,7 +9,7 @@ desktop app. The desktop app is an Electron shell (`electron/main.cjs`) around `
 npm run dist
 ```
 
-Builds the web bundle and then `release/Wilderness Gnomes-Setup-<version>.exe`, a one-click
+Builds the web bundle and then `release/Wilderness-Gnomes-Setup-<version>.exe`, a one-click
 installer that adds a desktop shortcut. `release/win-unpacked/Wilderness Gnomes.exe` runs
 without installing.
 
