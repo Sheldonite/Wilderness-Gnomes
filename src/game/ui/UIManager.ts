@@ -1,3 +1,4 @@
+import { BALANCE } from '../config/balance';
 import { isBossAbility } from '../config/bossAbilities';
 import { ownedUpgrades, upgradeRank, upgradeName, upgradeBenefit, upgradePreview, upgradeSummary, upgradeChanges, isAbility, isRanked, upgradeMaxRank } from '../core/UpgradeProgress';
 import type { GameManager } from '../core/GameManager';
@@ -54,6 +55,7 @@ export class UIManager {
             <div class="health-track" role="progressbar" aria-label="Health" aria-valuemin="0"><div class="health-fill"></div></div>
           </div>
         </section>
+        <section class="frankie-hud" aria-label="Frankie damage" hidden><img src="${frankiePortrait}" alt=""><div><strong>FRANKIE</strong><b class="frankie-bonus"></b><small class="frankie-total"></small></div></section>
         <div class="run-stats"><span class="time-stat">${icon('clock')}<b>0:00</b></span><i></i><span class="kill-stat">${icon('leaf')}<b>0</b><small>FOES</small></span></div>
         <button class="pause-button" type="button" aria-label="Pause game">${icon('pause')}<span>Pause</span><kbd>ESC</kbd></button>
         <div class="xp-hud"><span class="level-seal">1</span><div class="xp-meta"><span>WOODLAND WISDOM</span><span class="xp-value"></span></div>
@@ -173,9 +175,16 @@ export class UIManager {
     const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.hasMysteryCompanion, stats.hasMidnightCompanion, stats.hasFrankieCompanion, stats.frankieCount, stats.frankieFeatherBonus]);
     if (key === this.buildFingerprint) return;
     this.buildFingerprint = key;
+    const frankie = this.query('.frankie-hud');
+    frankie.hidden = !stats.hasFrankieCompanion;
+    if (stats.hasFrankieCompanion) {
+      const bonus = Math.min(BALANCE.companion.frankieFeatherCap, stats.frankieFeatherBonus);
+      this.query('.frankie-bonus').textContent = `+${bonus} feather damage`;
+      this.query('.frankie-total').textContent = `${BALANCE.companion.frankieDamage + bonus} damage / hit per bird`;
+    }
     const owned = ownedUpgrades(stats), strip = this.query('.build-strip');
     strip.hidden = !owned.length;
-    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isRanked(id) ? ` of ${upgradeMaxRank(id)}` : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b>${id === 'gain-companion-frankie' ? `<span class="feather-bonus">+${stats.frankieFeatherBonus} feather damage</span>` : ''}</span>`).join('');
+    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isRanked(id) ? ` of ${upgradeMaxRank(id)}` : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b></span>`).join('');
   }
 
   private createOverlay(title: string, body: string, eyebrow: string, emblem: string, className: string): HTMLElement {

@@ -465,4 +465,11 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 .desktop-updates .desktop-shell-link{border:0;background:none;color:#f0dab0aa;font-size:10px;text-decoration:underline;cursor:pointer;padding:0}
 .desktop-updates .desktop-shell-link:hover{color:#ffe3a3}
 
-.feather-bonus{margin-left:4px;padding:3px 6px;border-radius:6px;background:#ffffff18;color:#ffe4a0;white-space:nowrap;font-weight:700}
+.frankie-hud{position:absolute;left:24px;top:96px;display:flex;align-items:center;gap:9px;width:205px;padding:10px;border:1px solid #e2c483;border-radius:12px;background:#263d2df5;color:#fff0c4;box-shadow:0 3px 12px #14251b55}
+.frankie-hud[hidden]{display:none}
+.frankie-hud img{width:37px;height:48px;object-fit:contain}
+.frankie-hud div{display:flex;flex-direction:column;gap:5px}
+.frankie-hud strong{font-size:10px;letter-spacing:1.4px;color:#dbc998}
+.frankie-hud b{font-size:14px;font-variant-numeric:tabular-nums;color:#ffe4a0;white-space:nowrap}
+.frankie-hud small{font-size:10px;color:#ede5cb}
+@media(max-width:850px){.frankie-hud{left:17px;top:180px}}
