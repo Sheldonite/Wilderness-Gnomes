@@ -24,7 +24,7 @@ Every push to `main` already builds the game and publishes it to GitHub Pages, t
 
 The title screen's **Check for updates** button compares the commit of the build currently
 loaded with that manifest. If main is newer it offers **Download update**, fetches the
-changed files from Pages into `%APPDATA%\wilderness-gnomesundles\<commit>\`, verifies
+changed files from Pages into `%APPDATA%\wilderness-gnomes\bundles\<commit>\`, verifies
 each checksum, then **Reload with update** switches to it. Unchanged files are copied from the
 previous bundle instead of re-downloaded, and only the newest bundle is kept. The exe ships
 with the `dist/` it was built from and falls back to it if no bundle has been pulled.
