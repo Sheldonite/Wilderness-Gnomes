@@ -462,3 +462,5 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 .desktop-updates .desktop-update-action{border:1px solid #e4c680;border-radius:4px;background:linear-gradient(110deg,#e2c27f,#f0d599);color:#30412c;font-family:Georgia,serif;font-size:12px;padding:5px 11px;cursor:pointer}
 .desktop-updates .desktop-update-action:hover{background:#ffe3a3}
 @media(max-width:600px){.desktop-updates{right:8px;bottom:70px;font-size:10px}}
+.desktop-updates .desktop-shell-link{border:0;background:none;color:#f0dab0aa;font-size:10px;text-decoration:underline;cursor:pointer;padding:0}
+.desktop-updates .desktop-shell-link:hover{color:#ffe3a3}

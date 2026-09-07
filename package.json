@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node tests/run.cjs",
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/write-bundle-manifest.cjs",
     "preview": "vite preview --host 127.0.0.1",
     "desktop": "electron .",
     "dist": "npm run build && electron-builder --win",
