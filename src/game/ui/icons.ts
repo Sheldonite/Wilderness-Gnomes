@@ -25,6 +25,7 @@ const paths: Record<string, string> = {
   heart: '<path d="M16 28 4 16C-2 7 9 0 16 9 23 0 34 7 28 16Z"/>',
   split: '<path d="M16 28V15M16 18 6 8m10 10L26 8M3 13V5h8m10 0h8v8"/>',
   paw: '<ellipse cx="16" cy="23" rx="8" ry="6"/><ellipse cx="5" cy="14" rx="3" ry="4"/><ellipse cx="12" cy="7" rx="3" ry="4"/><ellipse cx="21" cy="7" rx="3" ry="4"/><ellipse cx="28" cy="14" rx="3" ry="4"/>',
+  buzzard: '<path d="M4 18c6-8 10-6 12-2 2-4 6-6 12-2"/><path d="M16 16c2 4 1 8-2 12m2-12c2 5 6 8 10 8"/><path d="M14 14 8 10m8 4 4-6"/>',
   pause: '<path d="M11 6v20M21 6v20"/>',
   arrow: '<path d="M5 16h22m-8-8 8 8-8 8"/>',
   star: '<path d="m16 2 4 10 10 4-10 4-4 10-4-10-10-4 10-4Z"/>',
@@ -42,5 +43,6 @@ export const UPGRADE_ICONS: Record<UpgradeId, string> = {
   'ricochet-charm': 'ricochet', 'firefly-orbit': 'firefly', 'bramble-snare': 'roots', 'spore-trail': 'mushroom',
   'acorn-shower': 'acorn', 'barkskin-ward': 'shield', 'woodland-magnet': 'magnet', 'mystery-double-pounce': 'pounce',
   'projectile-damage': 'spell', 'fire-rate': 'clock', 'move-speed': 'boot',
-  'max-health': 'heart', 'projectile-count': 'split', 'gain-companion-mystery': 'paw'
+  'max-health': 'heart', 'projectile-count': 'split', 'gain-companion-mystery': 'paw',
+  'gain-companion-frankie': 'buzzard', 'frankie-flock': 'buzzard'
 };

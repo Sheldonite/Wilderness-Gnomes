@@ -42,7 +42,8 @@ export class UIManager {
     character: PlayerCharacterDefinition,
     portrait: string,
     private readonly mysteryPortrait: string,
-    private readonly midnightPortrait: string
+    private readonly midnightPortrait: string,
+    private readonly frankiePortrait: string
   ) {
     this.root = document.getElementById('ui-root')!;
     this.root.innerHTML = `
@@ -98,7 +99,8 @@ export class UIManager {
     const arm = WEAPONS[this.gameManager.playerStats.weaponId];
     list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon(arm.icon)} ${arm.name} · ${arm.shortTrait}</p>`);
     const friends = [this.gameManager.playerStats.hasMysteryCompanion ? 'Mystery · pounce' : '',
-      this.gameManager.playerStats.hasMidnightCompanion ? 'Midnight · swat' : ''].filter(Boolean);
+      this.gameManager.playerStats.hasMidnightCompanion ? 'Midnight · swat' : '',
+      this.gameManager.playerStats.hasFrankieCompanion ? `Frankie · ${this.gameManager.playerStats.frankieCount} buzzard${this.gameManager.playerStats.frankieCount === 1 ? '' : 's'}` : ''].filter(Boolean);
     if (friends.length) list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${friends.join(' &nbsp; / &nbsp; ')}</p>`);
     const stats = this.gameManager.playerStats;
     const owned = ownedUpgrades(stats).filter(id => !id.startsWith('gain-companion'));
@@ -125,18 +127,19 @@ export class UIManager {
       const button = document.createElement('button'); button.type = 'button'; button.className = `upgrade-card ${progress.current ? 'owned-upgrade' : 'new-upgrade'}`;
       const isMystery = choice.id === 'gain-companion-mystery';
       const isMidnight = choice.id === 'gain-companion-midnight';
-      const isCompanion = isMystery || isMidnight;
+      const isFrankie = choice.id === 'gain-companion-frankie' || choice.id === 'frankie-flock';
+      const isCompanion = isMystery || isMidnight || isFrankie;
       if (isCompanion) button.classList.add('epic-companion');
       if (isBossAbility(choice.id)) button.classList.add('boss-relic');
-      const portrait = isMidnight ? this.midnightPortrait : this.mysteryPortrait;
-      const name = isMidnight ? 'Midnight' : 'Mystery';
+      const portrait = isMidnight ? this.midnightPortrait : isFrankie ? this.frankiePortrait : this.mysteryPortrait;
+      const name = isMidnight ? 'Midnight' : isFrankie ? 'Frankie' : 'Mystery';
       const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
         ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
         : UPGRADE_ICONS[choice.id];
       const summary = upgradeSummary(choice, this.gameManager.playerStats);
-      const changes = progress.current || choice.id === 'midnight-mighty-swat' ? upgradeChanges(choice, this.gameManager.playerStats) : '';
+      const changes = progress.current || choice.id === 'midnight-mighty-swat' || isFrankie ? upgradeChanges(choice, this.gameManager.playerStats) : '';
       button.title = choice.description;
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}">` : icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC' : isCompanion ? 'COMPANION' : progress.current ? 'UPGRADE' : 'NEW'}</span><strong>${upgradeName(choice.id, this.gameManager.playerStats)}</strong>${progress.capped ? `<span class="upgrade-rank">Rank ${progress.current} &rarr; ${progress.next} / ${progress.maxRank}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>` : isCompanion ? '<span class="upgrade-rank">One-time unlock</span>' : `<span class="upgrade-rank">Picks ${progress.current} &rarr; ${progress.next}</span>`}<span class="upgrade-description">${summary}</span>${changes ? `<span class="upgrade-changes">${changes}</span>` : ''}<span class="upgrade-select">Choose ${icon('arrow')}</span>`;
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}">` : icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC' : isCompanion ? 'COMPANION' : progress.current ? 'UPGRADE' : 'NEW'}</span><strong>${upgradeName(choice.id, this.gameManager.playerStats)}</strong>${progress.capped ? `<span class="upgrade-rank">Rank ${progress.current} &rarr; ${progress.next} / ${progress.maxRank}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>` : isCompanion && choice.id !== 'frankie-flock' ? '<span class="upgrade-rank">One-time unlock</span>' : `<span class="upgrade-rank">Picks ${progress.current} &rarr; ${progress.next}</span>`}<span class="upgrade-description">${summary}</span>${changes ? `<span class="upgrade-changes">${changes}</span>` : ''}<span class="upgrade-select">Choose ${icon('arrow')}</span>`;
       const select = () => {
         if (selected) return; selected = true;
         this.clearOverlay(); onChoose(choice); this.refreshBuild();
@@ -167,7 +170,7 @@ export class UIManager {
 
   private refreshBuild(): void {
     const stats = this.gameManager.playerStats;
-    const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.hasMysteryCompanion, stats.hasMidnightCompanion]);
+    const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.hasMysteryCompanion, stats.hasMidnightCompanion, stats.hasFrankieCompanion, stats.frankieCount]);
     if (key === this.buildFingerprint) return;
     this.buildFingerprint = key;
     const owned = ownedUpgrades(stats), strip = this.query('.build-strip');
