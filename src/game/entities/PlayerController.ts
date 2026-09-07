@@ -72,8 +72,8 @@ export class PlayerController {
 
     const next = clampToArena(
       {
-        x: this.sprite.x + direction.x * this.stats.speed * dt,
-        y: this.sprite.y + direction.y * this.stats.speed * dt
+        x: this.sprite.x + direction.x * this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * dt,
+        y: this.sprite.y + direction.y * this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * dt
       },
       this.radius
     );

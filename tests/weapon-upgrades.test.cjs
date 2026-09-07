@@ -54,11 +54,15 @@ test('both weapons offer and apply every ability rank, companion, stat, and boss
   const upgrades = new UpgradeSystem();
   for (const weapon of ['spell', 'crossbow']) {
     const stats = new GameManager(weapon).playerStats; stats.level = 10;
-    for (const id of ['gain-companion-mystery', 'gain-companion-midnight', 'projectile-damage', 'fire-rate', 'projectile-count', 'move-speed', 'max-health']) {
+    for (const id of ['projectile-damage', 'fire-rate', 'projectile-count', 'move-speed', 'max-health']) {
       const choice = upgrades.getAvailable(stats).find(c => c.id === id); assert.ok(choice, `${weapon}: ${id}`);
       upgrades.applyUpgrade(choice, stats); assert.equal(stats.upgradeCounts[id], 1);
     }
+    const owner = { 'mystery-double-pounce': 'wizard', 'midnight-mighty-swat': 'hailey',
+      'ribbon-sweep': 'ron', 'inspiring-shout': 'ron', 'dizzying-flurry': 'ron' };
     for (const id of ABILITY_IDS) for (let rank = 1; rank <= 10; rank++) {
+      stats.characterId = owner[id] ?? 'wizard';
+      stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true;
       const choice = upgrades.getAvailable(stats).find(c => c.id === id); assert.equal(choice.rank, rank);
       const snapshot = JSON.stringify(stats); assert.ok(upgradePreview(choice, stats).after); upgradeChanges(choice, stats);
       assert.equal(JSON.stringify(stats), snapshot);

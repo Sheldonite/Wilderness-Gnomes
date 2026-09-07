@@ -36,7 +36,7 @@ export class WeaponSystem {
       return;
     }
 
-    this.cooldownRemainingMs = stats.weaponCooldownMs;
+    this.cooldownRemainingMs = stats.weaponCooldownMs / (1 + stats.shoutAttackSpeedBonus);
     this.shotThisFrame = true;
     this.fireProjectiles(playerPosition, target.position, stats, projectiles);
   }

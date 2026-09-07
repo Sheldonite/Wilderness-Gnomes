@@ -28,7 +28,7 @@ test('three distinct choices reserve an unlock and a rank increase through many 
     for (let level = 0; level < 35; level++) {
       const available = upgrades.getAvailable(stats), choices = upgrades.getChoices(stats);
       assert.equal(choices.length, 3); assert.equal(new Set(choices.map(c => c.id)).size, 3);
-      if (available.some(c => c.rank === 1 || c.id.startsWith('gain-companion-'))) assert.ok(choices.some(c => c.rank === 1 || c.id.startsWith('gain-companion-')));
+      if (available.some(c => c.rank === 1)) assert.ok(choices.some(c => c.rank === 1));
       if (available.some(c => c.rank > 1)) assert.ok(choices.some(c => c.rank > 1));
       upgrades.applyUpgrade(choices[level % 3], stats);
       assert.ok(Object.values(stats.abilityRanks).every(rank => rank <= 10));
@@ -36,17 +36,29 @@ test('three distinct choices reserve an unlock and a rank increase through many 
   }
 });
 
-test('Mystery gates Double Pounce, and recruitment disappears after selection', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
-  assert.ok(!upgrades.getAvailable(stats).some(c => c.id === 'mystery-double-pounce'));
-  upgrades.applyUpgrade(upgrades.getAvailable(stats).find(c => c.id === 'gain-companion-mystery'), stats);
-  assert.ok(upgrades.getAvailable(stats).some(c => c.id === 'mystery-double-pounce'));
-  assert.ok(!upgrades.getAvailable(stats).some(c => c.id === 'gain-companion-mystery'));
+test('Double Pounce belongs to Nick alone, and no companion is ever offered as a card', () => {
+  const upgrades = new UpgradeSystem();
+  const nick = new GameManager('spell', undefined, 'wizard').playerStats;
+  assert.equal(nick.hasMysteryCompanion, true);
+  assert.ok(upgrades.getAvailable(nick).some(c => c.id === 'mystery-double-pounce'));
+  for (const character of ['hailey', 'sheldon', 'ron']) {
+    const other = new GameManager('spell', undefined, character).playerStats;
+    assert.ok(!upgrades.getAvailable(other).some(c => c.id === 'mystery-double-pounce'), character);
+  }
+  for (const character of ['wizard', 'hailey', 'sheldon', 'ron']) {
+    const stats = new GameManager('spell', undefined, character).playerStats;
+    assert.ok(!upgrades.getAvailable(stats).some(c => c.id.startsWith('gain-companion')), character);
+    assert.ok(!upgrades.getAvailable(stats).some(c => c.id === 'frankie-flock'), character);
+  }
 });
 
 test('all ability ranks have real next-benefit descriptions; stale cards cannot apply twice', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true; stats.level = 10;
+  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
+  stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true; stats.level = 10;
+  const owner = { 'mystery-double-pounce': 'wizard', 'midnight-mighty-swat': 'hailey',
+    'ribbon-sweep': 'ron', 'inspiring-shout': 'ron', 'dizzying-flurry': 'ron' };
   for (const id of ABILITY_IDS) {
+    stats.characterId = owner[id] ?? 'wizard';
     for (let rank = 1; rank <= 10; rank++) {
       const offer = upgrades.getAvailable(stats).find(c => c.id === id);
       assert.equal(offer.rank, rank); assert.ok(offer.description.length > 40);

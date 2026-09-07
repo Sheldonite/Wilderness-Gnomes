@@ -215,8 +215,8 @@ test('temporary save failure can recover without losing session purchases or dup
 test('market has four distinct trades with priced and described inventory', () => {
   assert.equal(MARKET_VENDORS.length, 4);
   assert.equal(new Set(MARKET_VENDORS.map(vendor => vendor.id)).size, 4);
-  assert.equal(MARKET_ITEMS.length, 16);
-  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 16);
+  assert.equal(MARKET_ITEMS.length, 17);
+  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 17);
   for (const vendor of MARKET_VENDORS) assert.ok(MARKET_ITEMS.some(item => item.vendorId === vendor.id));
   for (const item of MARKET_ITEMS) {
     assert.ok(item.name && item.description && item.effect && item.icon);
@@ -245,8 +245,11 @@ test('new runs apply every purchased bonus without granting boss abilities or co
     assert.equal(stats.weaponCooldownMs, base.playerStats.weaponCooldownMs * 0.85);
     assert.equal(stats.projectileCount, base.playerStats.projectileCount + 1);
     assert.equal(stats.mysteryDamage, base.playerStats.mysteryDamage * 1.45);
-    assert.equal(stats.hasMysteryCompanion, false);
+    // Nick always travels with Mystery; no purchase can add anyone else's companion.
+    assert.equal(stats.hasMysteryCompanion, true);
     assert.equal(stats.hasMidnightCompanion, false);
+    assert.equal(stats.hasFrankieCompanion, false);
+    assert.equal(stats.hasTobiasCompanion, false);
     assert.deepEqual(stats.bossAbilityRanks, { crownfire: 0, stormcall: 0, 'phoenix-heart': 0 });
     assert.ok(Object.values(stats.abilityRanks).every(rank => rank === 0));
     assert.notEqual(base.runId, upgraded.runId);
@@ -385,8 +388,9 @@ test('UPS Buddy is a saved cosmetic and grants no combat bonuses or fighting com
   assert.equal(loaded.profile.gold,5);
   assert.deepEqual(marketBonuses(loaded.profile),base);
   const game=new GameManager('spell',loaded.profile);
-  assert.equal(game.playerStats.hasMysteryCompanion,false);
+  assert.equal(game.playerStats.hasMysteryCompanion,true);
   assert.equal(game.playerStats.hasMidnightCompanion,false);
+  assert.equal(game.playerStats.hasFrankieCompanion,false);
 });
 
 

@@ -13,23 +13,20 @@ function foe(x, y, health = 100) {
 const origin = { x: 0, y: 0 };
 const damage = (enemy, amount) => enemy.takeDamage(amount);
 
-test('Frankie recruits once, then flock upgrades add birds up to five', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
-  assert.equal(stats.hasFrankieCompanion, false);
-  assert.ok(upgrades.getAvailable(stats).some(u => u.id === 'gain-companion-frankie'));
-  assert.ok(!upgrades.getAvailable(stats).some(u => u.id === 'frankie-flock'));
-  upgrades.applyUpgrade(upgrades.getAvailable(stats).find(u => u.id === 'gain-companion-frankie'), stats);
-  assert.equal(stats.hasFrankieCompanion, true); assert.equal(stats.frankieCount, 1);
+test('Frankie comes with Sheldon and grows a bird every second rank, never as a card', () => {
+  const game = new GameManager('spell', undefined, 'sheldon'), stats = game.playerStats, upgrades = new UpgradeSystem();
+  assert.equal(stats.hasFrankieCompanion, true);
+  assert.equal(stats.frankieCount, 1);
   assert.ok(!upgrades.getAvailable(stats).some(u => u.id === 'gain-companion-frankie'));
-  for (let n = 2; n <= 5; n++) {
-    const flock = upgrades.getAvailable(stats).find(u => u.id === 'frankie-flock');
-    assert.ok(flock, `flock available at ${n - 1}`);
-    upgrades.applyUpgrade(flock, stats);
-    assert.equal(stats.frankieCount, n);
-  }
   assert.ok(!upgrades.getAvailable(stats).some(u => u.id === 'frankie-flock'));
+  const birdsAtLevel = (level) => { game.level = level; game.syncCompanionToLevel(); return stats.frankieCount; };
+  assert.equal(birdsAtLevel(2), 1);
+  assert.equal(birdsAtLevel(6), 2);
+  assert.equal(birdsAtLevel(12), 3);
+  assert.equal(birdsAtLevel(18), 4);
+  assert.equal(birdsAtLevel(24), 5);
+  assert.equal(birdsAtLevel(60), 5);
   assert.equal(new GameManager().playerStats.hasFrankieCompanion, false);
-  assert.equal(new GameManager().playerStats.frankieCount, 0);
 });
 
 test('Frankie orbits at the listed radius, and more upgrades mean more birds', () => {

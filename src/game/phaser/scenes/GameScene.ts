@@ -23,6 +23,8 @@ import { RareRockSystem } from '../../systems/RareRockSystem';
 import { BossPowerSystem } from '../../systems/BossPowerSystem';
 import { BOSS_ARENA_RADIUS, insideBossArena, type BossId } from '../../core/BossGate';
 import { BOSS_ABILITY_IDS } from '../../config/bossAbilities';
+import { TOBIAS_SPRITE_KEY } from '../../config/tobiasSprite';
+import { COMPANION_NAMES, describeCompanionRank } from '../../config/companions';
 import { MarketProgress, marketProgress, emptyMarketProfile } from '../../core/MarketProgress';
 import type { Vector2Like } from '../../core/types';
 import { CollisionSystem } from '../../systems/CollisionSystem';
@@ -110,7 +112,7 @@ export class GameScene extends Phaser.Scene {
     this.selectedWeaponId = getWeapon(reviewWeapon ?? data.weaponId).id;
     this.practiceRun = import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review');
     this.cosmetic = new CosmeticGlow(this);
-    this.gameManager = new GameManager(this.selectedWeaponId, this.practiceRun ? emptyMarketProfile() : marketProgress.refresh());
+    this.gameManager = new GameManager(this.selectedWeaponId, this.practiceRun ? emptyMarketProfile() : marketProgress.refresh(), this.selectedCharacter.id);
     this.scenerySystem = new ScenerySystem(this);
     this.enemySpawner = new EnemySpawner(this, this.scenerySystem.navigation);
     this.companionSystem = new CompanionSystem(this, this.gameManager.playerStats, this.scenerySystem.navigation);
@@ -118,9 +120,14 @@ export class GameScene extends Phaser.Scene {
     this.upgradeSystem = new UpgradeSystem();
     this.collisionSystem = new CollisionSystem();
     this.cameraController = new CameraController(this.cameras.main);
+    const companionPortrait = {
+      mystery: () => this.textures.getBase64(MYSTERY_SPRITE_KEY, 0),
+      midnight: () => this.textures.getBase64(MIDNIGHT_SPRITE_KEY, 'walk-down-0'),
+      frankie: () => this.textures.getBase64(FRANKIE_PORTRAIT_KEY),
+      tobias: () => this.textures.getBase64(TOBIAS_SPRITE_KEY, 0)
+    }[this.selectedCharacter.companionId]();
     this.uiManager = new UIManager(this.gameManager, () => this.togglePause(), this.selectedCharacter,
-      this.textures.getBase64(this.selectedCharacter.textureKey, 0), this.textures.getBase64(MYSTERY_SPRITE_KEY, 0),
-      this.textures.getBase64(MIDNIGHT_SPRITE_KEY, 'walk-down-0'), this.textures.getBase64(FRANKIE_PORTRAIT_KEY));
+      this.textures.getBase64(this.selectedCharacter.textureKey, 0), companionPortrait);
     this.debugSpriteSheetMenu = import.meta.env.DEV ? new DebugSpriteSheetMenu(this) : undefined;
     this.presentation = new PresentationSystem(this);
     this.abilities = new AbilitySystem(this, this.gameManager.playerStats);
@@ -241,7 +248,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (review === 'progression') {
-      for (const id of ['spore-trail', 'acorn-shower', 'acorn-shower', 'projectile-damage', 'projectile-damage', 'gain-companion-midnight']) {
+      for (const id of ['spore-trail', 'acorn-shower', 'acorn-shower', 'projectile-damage', 'projectile-damage', 'move-speed']) {
         const choice = this.upgradeSystem.getAvailable(this.gameManager.playerStats).find(u => u.id === id)!;
         this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
       }
@@ -322,7 +329,7 @@ export class GameScene extends Phaser.Scene {
         enemy.health = 500; this.enemies.push(enemy);
       }
       if (review === 'midnight-upgrade') {
-        this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u => ['gain-companion-midnight', 'gain-companion-mystery', 'max-health'].includes(u.id));
+        this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u => ['midnight-mighty-swat', 'max-health', 'move-speed'].includes(u.id));
         this.gameManager.level = 2; this.gameManager.state = 'LevelUpPaused';
       }
       this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
@@ -426,6 +433,34 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.level = 2; this.gameManager.xpToNextLevel = 33;
       this.gameManager.playerStats.hasMysteryCompanion = true;
       this.enemies.push(new EnemyController(this, 1870, 1600, 0, this.scenerySystem.navigation));
+    } else if (review === 'ron') {
+      // Ron with all three performance skills running, so the ribbons, shout and spin are visible.
+      const rank = Math.min(10, Math.max(1, Number(new URLSearchParams(location.search).get('rank') ?? 5)));
+      for (const id of ['ribbon-sweep', 'inspiring-shout', 'dizzying-flurry'] as AbilityId[]) {
+        this.gameManager.playerStats.abilityRanks[id] = rank as AbilityRank;
+      }
+      this.gameManager.level = 12; this.gameManager.syncCompanionToLevel();
+      // Level 12 would otherwise summon the boss arena, which clears the reviewed crowd.
+      this.gameManager.bossGate.defeat('oven'); this.gameManager.bossGate.defeat('stag');
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      this.gameManager.xpToNextLevel = 100000;
+      for (let i = 0; i < 10; i++) {
+        const angle = i * 0.628;
+        const enemy = new EnemyController(this, 1600 + Math.cos(angle) * 190, 1600 + Math.sin(angle) * 190, 0, this.scenerySystem.navigation);
+        enemy.health = 4000; this.enemies.push(enemy);
+      }
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span data-ron-review>RON REVIEW</span><button type="button">Walk trail</button><button type="button">More foes</button>';
+      const buttons = this.reviewControls.querySelectorAll('button');
+      buttons[0].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[0].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
+      buttons[1].onclick = () => {
+        for (let i = 0; i < 6; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const enemy = new EnemyController(this, this.player.position.x + Math.cos(angle) * 200, this.player.position.y + Math.sin(angle) * 200, 0, this.scenerySystem.navigation);
+          enemy.health = 4000; this.enemies.push(enemy);
+        }
+      };
+      document.body.append(this.reviewControls);
     } else if (review === 'frankie') {
       this.gameManager.playerStats.hasFrankieCompanion = true;
       this.gameManager.playerStats.frankieCount = 5;
@@ -628,6 +663,11 @@ export class GameScene extends Phaser.Scene {
     const choices = bossReward ? this.upgradeSystem.getBossChoices(this.gameManager.playerStats)
       : this.reviewChoices ?? this.upgradeSystem.getChoices(this.gameManager.playerStats);
     this.reviewChoices = undefined;
+    const grewTo = this.gameManager.consumeCompanionGrowth();
+    const stats = this.gameManager.playerStats;
+    const note = grewTo
+      ? `${COMPANION_NAMES[stats.companionId]} grew to rank ${grewTo} — ${describeCompanionRank(stats.companionId, grewTo, stats)}.`
+      : undefined;
     this.uiManager.showLevelUp(choices, (choice) => {
       if (bossReward) this.upgradeSystem.applyBossUpgrade(choice, this.gameManager);
       else this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
@@ -635,7 +675,7 @@ export class GameScene extends Phaser.Scene {
       this.levelUpDisplayed = false;
       this.gameManager.resumeAfterUpgrade();
       this.events.emit('presentation:level', this.player.position);
-    }, this.gameManager.upgradeSource);
+    }, this.gameManager.upgradeSource, note);
   }
 
   private showPausedOnce(): void {

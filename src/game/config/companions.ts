@@ -20,12 +20,6 @@ export const COMPANION_NAMES: Record<CompanionId, string> = {
   tobias: 'Tobias'
 };
 
-export const COMPANION_BLURBS: Record<CompanionId, string> = {
-  mystery: 'A violet cat who pounces on anything that comes near.',
-  midnight: 'A black cat whose paw swats flatten a whole arc of foes.',
-  frankie: 'A black buzzard who circles overhead and stoops on the unwary.',
-  tobias: 'A bluefin tuna who swims through the air and torpedoes trouble.'
-};
 
 /** One companion rank for every this many player levels. Level 3 gives rank 1, level 30 rank 10. */
 export const COMPANION_LEVELS_PER_RANK = 3;

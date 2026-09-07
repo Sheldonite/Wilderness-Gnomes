@@ -3,7 +3,11 @@ import type { AbilityId, PlayerStats, Vector2Like } from './types';
 import type { CombatTarget, DealDamage } from './CombatResolver';
 import { distanceSq, normalize } from '../utils/math';
 
-export interface AbilityEnemy extends CombatTarget { slowMultiplier: number; }
+export interface AbilityEnemy extends CombatTarget {
+  slowMultiplier: number;
+  /** Ribbon Sweep throws foes back; anything that cannot be moved simply takes the damage. */
+  displace?(dx: number, dy: number): void;
+}
 export interface MagnetPickup { position: Vector2Like; isCollected: boolean; attract(): void; }
 export interface Patch extends Vector2Like { bornAt: number; expiresAt: number; radius: number; strength: number; }
 export interface SporePatch extends Patch { trailAngle: number; }
@@ -11,6 +15,10 @@ export interface Acorn extends Vector2Like { landsAt: number; radius: number; da
 /** Oak Fall: the great acorn rolling on after impact. */
 export interface Roller extends Vector2Like { dx: number; dy: number; endsAt: number; radius: number; damage: number; hit: Set<number>; }
 export interface AbilityEvent { kind: 'magnet' | 'impact'; position: Vector2Like; radius: number; }
+/** Ron: one swing of the ribbon staff, kept so the renderer can trail it behind him. */
+export interface RibbonArc { position: Vector2Like; angle: number; arc: number; range: number; bornAt: number; expiresAt: number; echo: boolean; }
+/** Ron: the ring of sound that opens an Inspiring Shout. */
+export interface ShoutRing { position: Vector2Like; radius: number; bornAt: number; expiresAt: number; }
 
 /** Pure gameplay simulation. Renderer capacity and reduced motion cannot change its results. */
 export class AbilitySimulation {
@@ -30,6 +38,18 @@ export class AbilitySimulation {
   private readonly harvestStacks: number[] = [];
   private lastSpore?: Vector2Like;
   private lastPosition: Vector2Like = { x: 0, y: 0 };
+  /** Ron's three performance skills, readable by the renderer. */
+  ribbons: RibbonArc[] = [];
+  shoutRings: ShoutRing[] = [];
+  spinEndsAt = 0;
+  spinRadius = 0;
+  shoutEndsAt = 0;
+  private facing: Vector2Like = { x: 0, y: 1 };
+  private pendingEchoes: { at: number; position: Vector2Like; angle: number; arc: number; range: number; damage: number; knockback: number }[] = [];
+  private spinNextTickAt = 0;
+  private shoutHealCarryMs = 0;
+  private lastRonPosition?: Vector2Like;
+  private vortexSlow = 0;
 
   constructor(private readonly stats: PlayerStats) {}
 
@@ -72,7 +92,9 @@ export class AbilitySimulation {
     const r = this.ranks;
     for (const [id, cooldown] of [
       ['bramble-snare', ABILITIES.bramble.cooldownMs], ['spore-trail', ABILITIES.spore.cooldownMs],
-      ['acorn-shower', this.acornCooldown()], ['woodland-magnet', ABILITIES.magnet.cooldownMs[r['woodland-magnet']]]
+      ['acorn-shower', this.acornCooldown()], ['woodland-magnet', ABILITIES.magnet.cooldownMs[r['woodland-magnet']]],
+      ['ribbon-sweep', ABILITIES.ribbon.cooldownMs], ['inspiring-shout', ABILITIES.shout.cooldownMs],
+      ['dizzying-flurry', ABILITIES.flurry.cooldownMs]
     ] as const) {
       if (r[id] && !this.due.has(id)) {
         this.due.set(id, this.elapsedMs + cooldown);
@@ -131,6 +153,7 @@ export class AbilitySimulation {
       this.events.push({ kind: 'magnet', position: { ...position }, radius });
       this.due.set('woodland-magnet', this.elapsedMs + ABILITIES.magnet.cooldownMs[ranks['woodland-magnet']]);
     }
+    this.updateRonPerformance(deltaMs, position, enemies, damage);
     this.updateFireflyPositions(deltaMs, position, enemies);
     const swarmTier = this.tier('firefly-orbit');
     const fireflyDamage = swarmTier >= 0 ? ABILITIES.firefly.swarm[swarmTier].damage : ABILITIES.firefly.damage;
@@ -146,6 +169,9 @@ export class AbilitySimulation {
         inThorns = true;
         const rooted = thornwall && this.elapsedMs < patch.bornAt + thornwall.rootMs;
         enemy.slowMultiplier = rooted ? 0 : Math.min(enemy.slowMultiplier, 1 - patch.strength);
+      }
+      if (this.vortexSlow > 0 && this.elapsedMs < this.spinEndsAt && distanceSq(enemy.position, position) <= this.spinRadius ** 2) {
+        enemy.slowMultiplier = Math.min(enemy.slowMultiplier, 1 - this.vortexSlow);
       }
       if (thornwall && inThorns) {
         const ticks = this.accumulate(this.thornExposure, enemy.id, deltaMs, thornwall.tickMs);
@@ -205,6 +231,127 @@ export class AbilitySimulation {
     if (this.spores.length > maxPatches) this.spores = this.spores.slice(-maxPatches);
     for (const map of [this.fireflyHits, this.sporeExposure, this.thornExposure]) for (const id of map.keys()) if (!living.has(id)) map.delete(id);
     this.lastPosition = { ...position };
+  }
+
+  /**
+   * Ron's performance. The ribbon sweeps toward whatever is nearest, falling back to the way he
+   * is walking; the shout rallies him for a few seconds; the flurry beats on everything close by.
+   * Awakened ranks add a trailing echo, healing, and a pull toward the spin.
+   */
+  private updateRonPerformance(deltaMs: number, position: Vector2Like, enemies: AbilityEnemy[], damage: DealDamage): void {
+    const ranks = this.ranks;
+    const previous = this.lastRonPosition ?? position;
+    this.lastRonPosition = { ...position };
+    const moved = { x: position.x - previous.x, y: position.y - previous.y };
+    if (moved.x !== 0 || moved.y !== 0) this.facing = normalize(moved.x, moved.y);
+
+    if (ranks['ribbon-sweep'] && this.ready('ribbon-sweep')) {
+      const rank = ranks['ribbon-sweep'], tier = this.tier('ribbon-sweep');
+      const cyclone = tier >= 0 ? ABILITIES.ribbon.cyclone[tier] : undefined;
+      const arc = (cyclone?.arcDegrees ?? ABILITIES.ribbon.arcDegrees) * Math.PI / 180;
+      const range = cyclone?.range ?? ABILITIES.ribbon.range;
+      const hurt = ABILITIES.ribbon.damage[rank], push = ABILITIES.ribbon.knockback[rank];
+      const target = this.closest(position, enemies, range);
+      const angle = target
+        ? Math.atan2(target.position.y - position.y, target.position.x - position.x)
+        : Math.atan2(this.facing.y, this.facing.x);
+      this.sweepRibbon(position, angle, arc, range, hurt, push, enemies, damage, false);
+      if (cyclone) this.pendingEchoes.push({ at: this.elapsedMs + cyclone.echoMs, position: { ...position }, angle,
+        arc, range, damage: hurt * cyclone.echoDamage, knockback: push * .5 });
+      this.due.set('ribbon-sweep', this.elapsedMs + ABILITIES.ribbon.cooldownMs);
+    }
+    for (const echo of this.pendingEchoes) {
+      if (this.elapsedMs < echo.at) continue;
+      this.sweepRibbon(echo.position, echo.angle, echo.arc, echo.range, echo.damage, echo.knockback, enemies, damage, true);
+    }
+    this.pendingEchoes = this.pendingEchoes.filter(echo => this.elapsedMs < echo.at);
+    this.ribbons = this.ribbons.filter(arc => this.elapsedMs < arc.expiresAt);
+
+    if (ranks['inspiring-shout'] && this.ready('inspiring-shout')) {
+      const tier = this.tier('inspiring-shout');
+      this.shoutEndsAt = this.elapsedMs + ABILITIES.shout.durationMs;
+      this.shoutHealCarryMs = 0;
+      const anthem = tier >= 0 ? ABILITIES.shout.anthem[tier] : undefined;
+      const radius = anthem ? anthem.waveRadius : 180;
+      this.shoutRings.push({ position: { ...position }, radius, bornAt: this.elapsedMs, expiresAt: this.elapsedMs + 700 });
+      if (anthem) {
+        for (const enemy of enemies) {
+          if (enemy.isDead || distanceSq(enemy.position, position) > (radius + enemy.radius) ** 2) continue;
+          damage(enemy, anthem.waveDamage);
+        }
+      }
+      this.due.set('inspiring-shout', this.elapsedMs + ABILITIES.shout.cooldownMs);
+    }
+    this.shoutRings = this.shoutRings.filter(ring => this.elapsedMs < ring.expiresAt);
+    const shouting = ranks['inspiring-shout'] > 0 && this.elapsedMs < this.shoutEndsAt;
+    this.stats.shoutAttackSpeedBonus = shouting ? ABILITIES.shout.attackSpeed[ranks['inspiring-shout']] : 0;
+    this.stats.shoutMoveSpeedBonus = shouting ? ABILITIES.shout.moveSpeed[ranks['inspiring-shout']] : 0;
+    const anthemTier = this.tier('inspiring-shout');
+    if (shouting && anthemTier >= 0) {
+      this.shoutHealCarryMs += deltaMs;
+      const seconds = Math.floor(this.shoutHealCarryMs / 1000);
+      if (seconds > 0) {
+        this.shoutHealCarryMs -= seconds * 1000;
+        this.pendingHeal += seconds * ABILITIES.shout.anthem[anthemTier].healPerSecond;
+      }
+    }
+
+    if (ranks['dizzying-flurry'] && this.ready('dizzying-flurry')) {
+      const tier = this.tier('dizzying-flurry');
+      const duration = tier >= 0 ? ABILITIES.flurry.vortex[tier].durationMs : ABILITIES.flurry.durationMs;
+      this.spinEndsAt = this.elapsedMs + duration;
+      this.spinNextTickAt = this.elapsedMs;
+      this.due.set('dizzying-flurry', this.elapsedMs + ABILITIES.flurry.cooldownMs + duration);
+    }
+    const spinTier = this.tier('dizzying-flurry');
+    const vortex = spinTier >= 0 ? ABILITIES.flurry.vortex[spinTier] : undefined;
+    this.spinRadius = ABILITIES.flurry.radius[ranks['dizzying-flurry']];
+    this.vortexSlow = this.elapsedMs < this.spinEndsAt && vortex ? vortex.slow : 0;
+    if (ranks['dizzying-flurry'] && this.elapsedMs < this.spinEndsAt) {
+      if (this.elapsedMs >= this.spinNextTickAt) {
+        this.spinNextTickAt = this.elapsedMs + ABILITIES.flurry.tickMs;
+        for (const enemy of enemies) {
+          if (enemy.isDead || distanceSq(enemy.position, position) > (this.spinRadius + enemy.radius) ** 2) continue;
+          damage(enemy, ABILITIES.flurry.damage[ranks['dizzying-flurry']]);
+        }
+        this.events.push({ kind: 'impact', position: { ...position }, radius: this.spinRadius });
+      }
+      const pull = vortex ? vortex.pull * deltaMs / 1000 : 0;
+      if (pull > 0) {
+        for (const enemy of enemies) {
+          if (enemy.isDead || !enemy.displace) continue;
+          const dx = position.x - enemy.position.x, dy = position.y - enemy.position.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance <= enemy.radius + 8 || distance > this.spinRadius) continue;
+          const step = Math.min(pull, distance - enemy.radius);
+          enemy.displace(dx / distance * step, dy / distance * step);
+        }
+      }
+    }
+  }
+
+  private sweepRibbon(origin: Vector2Like, angle: number, arc: number, range: number, hurt: number,
+    knockback: number, enemies: AbilityEnemy[], damage: DealDamage, echo: boolean): void {
+    this.ribbons.push({ position: { ...origin }, angle, arc, range, bornAt: this.elapsedMs, expiresAt: this.elapsedMs + 260, echo });
+    const half = arc / 2;
+    for (const enemy of enemies) {
+      if (enemy.isDead) continue;
+      const dx = enemy.position.x - origin.x, dy = enemy.position.y - origin.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > range + enemy.radius) continue;
+      // A full circle needs no angle test, and a foe standing on Ron is always caught.
+      if (arc < Math.PI * 2 - 1e-6 && distance > 1) {
+        let delta = Math.atan2(dy, dx) - angle;
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+        if (Math.abs(delta) > half) continue;
+      }
+      damage(enemy, hurt);
+      if (knockback > 0 && enemy.displace) {
+        const push = distance > 0 ? { x: dx / distance, y: dy / distance } : { x: Math.cos(angle), y: Math.sin(angle) };
+        enemy.displace(push.x * knockback, push.y * knockback);
+      }
+    }
   }
 
   private accumulate(map: Map<number, number>, id: number, coveredMs: number, tickMs: number): number {

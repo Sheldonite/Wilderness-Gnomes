@@ -19,11 +19,17 @@ function simulation(id, rank = 5) {
 }
 const damage = (target, amount) => { target.takeDamage(amount); };
 const origin = { x: 0, y: 0 };
+const ABILITY_OWNER = { 'mystery-double-pounce': 'wizard', 'midnight-mighty-swat': 'hailey',
+  'ribbon-sweep': 'ron', 'inspiring-shout': 'ron', 'dizzying-flurry': 'ron' };
+const asOwnerOf = (stats, id) => { stats.characterId = ABILITY_OWNER[id] ?? 'wizard'; return stats; };
+
 
 test('abilities stop at rank 5 until player level 10, then climb to an ascension at rank 10', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true;
+  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
+  stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true;
   assert.equal(MAX_ABILITY_RANK, 10); assert.equal(ASCENSION_PLAYER_LEVEL, 10);
   for (const id of ABILITY_IDS) {
+    asOwnerOf(stats, id);
     for (let rank = 1; rank < 5; rank++) upgrades.applyUpgrade(upgrades.getAvailable(stats).find(c => c.id === id), stats);
     const offer = upgrades.getAvailable(stats).find(c => c.id === id);
     assert.equal(offer.rank, 5); assert.equal(offer.category, 'AWAKENING');
@@ -36,6 +42,7 @@ test('abilities stop at rank 5 until player level 10, then climb to an ascension
   assert.ok(!upgrades.getAvailable(stats).some(c => c.rank === 6), 'still hidden one level short');
   stats.level = ASCENSION_PLAYER_LEVEL;
   for (const id of ABILITY_IDS) {
+    asOwnerOf(stats, id);
     for (let rank = 6; rank < 10; rank++) {
       const offer = upgrades.getAvailable(stats).find(c => c.id === id);
       assert.equal(offer.rank, rank); assert.equal(offer.category, `RANK ${rank} OF 10`);

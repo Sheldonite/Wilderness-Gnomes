@@ -4,7 +4,7 @@ export type MarketItemId =
   | 'peach-heart' | 'springwater-flask'
   | 'trail-boots' | 'quilted-cloak'
   | 'splitshot-charm' | 'mooncat-bell'
-  | 'unlock-crossbow' | 'unlock-hailey' | 'unlock-sheldon' | 'honey-glow' | 'violet-glow' | 'glitter-trail' | 'ups-buddy' | 'jawa-buddy';
+  | 'unlock-crossbow' | 'unlock-hailey' | 'unlock-sheldon' | 'unlock-ron' | 'honey-glow' | 'violet-glow' | 'glitter-trail' | 'ups-buddy' | 'jawa-buddy';
 
 export type CosmeticId = 'honey-glow' | 'violet-glow' | 'glitter-trail' | 'ups-buddy' | 'jawa-buddy';
 
@@ -45,6 +45,7 @@ export const MARKET_ITEMS: readonly MarketItem[] = [
   { id: 'honey-glow', vendorId: 'outfitter', kind: 'cosmetic', name: 'Honey Glow', description: 'A warm golden halo with little dancing sparks.', effect: 'Visual only. Equip on either character.', prices: [5], maxRank: 1, icon: 'charm', accent: 0xf6ce73 },
   { id: 'glitter-trail', vendorId: 'outfitter', kind: 'cosmetic', name: 'Glitter Trail', description: 'Leave a twinkling trail of gold, pink and lilac as you walk.', effect: 'Visual only. Equip on either character.', prices: [5], maxRank: 1, icon: 'charm', accent: 0xf3b5e6 },
   { id: 'violet-glow', vendorId: 'outfitter', kind: 'cosmetic', name: 'Violet Glow', description: 'A lavender halo with soft woodland sparkles.', effect: 'Visual only. Equip on either character.', prices: [5], maxRank: 1, icon: 'charm', accent: 0xc4a0ef },
+  { id: 'unlock-ron', vendorId: 'curios', kind: 'character', name: 'Ron', description: 'A travelling bard whose ribbon staff sweeps foes aside. Tobias the flying tuna comes with him.', effect: 'Permanent character unlock. Uses either weapon.', prices: [50], maxRank: 1, icon: 'cloak', accent: 0x1e4a3e },
   { id: 'unlock-sheldon', vendorId: 'curios', kind: 'character', name: 'Sheldon', description: 'Always up for the next trail. Hire Sheldon for your adventures.', effect: 'Permanent character unlock. Uses either weapon.', prices: [50], maxRank: 1, icon: 'cloak', accent: 0xc7a86d },
   { id: 'unlock-hailey', vendorId: 'curios', kind: 'character', name: 'Hailey', description: 'An adventurous heart, ready to join your roster.', effect: 'Permanent character unlock. Uses either weapon.', prices: [50], maxRank: 1, icon: 'cloak', accent: 0xa7b4eb },
   { id: 'embersteel-edge', vendorId: 'forge', name: 'Embersteel Edge', description: 'A warm copper whetstone sharpens bolts and focuses spells.', effect: '+10% starting weapon damage per rank.', prices: [5, 10, 18], maxRank: 3, icon: 'blade', accent: 0xf6b36c },
@@ -75,6 +76,7 @@ export function marketItemBenefit(id: string, ownedRank: number): string {
   switch (item.id) {
     case 'unlock-crossbow': return rank ? 'Crossbow available to equip here' : 'Crossbow locked';
     case 'unlock-sheldon': return rank ? 'Sheldon available on the home screen' : 'Sheldon locked';
+    case 'unlock-ron': return rank ? 'Ron available on the home screen' : 'Ron locked';
     case 'unlock-hailey': return rank ? 'Hailey available on the home screen' : 'Hailey locked';
     case 'jawa-buddy': return rank ? 'Wandering Buddy available to equip' : 'Wandering Buddy not owned';
     case 'ups-buddy': return rank ? 'UPS Buddy available to equip' : 'UPS Buddy not owned';

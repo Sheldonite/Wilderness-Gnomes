@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { mountDesktopUpdates } from '../../../desktop/updates';
 import { PLAYER_CHARACTERS, type PlayerCharacterId } from '../../config/playerCharacters';
+import { COMPANION_NAMES } from '../../config/companions';
 import { ART } from '../../config/presentation';
 import type { WeaponId } from '../../core/types';
 import { icon } from '../../ui/icons';
@@ -19,6 +20,7 @@ export class StartScene extends Phaser.Scene {
     if (event.code === 'Digit1') this.selectCharacter('wizard');
     if (event.code === 'Digit2') this.selectCharacter('hailey');
     if (event.code === 'Digit5') this.selectCharacter('sheldon');
+    if (event.code === 'Digit6') this.selectCharacter('ron');
     // Native focused buttons retain their normal Enter/Space behavior.
     if ((event.code === 'Space' || event.code === 'Enter') && !(document.activeElement instanceof HTMLButtonElement)) {
       event.preventDefault(); this.startGame();
@@ -58,9 +60,10 @@ export class StartScene extends Phaser.Scene {
           <fieldset class="wanderer-selection">
             <legend>CHOOSE YOUR WANDERER</legend>
             <div class="wanderer-cards">
-              ${this.characterCard('wizard', 'A spark of woodland magic.', '1')}
-              ${this.characterCard('hailey', 'An adventurous heart.', '2')}
-              ${this.characterCard('sheldon', 'Always up for the next trail.', '5')}
+              ${this.characterCard('wizard', '1')}
+              ${this.characterCard('hailey', '2')}
+              ${this.characterCard('sheldon', '5')}
+              ${this.characterCard('ron', '6')}
             </div>
           </fieldset>
           <button class="title-weapons-link" type="button">Choose your weapon at Market Day ${icon('arrow')}</button>
@@ -69,7 +72,7 @@ export class StartScene extends Phaser.Scene {
         </section>
         <footer class="title-footer">
           <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to wander <i></i> Your arm fires on its own</span>
-          <span class="mystery-hint">${icon('paw')} A familiar friend awaits an upgrade.</span>
+          <span class="mystery-hint">${icon('paw')} Your companion grows stronger every three levels.</span>
         </footer>
         <div class="title-pollen" aria-hidden="true">${'<i></i>'.repeat(12)}</div>
       </main>`;
@@ -94,8 +97,10 @@ export class StartScene extends Phaser.Scene {
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review')) this.startGame();
   }
 
-  private characterCard(id: PlayerCharacterId, description: string, key: string): string {
+  private characterCard(id: PlayerCharacterId, key: string): string {
     const character = PLAYER_CHARACTERS[id];
+    // Each card names the companion, because choosing a wanderer now chooses a companion too.
+    const description = `${character.blurb} With ${COMPANION_NAMES[character.companionId]}.`;
     const portrait = this.textures.getBase64(character.textureKey, 0);
     return `<button class="wanderer-card" type="button" data-character="${id}" aria-pressed="false">
       <span class="choice-key">${key}</span><span class="selection-tick" aria-hidden="true">✓</span>
@@ -125,7 +130,7 @@ export class StartScene extends Phaser.Scene {
     const reviewCharacter = review?.get('character');
     const reviewWeapon = review?.get('weapon');
     this.scene.start('GameScene', {
-      characterId: reviewCharacter === 'sheldon' ? 'sheldon' : reviewCharacter === 'hailey' ? 'hailey' : this.selectedCharacterId,
+      characterId: review?.get('review') === 'ron' ? 'ron' : ['sheldon', 'hailey', 'ron'].includes(reviewCharacter ?? '') ? reviewCharacter! : this.selectedCharacterId,
       weaponId: reviewWeapon === 'crossbow' ? 'crossbow' : this.selectedWeaponId,
       skipReview: !this.reviewActive
     });

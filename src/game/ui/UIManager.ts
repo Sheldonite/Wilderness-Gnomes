@@ -113,12 +113,13 @@ export class UIManager {
 
   hideOverlay(): void { this.clearOverlay(); }
 
-  showLevelUp(choices: UpgradeDefinition[], onChoose: (choice: UpgradeDefinition) => void, source: UpgradeSource = 'level'): void {
+  showLevelUp(choices: UpgradeDefinition[], onChoose: (choice: UpgradeDefinition) => void, source: UpgradeSource = 'level', companionNote?: string): void {
     const chest = source !== 'level', boss = source === 'boss';
     const list = this.createOverlay(boss ? 'Boss relic' : chest ? 'Treasure!' : 'Level up!',
       boss ? 'Choose one relic.' : chest ? 'Choose a free upgrade.' : 'Choose an upgrade.',
       boss ? 'BOSS DEFEATED' : chest ? 'FREE UPGRADE' : `LEVEL ${this.gameManager.level}`, chest ? 'chest' : 'star', 'upgrade-panel');
     list.classList.add('upgrade-grid');
+    if (companionNote) list.insertAdjacentHTML('beforebegin', `<p class="companion-growth">${icon('paw')} ${companionNote}</p>`);
     let selected = false;
     choices.forEach((choice, index) => {
       const progress = upgradePreview(choice, this.gameManager.playerStats);

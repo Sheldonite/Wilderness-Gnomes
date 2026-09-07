@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import url from '../../assets/sprites/tobias-tuna-sheet.png';
 
 /**
  * Tobias is drawn by `scripts/build_tobias_tuna.py`: 6 columns by 2 rows of 192px cells.
@@ -7,7 +6,6 @@ import url from '../../assets/sprites/tobias-tuna-sheet.png';
  * He always faces right in the sheet; the renderer flips him.
  */
 export const TOBIAS_SPRITE_KEY = 'companion-tobias';
-export const TOBIAS_SPRITE_URL = url;
 export const TOBIAS_FRAME_SIZE = 192;
 export const TOBIAS_SWIM_KEY = 'tobias-swim';
 export const TOBIAS_DART_KEY = 'tobias-dart';

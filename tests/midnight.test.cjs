@@ -12,11 +12,10 @@ function foe(x, y, health = 100) {
 }
 const damage = (enemy, amount) => enemy.takeDamage(amount);
 
-test('Mighty Swat requires Midnight, ranks up once per pick, and resets each run', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
+test('Mighty Swat belongs to Hailey, ranks up once per pick, and resets each run', () => {
+  const stats = new GameManager('spell', undefined, 'hailey').playerStats, upgrades = new UpgradeSystem();
   const offer = () => upgrades.getAvailable(stats).find(u => u.id === 'midnight-mighty-swat');
-  assert.equal(offer(), undefined);
-  upgrades.applyUpgrade(upgrades.getAvailable(stats).find(u => u.id === 'gain-companion-midnight'), stats);
+  assert.equal(upgrades.getAvailable(new GameManager().playerStats).find(u => u.id === 'midnight-mighty-swat'), undefined);
   const first = offer(); assert.equal(first.rank, 1);
   upgrades.applyUpgrade(first, stats); upgrades.applyUpgrade(first, stats);
   assert.equal(stats.abilityRanks['midnight-mighty-swat'], 1);
@@ -63,16 +62,18 @@ test('higher swat ranks shorten the interval without moving the impact frame', (
   assert.ok(strikes(10) > strikes(0));
 });
 
-test('Midnight recruits once, independently of Mystery, and both flags reset on restart', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
-  assert.equal(stats.hasMidnightCompanion, false); assert.equal(stats.hasMysteryCompanion, false);
-  upgrades.applyUpgrade(upgrades.getAvailable(stats).find(u => u.id === 'gain-companion-midnight'), stats);
-  assert.equal(stats.hasMidnightCompanion, true); assert.equal(stats.hasMysteryCompanion, false);
-  assert.ok(!upgrades.getAvailable(stats).some(u => u.id === 'gain-companion-midnight'));
-  assert.ok(!upgrades.getAvailable(stats).some(u => u.id === 'mystery-double-pounce'));
-  upgrades.applyUpgrade(upgrades.getAvailable(stats).find(u => u.id === 'gain-companion-mystery'), stats);
-  assert.equal(stats.hasMysteryCompanion, true); assert.equal(stats.hasMidnightCompanion, true);
-  assert.equal(new GameManager().playerStats.hasMidnightCompanion, false);
+test('each wanderer brings exactly one companion, and never the others', () => {
+  const upgrades = new UpgradeSystem();
+  const expected = { wizard: 'mystery', hailey: 'midnight', sheldon: 'frankie', ron: 'tobias' };
+  for (const [character, companion] of Object.entries(expected)) {
+    const stats = new GameManager('spell', undefined, character).playerStats;
+    assert.equal(stats.companionId, companion, character);
+    assert.equal(stats.hasMysteryCompanion, companion === 'mystery', character);
+    assert.equal(stats.hasMidnightCompanion, companion === 'midnight', character);
+    assert.equal(stats.hasFrankieCompanion, companion === 'frankie', character);
+    assert.equal(stats.hasTobiasCompanion, companion === 'tobias', character);
+    assert.equal(upgrades.getAvailable(stats).some(u => u.id === 'midnight-mighty-swat'), character === 'hailey', character);
+  }
 });
 
 test('Midnight walks to enemies at a bounded speed rather than lunging or teleporting', () => {

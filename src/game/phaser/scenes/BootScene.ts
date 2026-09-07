@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 import { preloadSheldon, createSheldonAnimations } from '../../config/sheldonSprite';
+import ronSpriteSheetUrl from '../../../assets/sprites/ron-bard-spritesheet.png';
+import tobiasSheetUrl from '../../../assets/sprites/tobias-tuna-sheet.png';
+import { RON_FRAME_SIZE, RON_SPRITE_KEY, createRonAnimations } from '../../config/ronSprite';
+import { TOBIAS_FRAME_SIZE, TOBIAS_SPRITE_KEY, createTobiasAnimations } from '../../config/tobiasSprite';
 import { OVEN_TEXTURE, ovenSourceUrl, createOvenFrames } from '../../config/ovenSprite';
 import { STAG_FRAME_SIZE, STAG_TEXTURE, createStagAnimations, stagSheetUrl } from '../../config/stagSprite';
 import { ART, LOOK } from '../../config/presentation';
@@ -117,15 +121,20 @@ export class BootScene extends Phaser.Scene {
       frameWidth: MYSTERY_FRAME_SIZE,
       frameHeight: MYSTERY_FRAME_SIZE
     });
+    this.load.spritesheet(RON_SPRITE_KEY, ronSpriteSheetUrl, { frameWidth: RON_FRAME_SIZE, frameHeight: RON_FRAME_SIZE });
+    this.load.spritesheet(TOBIAS_SPRITE_KEY, tobiasSheetUrl, { frameWidth: TOBIAS_FRAME_SIZE, frameHeight: TOBIAS_FRAME_SIZE });
   }
 
   create(): void {
     createSheldonAnimations(this);
+    createRonAnimations(this);
+    createTobiasAnimations(this);
     createStorybookTextures(this);
     this.createGreySquirrelTexture();
     [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, DOE_SPRITE_KEY, FAWN_SPRITE_KEY, BUCK_SPRITE_KEY, ARMADILLO_SPRITE_KEY, ARMADILLO_ROLL_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
     // The wizard sheet is authored at 192px and drawn at ~40%; linear filtering keeps the downscale smooth.
     this.textures.get(PLAYER_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    for (const key of [RON_SPRITE_KEY, TOBIAS_SPRITE_KEY]) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get('heartwood-crossbow').setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get('heartwood-crossbow-top').setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get(FRANKIE_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
