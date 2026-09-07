@@ -6,6 +6,7 @@ import { StartScene } from './game/phaser/scenes/StartScene';
 import { MarketScene } from './game/phaser/scenes/MarketScene';
 import './styles.css';
 import './game/ui/market.css';
+import './game/ui/sheldon.css';
 import { installPerformanceReadout } from './game/ui/PerformanceReadout';
 
 installPerformanceReadout();

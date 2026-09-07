@@ -30,6 +30,7 @@ export class MarketScene extends Phaser.Scene {
   private preview = false;
   private zoomed = true;
   private leaving = false;
+  private facing: Vector2Like = { x: 0, y: 1 };
   private status = '';
   private destination!: Phaser.GameObjects.Graphics;
   private readonly onResize = () => this.resize();
@@ -56,6 +57,7 @@ export class MarketScene extends Phaser.Scene {
 
   create(data: {characterId?: string; weaponId?: WeaponId; review?: boolean; vendorId?: MarketVendorId} = {}): void {
     this.path = []; this.visiting = undefined; this.shop = undefined; this.nearestVendor = undefined;
+    this.facing = { x: 0, y: 1 };
     this.status = ''; this.zoomed = true; this.leaving = false;
     this.preview = import.meta.env.DEV && Boolean(data.review);
     this.progress = this.preview ? new MarketProgress(null) : marketProgress;
@@ -67,7 +69,7 @@ export class MarketScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#223b31');
     this.add.image(WIDTH / 2, HEIGHT / 2, 'newnan-market-square').setDisplaySize(WIDTH, HEIGHT).setDepth(-100);
     this.world = new MarketWorld(this); this.world.create();
-    this.player = this.add.sprite(768, 810, this.character.textureKey).setScale(this.character.scale).setOrigin(.5, 1);
+    this.player = this.add.sprite(768, 810, this.character.textureKey).setScale(this.character.scale).setOrigin(.5, this.character.footOriginY ?? 1);
     this.player.play(this.character.idleAnimation.key);
     this.cosmetic = new CosmeticGlow(this);
     this.destination = this.add.graphics().setDepth(10);
@@ -149,7 +151,8 @@ export class MarketScene extends Phaser.Scene {
     this.player.setPosition(safe.x,safe.y).setDepth(safe.y);
     this.cosmetic.update(dt, this.player, this.progress.equippedCosmetic);
     const moving = Math.hypot(safe.x-before.x,safe.y-before.y) > .01;
-    const animation = moving ? this.character.animationForDirection({x:(safe.x-before.x)/travel,y:(safe.y-before.y)/travel}) : this.character.idleAnimation;
+    if (moving) this.facing = { x: (safe.x-before.x)/travel, y: (safe.y-before.y)/travel };
+    const animation = moving ? this.character.animationForDirection(this.facing) : this.character.idleForDirection?.(this.facing) ?? this.character.idleAnimation;
     this.player.play(animation.key,true).setFlipX(Boolean(animation.flipX));
     if (!this.path.length) this.destination.clear();
     const closest = this.world.vendors.map(v => ({v,d:Phaser.Math.Distance.Between(safe.x,safe.y,v.interactionX,v.interactionY)})).sort((a,b)=>a.d-b.d)[0];
@@ -162,7 +165,8 @@ export class MarketScene extends Phaser.Scene {
 
   private openShop(id: MarketVendorId): void {
     this.path = []; this.visiting = undefined; this.destination.clear(); this.shop = id;
-    this.player.play(this.character.idleAnimation.key,true);
+    const idle = this.character.idleForDirection?.(this.facing) ?? this.character.idleAnimation;
+    this.player.play(idle.key,true).setFlipX(Boolean(idle.flipX));
     this.root.querySelector<HTMLElement>('.market-interact')!.hidden = true;
     this.progress.refresh();
     this.root.querySelector('[data-gold]')!.textContent = String(this.progress.profile.gold);

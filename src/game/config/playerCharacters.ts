@@ -1,7 +1,8 @@
 import type { Vector2Like } from '../core/types';
 import { PLAYER_SPRITE_KEY } from './playerSprite';
+import { sheldonAnimation } from '../core/SheldonFrames';
 
-export type PlayerCharacterId = 'wizard' | 'hailey';
+export type PlayerCharacterId = 'wizard' | 'hailey' | 'sheldon';
 
 export interface PlayerAnimationChoice {
   key: string;
@@ -14,6 +15,9 @@ export interface PlayerCharacterDefinition {
   textureKey: string;
   scale: number;
   idleAnimation: PlayerAnimationChoice;
+  idleForDirection?: (direction: Vector2Like) => PlayerAnimationChoice;
+  bakedAnimation?: boolean;
+  footOriginY?: number;
   aura: boolean;
   animationForDirection: (direction: Vector2Like) => PlayerAnimationChoice;
 }
@@ -52,6 +56,12 @@ const HAILEY_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> 
 };
 
 export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinition> = {
+  sheldon: {
+    id: 'sheldon', name: 'Sheldon', textureKey: 'player-sheldon', scale: .35,
+    idleAnimation: { key: 'sheldon-idle-south' }, aura: false, bakedAnimation: true, footOriginY: 238 / 256,
+    animationForDirection: direction => sheldonAnimation(direction),
+    idleForDirection: direction => sheldonAnimation(direction, true)
+  },
   wizard: {
     id: 'wizard',
     name: 'Nick',
@@ -75,6 +85,7 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
 };
 
 export function getPlayerCharacter(id?: string): PlayerCharacterDefinition {
+  if (id === 'sheldon') return PLAYER_CHARACTERS.sheldon;
   if (id === 'hailey') {
     return PLAYER_CHARACTERS.hailey;
   }

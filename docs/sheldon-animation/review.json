@@ -1,0 +1,674 @@
+[
+  {
+    "id": "south-idle-1",
+    "score": 8,
+    "reason": "Cap, stubble, gray graphic shirt and relaxed front stance match; boots are cleanly planted.",
+    "improvement": "No blocking change; retain this face as the walking reference.",
+    "reviewPass": 1
+  },
+  {
+    "id": "south-idle-2",
+    "score": 8,
+    "reason": "Lowered eyelids give a readable blink while clothing and stance remain stable.",
+    "improvement": "No blocking change; keep blink duration brief.",
+    "reviewPass": 1
+  },
+  {
+    "id": "south-idle-3",
+    "score": 8,
+    "reason": "Closed-eye phase preserves the smiling mature face and solid foot placement.",
+    "improvement": "No blocking change; avoid holding the closed eyes too long.",
+    "reviewPass": 1
+  },
+  {
+    "id": "south-idle-4",
+    "score": 8,
+    "reason": "Open-eyed return retains the same hat outline, shoulders and boots.",
+    "improvement": "No blocking change; preserve this silhouette at the loop seam.",
+    "reviewPass": 1
+  },
+  {
+    "id": "south-walk-1",
+    "score": 8,
+    "reason": "Head, stubble and jacket width now match the accepted idle; viewer-right leading contact is clean.",
+    "improvement": "No blocking change; preserve this first-contact anchor.",
+    "reviewPass": 3
+  },
+  {
+    "id": "south-walk-2",
+    "score": 8,
+    "reason": "Recognizable mature face and compressed step keep the revised proportions stable.",
+    "improvement": "No blocking change; keep the support boot registered.",
+    "reviewPass": 3
+  },
+  {
+    "id": "south-walk-3",
+    "score": 8,
+    "reason": "Compact under-body boot stance now supplies a clear passing phase with consistent identity.",
+    "improvement": "No blocking change; preserve the compact passing silhouette.",
+    "reviewPass": 3
+  },
+  {
+    "id": "south-walk-4",
+    "score": 8,
+    "reason": "Opposite boot begins advancing and the torso retains the same proportions and clothing.",
+    "improvement": "No blocking change; retain the modest recovery motion.",
+    "reviewPass": 3
+  },
+  {
+    "id": "south-walk-5",
+    "score": 8,
+    "reason": "Viewer-left boot now clearly leads with visible contact while the viewer-right leg trails, completing the opposite contact. Cap, stubble, open charcoal jacket and gray graphic shirt remain coherent with accepted neighboring frames.",
+    "improvement": "No blocking change; preserve this opposite leading leg and the clear boot separation.",
+    "reviewPass": 5
+  },
+  {
+    "id": "south-walk-6",
+    "score": 8,
+    "reason": "Viewer-left supporting step and lifted opposite boot provide a readable second-half gait pose.",
+    "improvement": "No blocking change; preserve this leg alternation.",
+    "reviewPass": 3
+  },
+  {
+    "id": "south-walk-7",
+    "score": 8,
+    "reason": "Feet return beneath the hips for a clean second passing pose; head and outfit stay coherent.",
+    "improvement": "No blocking change; retain this consistent silhouette.",
+    "reviewPass": 3
+  },
+  {
+    "id": "south-walk-8",
+    "score": 8,
+    "reason": "The next leading boot advances with a clean rear-foot recovery and stable mature face.",
+    "improvement": "No blocking change; maintain the smooth return toward frame 1.",
+    "reviewPass": 3
+  },
+  {
+    "id": "southeast-idle-1",
+    "score": 8,
+    "reason": "Correct down-right direction now retains the accepted walk's cap size, face and jacket width.",
+    "improvement": "No blocking change; keep this directional idle anchor.",
+    "reviewPass": 3
+  },
+  {
+    "id": "southeast-idle-2",
+    "score": 8,
+    "reason": "Relaxed shoulders and grounded boots stay coherent with the first frame and walking design.",
+    "improvement": "No blocking change; optional restrained chest breathing.",
+    "reviewPass": 3
+  },
+  {
+    "id": "southeast-idle-3",
+    "score": 8,
+    "reason": "Readable blink retains the same cheek, stubble and cap proportions in the corrected direction.",
+    "improvement": "No blocking change; keep the blink brief.",
+    "reviewPass": 3
+  },
+  {
+    "id": "southeast-idle-4",
+    "score": 8,
+    "reason": "Open-eyed return preserves the corrected angle and matched head/body proportions.",
+    "improvement": "No blocking change; retain consistent boot registration.",
+    "reviewPass": 3
+  },
+  {
+    "id": "southeast-walk-1",
+    "score": 8,
+    "reason": "Down-right facing, stubble and open jacket read clearly; a forward contact is visible.",
+    "improvement": "No blocking change; use this as a southeast contact anchor.",
+    "reviewPass": 1
+  },
+  {
+    "id": "southeast-walk-2",
+    "score": 8,
+    "reason": "Compressed supporting leg and lifted rear boot now distinguish recoil from contact.",
+    "improvement": "No blocking change; optional stronger opposing arm swing.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southeast-walk-3",
+    "score": 8,
+    "reason": "Boots now pass beneath the body; face, hat and jacket remain coherent.",
+    "improvement": "No blocking change; keep the passing foot close to its hip.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southeast-walk-4",
+    "score": 8,
+    "reason": "Bent advancing knee creates a readable recovery pose without clipping.",
+    "improvement": "No blocking change; retain the compact recovery silhouette.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southeast-walk-5",
+    "score": 8,
+    "reason": "Opposite arm placement and leg overlap provide a readable second contact; face remains recognizable.",
+    "improvement": "No blocking change; preserve the reversed arm swing.",
+    "reviewPass": 1
+  },
+  {
+    "id": "southeast-walk-6",
+    "score": 8,
+    "reason": "Second compressed stance gives useful contrast to the opposite contact.",
+    "improvement": "No blocking change; optional clearer near/far leg shading.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southeast-walk-7",
+    "score": 8,
+    "reason": "Under-body boot placement supplies the missing opposite passing phase.",
+    "improvement": "No blocking change; keep the support foot registered.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southeast-walk-8",
+    "score": 8,
+    "reason": "Tucked trailing boot and bent leg form a distinct loop recovery.",
+    "improvement": "No blocking change; preserve stable head height through the seam.",
+    "reviewPass": 4
+  },
+  {
+    "id": "east-idle-1",
+    "score": 8,
+    "reason": "Right-facing profile now matches the walking head scale, stubble and charcoal jacket.",
+    "improvement": "No blocking change; preserve this profile anchor.",
+    "reviewPass": 3
+  },
+  {
+    "id": "east-idle-2",
+    "score": 8,
+    "reason": "Profile nose and brim remain stable with clean planted boots and consistent body width.",
+    "improvement": "No blocking change; optional subtle shoulder breathing.",
+    "reviewPass": 3
+  },
+  {
+    "id": "east-idle-3",
+    "score": 8,
+    "reason": "Profile blink is legible without reverting to a front-facing head or changing proportions.",
+    "improvement": "No blocking change; keep the blink duration short.",
+    "reviewPass": 3
+  },
+  {
+    "id": "east-idle-4",
+    "score": 8,
+    "reason": "Return pose keeps the same profile and corrected cap/body ratio as the walk.",
+    "improvement": "No blocking change; maintain the foot baseline.",
+    "reviewPass": 3
+  },
+  {
+    "id": "east-walk-1",
+    "score": 8,
+    "reason": "Right-facing profile, mature stubble and distinct contact silhouette preserve the character.",
+    "improvement": "No blocking change; retain this contact anchor.",
+    "reviewPass": 1
+  },
+  {
+    "id": "east-walk-2",
+    "score": 8,
+    "reason": "Bent rear leg and planted leading boot now convey recoil instead of another long stride.",
+    "improvement": "No blocking change; keep the support boot fixed.",
+    "reviewPass": 4
+  },
+  {
+    "id": "east-walk-3",
+    "score": 8,
+    "reason": "Feet are now compact under the pelvis, providing a clear passing silhouette.",
+    "improvement": "No blocking change; optional one-pixel separation of overlapping boots.",
+    "reviewPass": 4
+  },
+  {
+    "id": "east-walk-4",
+    "score": 8,
+    "reason": "Feet come together in a compact raised-heel pose; profile and outfit remain stable.",
+    "improvement": "No blocking change; smooth the transition into the opposite contact.",
+    "reviewPass": 1
+  },
+  {
+    "id": "east-walk-5",
+    "score": 8,
+    "reason": "Profile and clothing stay consistent; leg overlap supports the opposite contact.",
+    "improvement": "No blocking change; retain clear near/far-leg overlap.",
+    "reviewPass": 1
+  },
+  {
+    "id": "east-walk-6",
+    "score": 8,
+    "reason": "A compact stance gives useful contrast to the extended contacts without anatomy defects.",
+    "improvement": "No blocking change; keep the planted boot stable during recoil.",
+    "reviewPass": 1
+  },
+  {
+    "id": "east-walk-7",
+    "score": 8,
+    "reason": "Second compact stance replaces the repeated extended contact; profile remains consistent.",
+    "improvement": "No blocking change; retain the readable profile face.",
+    "reviewPass": 4
+  },
+  {
+    "id": "east-walk-8",
+    "score": 8,
+    "reason": "Raised forward knee gives a distinct up phase before returning to contact.",
+    "improvement": "No blocking change; keep the knee lift modest for a walk.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northeast-idle-1",
+    "score": 8,
+    "reason": "Cap back, brown hair, hood and right-facing rear angle carry the approved outfit convincingly.",
+    "improvement": "No blocking change; retain the visible right cheek sliver.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northeast-idle-2",
+    "score": 8,
+    "reason": "Rear three-quarter posture and grounded boots remain stable.",
+    "improvement": "No blocking change; optional one-pixel breathing motion at the shoulders.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northeast-idle-3",
+    "score": 8,
+    "reason": "Back-of-jacket folds and cap silhouette remain coherent with the first frame.",
+    "improvement": "No blocking change; retain the restrained idle motion.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northeast-idle-4",
+    "score": 8,
+    "reason": "Return pose preserves the same rear angle, proportions and boot placement.",
+    "improvement": "No blocking change; maintain foot registration at the loop seam.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northeast-walk-1",
+    "score": 8,
+    "reason": "Rear-right direction and clothing are clear; the first reaching step reads convincingly.",
+    "improvement": "No blocking change; use this as one contact anchor.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northeast-walk-2",
+    "score": 8,
+    "reason": "Compressed knee and low planted boot now differentiate the recoil phase.",
+    "improvement": "No blocking change; retain the visible sole detail.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northeast-walk-3",
+    "score": 8,
+    "reason": "Boots move beneath the body in a compact passing pose; rear-right identity is intact.",
+    "improvement": "No blocking change; maintain clear ground contact.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northeast-walk-4",
+    "score": 8,
+    "reason": "Visible lifted sole creates a distinct recovery pose without losing the rear-right identity.",
+    "improvement": "No blocking change; keep sole size consistent.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northeast-walk-5",
+    "score": 8,
+    "reason": "The crossed contact and changed arm overlap now distinguish this second contact from the first. Rear-right cap, hair, hood and dark hiking clothes remain coherent.",
+    "improvement": "No blocking change; optional slightly stronger near/far thigh shading would make the anatomical swap even clearer.",
+    "reviewPass": 6
+  },
+  {
+    "id": "northeast-walk-6",
+    "score": 8,
+    "reason": "One visible planted boot and bent opposite leg now give the recoil weight.",
+    "improvement": "No blocking change; optional stronger separation of near/far boots.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northeast-walk-7",
+    "score": 8,
+    "reason": "A compact under-body step now replaces the repeated tucked-back sole.",
+    "improvement": "No blocking change; keep the support boot readable.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northeast-walk-8",
+    "score": 8,
+    "reason": "Lifted sole and forward reach produce a distinct recovery silhouette with stable clothing.",
+    "improvement": "No blocking change; preserve the clean boot contour.",
+    "reviewPass": 4
+  },
+  {
+    "id": "north-idle-1",
+    "score": 8,
+    "reason": "Centered cap opening, hair, hood and black trousers form a convincing true rear view.",
+    "improvement": "No blocking change; keep the cap opening centered.",
+    "reviewPass": 1
+  },
+  {
+    "id": "north-idle-2",
+    "score": 8,
+    "reason": "The same rear silhouette and grounded boot spacing remain consistent.",
+    "improvement": "No blocking change; optional subtle shoulder breathing only.",
+    "reviewPass": 1
+  },
+  {
+    "id": "north-idle-3",
+    "score": 8,
+    "reason": "Hood folds and hairline match neighboring phases without anatomy or clipping defects.",
+    "improvement": "No blocking change; preserve the shared foot baseline.",
+    "reviewPass": 1
+  },
+  {
+    "id": "north-idle-4",
+    "score": 8,
+    "reason": "Rear standing pose closes the idle sequence cleanly.",
+    "improvement": "No blocking change; retain the restrained movement.",
+    "reviewPass": 1
+  },
+  {
+    "id": "north-walk-1",
+    "score": 8,
+    "reason": "Rear direction is unambiguous and one sole lifts while the other boot supports the figure.",
+    "improvement": "No blocking change; retain the leg separation.",
+    "reviewPass": 1
+  },
+  {
+    "id": "north-walk-2",
+    "score": 8,
+    "reason": "Lifted boot underside makes the rear gait legible while cap and hood remain stable.",
+    "improvement": "No blocking change; keep the supporting foot registered.",
+    "reviewPass": 1
+  },
+  {
+    "id": "north-walk-3",
+    "score": 8,
+    "reason": "The boots now pass close beneath the hips rather than repeating the extended first step.",
+    "improvement": "No blocking change; keep the cap and hood centered.",
+    "reviewPass": 4
+  },
+  {
+    "id": "north-walk-4",
+    "score": 8,
+    "reason": "The lifted boot switches sides and stays anatomically readable.",
+    "improvement": "No blocking change; preserve clear separation of both boots.",
+    "reviewPass": 1
+  },
+  {
+    "id": "north-walk-5",
+    "score": 8,
+    "reason": "The raised sole switches to the opposite side, making the second contact legible.",
+    "improvement": "No blocking change; preserve this side switch.",
+    "reviewPass": 4
+  },
+  {
+    "id": "north-walk-6",
+    "score": 8,
+    "reason": "Opposite lifted sole and supporting boot now retain the second-half leg arrangement.",
+    "improvement": "No blocking change; optional one-pixel knee compression.",
+    "reviewPass": 4
+  },
+  {
+    "id": "north-walk-7",
+    "score": 8,
+    "reason": "Feet return beneath the hips in the opposite passing phase with clean edges.",
+    "improvement": "No blocking change; keep boot separation visible.",
+    "reviewPass": 4
+  },
+  {
+    "id": "north-walk-8",
+    "score": 8,
+    "reason": "Opposite recovery boot advances toward the loop while the hood and cap remain stable.",
+    "improvement": "No blocking change; preserve the fixed rear-facing angle.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northwest-idle-1",
+    "score": 8,
+    "reason": "Rear-left cap, hair, hood and boots convincingly extend the approved design.",
+    "improvement": "No blocking change; keep the cheek sliver small.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northwest-idle-2",
+    "score": 8,
+    "reason": "Relaxed rear three-quarter stance remains consistent with the first frame.",
+    "improvement": "No blocking change; optional gentle shoulder rise.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northwest-idle-3",
+    "score": 8,
+    "reason": "Jacket folds and planted feet stay stable with clean pixel edges.",
+    "improvement": "No blocking change; keep the same cap and hood outline.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northwest-idle-4",
+    "score": 8,
+    "reason": "Loop-return posture preserves the correct rear-left orientation.",
+    "improvement": "No blocking change; retain the foot baseline.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northwest-walk-1",
+    "score": 8,
+    "reason": "Rear-left direction and the first reaching contact are clear and unclipped.",
+    "improvement": "No blocking change; retain this contact pose.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northwest-walk-2",
+    "score": 8,
+    "reason": "Bent trailing knee and planted boot now show recoil with a clear rear-left silhouette.",
+    "improvement": "No blocking change; keep the support boot grounded.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northwest-walk-3",
+    "score": 8,
+    "reason": "Compact boot grouping supplies a passing phase while preserving the hood and cap.",
+    "improvement": "No blocking change; optional extra near/far boot contrast.",
+    "reviewPass": 4
+  },
+  {
+    "id": "northwest-walk-4",
+    "score": 8,
+    "reason": "Tucked trailing boot gives a readable recovery silhouette and retains the rear-left angle.",
+    "improvement": "No blocking change; preserve clear supporting-foot contact.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northwest-walk-5",
+    "score": 8,
+    "reason": "The opposite arm and leg arrangement creates a credible second contact.",
+    "improvement": "No blocking change; keep the near/far limb separation.",
+    "reviewPass": 1
+  },
+  {
+    "id": "northwest-walk-6",
+    "score": 8,
+    "reason": "The foreground supporting boot is planted while the smaller far boot lifts behind the figure. This now reads as the opposite recoil rather than another large foreground rear sole.",
+    "improvement": "No blocking change; optional slightly softer knee lift would make the walk less brisk.",
+    "reviewPass": 6
+  },
+  {
+    "id": "northwest-walk-7",
+    "score": 8,
+    "reason": "The opposite boot passes close beneath the hips beside the planted support foot, resolving the repeated half-cycle while keeping the rear-left cap and hood stable.",
+    "improvement": "No blocking change; preserve visible separation between the two boots.",
+    "reviewPass": 6
+  },
+  {
+    "id": "northwest-walk-8",
+    "score": 8,
+    "reason": "The final stride narrows and the heel lifts into a distinct recovery phase, replacing the previous wide contact pose. Rear-left direction and character clothing remain consistent.",
+    "improvement": "No blocking change; keep the lifted heel clear at the loop seam.",
+    "reviewPass": 6
+  },
+  {
+    "id": "west-idle-1",
+    "score": 8,
+    "reason": "Left profile, cap brim, stubble and visible gray shirt preserve the approved character.",
+    "improvement": "No blocking change; retain this profile reference.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-idle-2",
+    "score": 8,
+    "reason": "Quiet standing pose keeps the same left-facing head and grounded boots.",
+    "improvement": "No blocking change; optional subtle chest breathing.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-idle-3",
+    "score": 8,
+    "reason": "Blink retains the profile nose and mature smiling face without silhouette drift.",
+    "improvement": "No blocking change; keep the blink brief.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-idle-4",
+    "score": 8,
+    "reason": "Eyes reopen into a stable profile return pose.",
+    "improvement": "No blocking change; preserve identical foot registration.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-walk-1",
+    "score": 8,
+    "reason": "Left-facing contact, stubble and open jacket are clean and recognizable.",
+    "improvement": "No blocking change; retain this contact anchor.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-walk-2",
+    "score": 8,
+    "reason": "Bent leading knee and lifted opposite boot now give a clear recoil pose.",
+    "improvement": "No blocking change; keep the left-facing nose and cap stable.",
+    "reviewPass": 4
+  },
+  {
+    "id": "west-walk-3",
+    "score": 8,
+    "reason": "Tucked rear boot provides a useful compact recovery silhouette.",
+    "improvement": "No blocking change; maintain the planted foot through the transition.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-walk-4",
+    "score": 8,
+    "reason": "Tucked rear foot and narrower stride produce a distinct up/recovery pose.",
+    "improvement": "No blocking change; preserve clean separation of the boots.",
+    "reviewPass": 4
+  },
+  {
+    "id": "west-walk-5",
+    "score": 8,
+    "reason": "Opposite contact keeps the left profile and clean limb silhouette.",
+    "improvement": "No blocking change; retain the anatomical leg overlap.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-walk-6",
+    "score": 8,
+    "reason": "A compact bent-leg stance provides contrast to the contact poses.",
+    "improvement": "No blocking change; preserve the support boot's ground contact.",
+    "reviewPass": 1
+  },
+  {
+    "id": "west-walk-7",
+    "score": 8,
+    "reason": "Compact under-body feet now create the missing second passing phase.",
+    "improvement": "No blocking change; optional one-pixel boot separation.",
+    "reviewPass": 4
+  },
+  {
+    "id": "west-walk-8",
+    "score": 8,
+    "reason": "Raised trailing heel and compact legs form a usable recovery into contact.",
+    "improvement": "No blocking change; retain the mature face and jacket proportions.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southwest-idle-1",
+    "score": 8,
+    "reason": "Down-left face, brown stubble, cap and gray graphic shirt match the approved pose closely.",
+    "improvement": "No blocking change; retain this identity anchor.",
+    "reviewPass": 1
+  },
+  {
+    "id": "southwest-idle-2",
+    "score": 8,
+    "reason": "The quiet diagonal stance preserves the mature face and boot placement.",
+    "improvement": "No blocking change; optional subtle breathing at the chest.",
+    "reviewPass": 1
+  },
+  {
+    "id": "southwest-idle-3",
+    "score": 8,
+    "reason": "Closed-eye smile is readable and keeps the approved facial structure.",
+    "improvement": "No blocking change; keep the blink short.",
+    "reviewPass": 1
+  },
+  {
+    "id": "southwest-idle-4",
+    "score": 8,
+    "reason": "Open-eyed return preserves down-left direction and clothing detail.",
+    "improvement": "No blocking change; retain the shared idle baseline.",
+    "reviewPass": 1
+  },
+  {
+    "id": "southwest-walk-1",
+    "score": 8,
+    "reason": "Recognizable face and down-left reach make a clean first contact pose.",
+    "improvement": "No blocking change; use this as a contact anchor.",
+    "reviewPass": 1
+  },
+  {
+    "id": "southwest-walk-2",
+    "score": 8,
+    "reason": "Compressed stance and bent rear knee distinguish recoil from the long first contact.",
+    "improvement": "No blocking change; preserve the down-left face angle.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southwest-walk-3",
+    "score": 8,
+    "reason": "Feet now come beneath the torso in a clear passing pose with stable character identity.",
+    "improvement": "No blocking change; keep the supporting sole level.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southwest-walk-4",
+    "score": 8,
+    "reason": "Bent trailing boot and recovering forward leg now vary the pose visibly.",
+    "improvement": "No blocking change; keep the recovery step restrained.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southwest-walk-5",
+    "score": 8,
+    "reason": "Forward hand moves across the lower torso and the lead-leg overlap changes, giving a distinct opposite contact while preserving the down-left face and approved outfit.",
+    "improvement": "No blocking change; preserve the counter-swing and the clean separation of both boots.",
+    "reviewPass": 6
+  },
+  {
+    "id": "southwest-walk-6",
+    "score": 8,
+    "reason": "Compressed second-half stance supplies recoil with a readable planted boot.",
+    "improvement": "No blocking change; optional stronger near/far leg shading.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southwest-walk-7",
+    "score": 8,
+    "reason": "Under-body boot placement now forms a compact opposite passing pose.",
+    "improvement": "No blocking change; retain the clean silhouette.",
+    "reviewPass": 4
+  },
+  {
+    "id": "southwest-walk-8",
+    "score": 8,
+    "reason": "Bent trailing boot and advancing leg now provide a distinct final recovery.",
+    "improvement": "No blocking change; preserve the stable head/body ratio through the loop.",
+    "reviewPass": 4
+  }
+]

@@ -6,6 +6,7 @@ import { icon } from '../../ui/icons';
 import { showSpriteReview } from '../../ui/SpriteReview';
 import { showMidnightReview } from '../../ui/MidnightReview';
 import { marketProgress } from '../../core/MarketProgress';
+import { showSheldonReview } from '../../ui/SheldonReview';
 
 export class StartScene extends Phaser.Scene {
   private selectedCharacterId: PlayerCharacterId = 'wizard';
@@ -16,6 +17,7 @@ export class StartScene extends Phaser.Scene {
   private readonly keyboardHandler = (event: KeyboardEvent) => {
     if (event.code === 'Digit1') this.selectCharacter('wizard');
     if (event.code === 'Digit2') this.selectCharacter('hailey');
+    if (event.code === 'Digit5') this.selectCharacter('sheldon');
     // Native focused buttons retain their normal Enter/Space behavior.
     if ((event.code === 'Space' || event.code === 'Enter') && !(document.activeElement instanceof HTMLButtonElement)) {
       event.preventDefault(); this.startGame();
@@ -25,6 +27,7 @@ export class StartScene extends Phaser.Scene {
   constructor() { super('StartScene'); }
 
   create(data: { skipReview?: boolean } = {}): void {
+    if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'sheldon') { showSheldonReview(this); return; }
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'market') {
       this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId, review: true }); return;
     }
@@ -56,6 +59,7 @@ export class StartScene extends Phaser.Scene {
             <div class="wanderer-cards">
               ${this.characterCard('wizard', 'A spark of woodland magic.', '1')}
               ${this.characterCard('hailey', 'An adventurous heart.', '2')}
+              ${this.characterCard('sheldon', 'Always up for the next trail.', '5')}
             </div>
           </fieldset>
           <button class="title-weapons-link" type="button">Choose your weapon at Market Day ${icon('arrow')}</button>
@@ -118,7 +122,7 @@ export class StartScene extends Phaser.Scene {
     const reviewCharacter = review?.get('character');
     const reviewWeapon = review?.get('weapon');
     this.scene.start('GameScene', {
-      characterId: reviewCharacter === 'hailey' ? 'hailey' : this.selectedCharacterId,
+      characterId: reviewCharacter === 'sheldon' ? 'sheldon' : reviewCharacter === 'hailey' ? 'hailey' : this.selectedCharacterId,
       weaponId: reviewWeapon === 'crossbow' ? 'crossbow' : this.selectedWeaponId,
       skipReview: !this.reviewActive
     });

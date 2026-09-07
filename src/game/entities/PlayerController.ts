@@ -13,6 +13,7 @@ export class PlayerController {
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly radius = BALANCE.player.radius;
   private movementDirection: Vector2Like = { x: 0, y: 0 };
+  private facingDirection: Vector2Like = { x: 0, y: 1 };
   private aura?: PlayerAura;
   private idleTime = 0;
   private readonly arm?: Phaser.GameObjects.Image;
@@ -99,7 +100,7 @@ export class PlayerController {
     const moving = direction.x !== 0 || direction.y !== 0;
     const baseScale = this.character.scale;
 
-    if (reducedMotion() || (!moving && this.character.id === 'hailey')) {
+    if (reducedMotion() || this.character.bakedAnimation || (!moving && this.character.id === 'hailey')) {
       this.sprite.setRotation(0).setScale(baseScale);
       if (this.character.id === 'hailey' && !moving) {
         // Her standing frames already breathe, anchored at the soles.
@@ -148,10 +149,11 @@ export class PlayerController {
 
   private updateAnimation(direction: Vector2Like): void {
     if (direction.x === 0 && direction.y === 0) {
-      this.playAnimation(this.character.idleAnimation);
+      this.playAnimation(this.character.idleForDirection?.(this.facingDirection) ?? this.character.idleAnimation);
       return;
     }
 
+    this.facingDirection = { ...direction };
     this.playAnimation(this.character.animationForDirection(direction));
   }
 

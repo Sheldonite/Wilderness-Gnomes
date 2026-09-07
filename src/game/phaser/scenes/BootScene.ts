@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { preloadSheldon, createSheldonAnimations } from '../../config/sheldonSprite';
 import { OVEN_TEXTURE, ovenSourceUrl, createOvenFrames } from '../../config/ovenSprite';
 import { STAG_FRAME_SIZE, STAG_TEXTURE, createStagAnimations, stagSheetUrl } from '../../config/stagSprite';
 import { ART } from '../../config/presentation';
@@ -60,6 +61,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    preloadSheldon(this);
     const root = document.getElementById('ui-root')!;
     root.innerHTML = '<div class="loading-screen"><span class="loading-leaf">❧</span><h1>Wilderness Gnomes</h1><p>Waking the woodland…</p><div class="loading-track"><span></span></div></div>';
     const fill = root.querySelector<HTMLElement>('.loading-track span')!;
@@ -105,6 +107,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    createSheldonAnimations(this);
     createStorybookTextures(this);
     this.createGreySquirrelTexture();
     [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, DOE_SPRITE_KEY, FAWN_SPRITE_KEY, BUCK_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
