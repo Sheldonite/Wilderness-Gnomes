@@ -62,10 +62,14 @@ test('all ability ranks have real next-benefit descriptions; stale cards cannot 
 });
 
 test('queued XP levels are preserved and resume one selection at a time', () => {
+  const { BALANCE } = require('../artifacts/ability-tests/game/config/balance.js');
+  const threshold = level => Math.ceil(BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, level - 1));
+  // enough XP for exactly two level-ups, with some left over
+  const grant = threshold(1) + threshold(2) + Math.floor(threshold(3) / 2);
   const manager = new GameManager();
-  manager.addXp(100); assert.equal(manager.level, 2);
+  manager.addXp(grant); assert.equal(manager.level, 2);
   manager.resumeAfterUpgrade(); assert.equal(manager.level, 3); assert.equal(manager.state, 'LevelUpPaused');
-  manager.resumeAfterUpgrade(); assert.equal(manager.state, 'Playing'); assert.equal(manager.xp, 43);
+  manager.resumeAfterUpgrade(); assert.equal(manager.state, 'Playing'); assert.equal(manager.xp, grant - threshold(1) - threshold(2));
 });
 
 test('Barkskin blocks contact, protects for 500ms, then recharges on the gameplay clock', () => {
