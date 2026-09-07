@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { createJawaBuddyTexture, JAWA_BUDDY_TEXTURE } from './JawaTexture';
 import { ParcelFollower } from '../core/ParcelFollower';
 import type { Vector2Like } from '../core/types';
 import { reducedMotion } from '../config/presentation';
@@ -10,6 +11,7 @@ export class ParcelCompanion {
   private readonly legs: Phaser.GameObjects.Graphics;
   private readonly shadow: Phaser.GameObjects.Ellipse;
   constructor(scene: Phaser.Scene) {
+    createJawaBuddyTexture(scene);
     const key='cosmetic-ups-parcel';
     if(!scene.textures.exists(key)) {
       const texture=scene.textures.createCanvas(key,192,192)!;
@@ -33,18 +35,19 @@ export class ParcelCompanion {
     this.legs=scene.add.graphics().setVisible(false);
     this.body=scene.add.image(0,0,key).setDisplaySize(45,45).setOrigin(.5,1).setVisible(false);
   }
-  update(dt:number,player:Vector2Like,active:boolean):void {
+  update(dt:number,player:Vector2Like,active:boolean,jawa=false):void {
     this.follower.update(dt,player,active);
     this.body.setVisible(active);this.legs.setVisible(active);this.shadow.setVisible(active);
     if(!active)return;
+    this.body.setTexture(jawa?JAWA_BUDDY_TEXTURE:'cosmetic-ups-parcel');
     const {position,stride,moving}=this.follower;
     const step=moving&&!reducedMotion()?Math.sin(stride*.24):0;
     this.shadow.setPosition(position.x,position.y);
     this.legs.clear().setPosition(position.x,position.y).setDepth(position.y);
     for(const side of [-1,1]) {
-      const x=side*7,lift=Math.max(0,step*side)*3;
+      const x=side*(jawa?5:7),lift=Math.max(0,step*side)*3;
       this.legs.lineStyle(3,0x765134).lineBetween(x,-12,x+step*side*3,-3-lift);
-      this.legs.fillStyle(0x563b29).fillEllipse(x+step*side*3+1,-2-lift,10,5);
+      this.legs.fillStyle(0x563b29).fillEllipse(x+step*side*3+1,-2-lift,jawa?8:10,5);
     }
     this.body.setPosition(position.x,position.y-3-Math.abs(step)*1.5).setRotation(step*.035).setDepth(position.y+.1);
   }

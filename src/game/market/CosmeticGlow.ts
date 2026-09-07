@@ -15,8 +15,8 @@ export class CosmeticGlow {
   update(deltaMs: number, position: Vector2Like, cosmetic: CosmeticId | null): void {
     this.art.clear();
     this.trail.update(deltaMs,position,cosmetic==='glitter-trail');
-    this.parcel.update(deltaMs,position,cosmetic==='ups-buddy');
-    if (!cosmetic || cosmetic==='ups-buddy') return;
+    this.parcel.update(deltaMs,position,cosmetic==='ups-buddy'||cosmetic==='jawa-buddy',cosmetic==='jawa-buddy');
+    if (!cosmetic || cosmetic==='ups-buddy' || cosmetic==='jawa-buddy') return;
     if(cosmetic==='glitter-trail') {
       this.art.setPosition(0,0);
       const calm=reducedMotion();

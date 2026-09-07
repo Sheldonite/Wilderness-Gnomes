@@ -46,3 +46,17 @@ test('Mystery attacks again while returning to a moving player, as soon as coold
   cat.update(100, movingPlayer, { x: 1, y: 0 }, [next], damage);
   assert.equal(hits, 2, 'does not hit a defeated target twice');
 });
+
+
+test('Mystery abandons a pounce when boss cleanup removes her target', () => {
+  const stats=new GameManager().playerStats, player={x:1000,y:1000};
+  const cat=new MysteryCompanion(scene(),stats,player);
+  const target={id:90,position:{x:cat.position.x+50,y:cat.position.y},radius:15,isDead:false};
+  let hits=0;
+  cat.update(600,player,{x:0,y:0},[target],()=>hits++);
+  assert.match(cat.sprite.animation,/pounce/);
+  target.isDead=true;
+  cat.update(100,player,{x:0,y:0},[],()=>hits++);
+  assert.equal(hits,0);
+  assert.notEqual(cat.state,'pouncing');
+});

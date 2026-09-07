@@ -152,6 +152,11 @@ export class EnemyController {
       return false;
     }
 
+    if (!this.sprite.scene) {
+      this.isDead = true;
+      return false;
+    }
+
     this.health -= amount;
     this.sprite.scene.events.emit('presentation:hit', this.sprite);
     this.isDead = this.health <= 0;
@@ -165,6 +170,9 @@ export class EnemyController {
   }
 
   destroy(): void {
+    // Boss arenas also remove living enemies. Invalidate retained companion targets
+    // before Phaser clears the sprite's scene reference.
+    this.isDead = true;
     this.sprite.destroy();
   }
 

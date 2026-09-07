@@ -100,7 +100,7 @@ export class StartScene extends Phaser.Scene {
     return `<button class="wanderer-card" type="button" data-character="${id}" aria-pressed="false">
       <span class="choice-key">${key}</span><span class="selection-tick" aria-hidden="true">✓</span>
       <span class="wanderer-portrait"><img src="${portrait}" alt="" class="portrait-${id}"></span>
-      <span class="wanderer-copy"><strong>${character.name}</strong><small>${marketProgress.characterUnlocked(id)?description:'Unlock at Staffing Company · 15 gold'}</small></span>
+      <span class="wanderer-copy"><strong>${character.name}</strong><small>${marketProgress.characterUnlocked(id)?description:'Unlock at Staffing Company · 50 gold'}</small></span>
     </button>`;
   }
 

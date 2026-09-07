@@ -215,8 +215,8 @@ test('temporary save failure can recover without losing session purchases or dup
 test('market has four distinct trades with priced and described inventory', () => {
   assert.equal(MARKET_VENDORS.length, 4);
   assert.equal(new Set(MARKET_VENDORS.map(vendor => vendor.id)).size, 4);
-  assert.equal(MARKET_ITEMS.length, 14);
-  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 14);
+  assert.equal(MARKET_ITEMS.length, 16);
+  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 16);
   for (const vendor of MARKET_VENDORS) assert.ok(MARKET_ITEMS.some(item => item.vendorId === vendor.id));
   for (const item of MARKET_ITEMS) {
     assert.ok(item.name && item.description && item.effect && item.icon);
@@ -290,7 +290,7 @@ test('purchased cloak reduces actual damage and tonic heals only while playing, 
 
 
 test('new players unlock Hailey and crossbow once, and keep them after reload', () => {
-  const storage = memoryStorage(fundedProfile(40)), market = new MarketProgress(storage);
+  const storage = memoryStorage(fundedProfile(75)), market = new MarketProgress(storage);
   assert.equal(market.characterUnlocked('wizard'), true);
   assert.equal(market.characterUnlocked('hailey'), false);
   assert.equal(market.weaponUnlocked('spell'), true);
@@ -387,4 +387,40 @@ test('UPS Buddy is a saved cosmetic and grants no combat bonuses or fighting com
   const game=new GameManager('spell',loaded.profile);
   assert.equal(game.playerStats.hasMysteryCompanion,false);
   assert.equal(game.playerStats.hasMidnightCompanion,false);
+});
+
+
+test('Staffing Company unlocks Sheldon permanently for 50 gold without repeat charges', () => {
+  const storage=memoryStorage(fundedProfile(55)), market=new MarketProgress(storage);
+  assert.equal(market.characterUnlocked('sheldon'),false);
+  const listing=MARKET_ITEMS.find(item=>item.id==='unlock-sheldon');
+  assert.equal(listing.vendorId,'curios');
+  assert.equal(listing.kind,'character');
+  assert.equal(market.purchase(listing.id).status,'purchased');
+  const reloaded=new MarketProgress(storage);
+  assert.equal(reloaded.characterUnlocked('sheldon'),true);
+  assert.equal(reloaded.profile.gold,5);
+  assert.equal(reloaded.purchase(listing.id).status,'max-rank');
+  assert.equal(reloaded.profile.gold,5);
+  const poor=new MarketProgress(memoryStorage(fundedProfile(49)));
+  assert.equal(poor.purchase(listing.id).status,'insufficient-gold');
+  assert.equal(poor.characterUnlocked('sheldon'),false);
+  const old={version:1,gold:20,ranks:{},settledRuns:[]};
+  assert.equal(new MarketProgress(memoryStorage(old)).characterUnlocked('sheldon'),false);
+});
+
+
+test('Jawa Buddy is a permanent cosmetic purchase that does not change combat', () => {
+  const storage=memoryStorage(fundedProfile(10)), market=new MarketProgress(storage);
+  const before=marketBonuses(market.profile);
+  assert.equal(market.equipCosmetic('jawa-buddy'),false);
+  assert.equal(market.purchase('jawa-buddy').status,'purchased');
+  assert.equal(market.equipCosmetic('jawa-buddy'),true);
+  const loaded=new MarketProgress(storage);
+  assert.equal(loaded.equippedCosmetic,'jawa-buddy');
+  assert.equal(loaded.profile.gold,5);
+  assert.deepEqual(marketBonuses(loaded.profile),before);
+  assert.equal(loaded.purchase('jawa-buddy').status,'max-rank');
+  loaded.equipCosmetic(null);
+  assert.equal(new MarketProgress(storage).equippedCosmetic,null);
 });

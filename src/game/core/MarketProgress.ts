@@ -220,7 +220,7 @@ export class MarketProgress {
     return { status: 'awarded', goldEarned, ...this.result() };
   }
 
-  characterUnlocked(id: string): boolean { return id === 'wizard' || (id === 'hailey' && !!this.current.ranks['unlock-hailey']); }
+  characterUnlocked(id: string): boolean { return id === 'wizard' || (id === 'hailey' && !!this.current.ranks['unlock-hailey']) || (id === 'sheldon' && !!this.current.ranks['unlock-sheldon']); }
   weaponUnlocked(id: string): boolean { return id === 'spell' || (id === 'crossbow' && !!this.current.ranks['unlock-crossbow']); }
 
   equipWeapon(id: WeaponId): boolean {
