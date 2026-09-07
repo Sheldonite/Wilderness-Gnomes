@@ -1,9 +1,11 @@
+import { describeMidnightSwat } from './midnightSwat';
 import type { AbilityId, AbilityRank, AbilityRanks, WeaponId } from '../core/types';
 import { WEAPONS } from './weapons';
 
 export const ABILITY_IDS: AbilityId[] = ['ricochet-charm', 'firefly-orbit', 'bramble-snare', 'spore-trail',
-  'acorn-shower', 'barkskin-ward', 'woodland-magnet', 'mystery-double-pounce'];
+  'acorn-shower', 'barkskin-ward', 'woodland-magnet', 'mystery-double-pounce', 'midnight-mighty-swat'];
 export const ABILITY_NAMES: Record<AbilityId, string> = {
+  'midnight-mighty-swat': 'Midnight’s Mighty Swat',
   'ricochet-charm': 'Ricochet Charm', 'firefly-orbit': 'Firefly Orbit', 'bramble-snare': 'Bramble Snare',
   'spore-trail': 'Spore Trail', 'acorn-shower': 'Acorn Shower', 'barkskin-ward': 'Barkskin Ward',
   'woodland-magnet': 'Woodland Magnet', 'mystery-double-pounce': 'Mystery’s Double Pounce'
@@ -21,12 +23,12 @@ export const ASCENSION_PLAYER_LEVEL = 10;
 export const AWAKENING_NAMES: Record<AbilityId, string> = {
   'ricochet-charm': 'Chain Lightning', 'firefly-orbit': 'Firefly Swarm', 'bramble-snare': 'Thornwall',
   'spore-trail': 'Fungal Bloom', 'acorn-shower': 'Oak Fall', 'barkskin-ward': 'Living Bark',
-  'woodland-magnet': 'Harvest Wind', 'mystery-double-pounce': 'Feral Frenzy'
+  'woodland-magnet': 'Harvest Wind', 'mystery-double-pounce': 'Feral Frenzy', 'midnight-mighty-swat': 'Sweeping Paw'
 };
 export const ASCENSION_NAMES: Record<AbilityId, string> = {
   'ricochet-charm': 'Storm Front', 'firefly-orbit': 'Firefly Inferno', 'bramble-snare': 'Thornheart',
   'spore-trail': 'Mycelium Tide', 'acorn-shower': 'Worldtree Fall', 'barkskin-ward': 'Heartwood',
-  'woodland-magnet': 'Gale Harvest', 'mystery-double-pounce': 'Bloodlust'
+  'woodland-magnet': 'Gale Harvest', 'mystery-double-pounce': 'Bloodlust', 'midnight-mighty-swat': 'Midnight Maelstrom'
 };
 export const isAwakened = (rank: number): boolean => rank >= AWAKENING_RANK;
 export const isAscended = (rank: number): boolean => rank >= ASCENSION_RANK;
@@ -72,6 +74,7 @@ export function describeAwakening(id: AbilityId, rank: number, weaponId: WeaponI
   const t = awakeningTier(rank), name = tierName(id, rank);
   const c = ABILITIES, pct = (v: number) => Math.round(v * 100);
   switch (id) {
+    case 'midnight-mighty-swat': return `${name}: ${describeMidnightSwat(rank)}`;
     case 'ricochet-charm': {
       const ch = c.ricochet.chain[t];
       const again = ch.splitBounces ? ` Each split bolt bounces ${ch.splitBounces} more time.` : '';
@@ -99,6 +102,7 @@ export function describeAwakening(id: AbilityId, rank: number, weaponId: WeaponI
 export function describeAbility(id: AbilityId, rank: AbilityRank, weaponId: WeaponId = 'spell'): string {
   if (isAwakened(rank)) return describeAwakening(id, rank, weaponId);
   switch (id) {
+    case 'midnight-mighty-swat': return describeMidnightSwat(rank);
     case 'ricochet-charm': {
       if (weaponId === 'crossbow') {
         const extra = WEAPONS.crossbow.baseExtraTargets + rank;

@@ -6,6 +6,7 @@ import { createStorybookTextures } from '../storybookTextures';
 import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } from '../../config/midnightSprite';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import haileySpriteSheetUrl from '../../../assets/sprites/Hailey-Walk.png';
+import haileyIdleUrl from '../../../assets/sprites/Hailey-Idle-Matched.png';
 import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
 import doeSpriteSheetUrl from '../../../assets/sprites/deer-doe-spritesheet.png';
 import fawnSpriteSheetUrl from '../../../assets/sprites/deer-fawn-spritesheet.png';
@@ -83,6 +84,7 @@ export class BootScene extends Phaser.Scene {
       spacing: 0,
       margin: 0
     });
+    this.load.image('hailey-idle-source', haileyIdleUrl);
     this.load.spritesheet(ENEMY_SPRITE_KEY, squirrelEnemySpriteSheetUrl, {
       frameWidth: ENEMY_FRAME_SIZE,
       frameHeight: ENEMY_FRAME_SIZE
@@ -196,8 +198,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   private createHaileyAnimations(): void {
+    this.createHaileyStandingAnimation();
     const animations = [
-      ['idle-down', 0, 0, 4],
       ['walk-down', 0, 3, 8],
       ['idle-right', 4, 4, 4],
       ['walk-right', 4, 7, 8],
@@ -218,6 +220,43 @@ export class BootScene extends Phaser.Scene {
         repeat: -1
       });
     }
+  }
+
+  private createHaileyStandingAnimation(): void {
+    const key = `${HAILEY_ANIMATION_PREFIX}-idle-down`;
+    if (this.anims.exists(key)) return;
+
+    // Fit the generated pose into the walk frames' canvas, keeping her feet
+    // at the same baseline. A tiny breathing loop leaves both feet planted.
+    const source = this.textures.get('hailey-idle-source').getSourceImage() as HTMLImageElement;
+    const canvas = document.createElement('canvas');
+    canvas.width = source.width;
+    canvas.height = source.height;
+    const context = canvas.getContext('2d')!;
+    context.drawImage(source, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let left = canvas.width, top = canvas.height, right = 0, bottom = 0;
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        if (pixels[(y * canvas.width + x) * 4 + 3] < 32) continue;
+        left = Math.min(left, x); right = Math.max(right, x);
+        top = Math.min(top, y); bottom = Math.max(bottom, y);
+      }
+    }
+    const width = right - left + 1, height = bottom - top + 1;
+    const textureKey = 'hailey-standing';
+    const texture = this.textures.createCanvas(textureKey, HAILEY_FRAME_WIDTH * 8, HAILEY_FRAME_HEIGHT)!;
+    for (let frame = 0; frame < 8; frame++) {
+      const drawHeight = 243 + Math.round(Math.sin(frame / 8 * Math.PI * 2));
+      const drawWidth = 243 * width / height;
+      texture.context.drawImage(source, left, top, width, height,
+        frame * HAILEY_FRAME_WIDTH + 66.5 - drawWidth / 2,
+        255 - drawHeight, drawWidth, drawHeight);
+      texture.add(frame, 0, frame * HAILEY_FRAME_WIDTH, 0, HAILEY_FRAME_WIDTH, HAILEY_FRAME_HEIGHT);
+    }
+    texture.refresh();
+    texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.anims.create({ key, frames: this.anims.generateFrameNumbers(textureKey, { start: 0, end: 7 }), frameRate: 5, repeat: -1 });
   }
 
   private createMysteryAnimations(): void {

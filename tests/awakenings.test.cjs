@@ -21,7 +21,7 @@ const damage = (target, amount) => { target.takeDamage(amount); };
 const origin = { x: 0, y: 0 };
 
 test('abilities stop at rank 5 until player level 10, then climb to an ascension at rank 10', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true;
+  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true;
   assert.equal(MAX_ABILITY_RANK, 10); assert.equal(ASCENSION_PLAYER_LEVEL, 10);
   for (const id of ABILITY_IDS) {
     for (let rank = 1; rank < 5; rank++) upgrades.applyUpgrade(upgrades.getAvailable(stats).find(c => c.id === id), stats);

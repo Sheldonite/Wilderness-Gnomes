@@ -4,7 +4,7 @@ import { MIDNIGHT_SPRITE_KEY, midnightScale } from '../config/midnightSprite';
 import { LOOK, reducedMotion } from '../config/presentation';
 import { MidnightBehavior } from '../core/MidnightBehavior';
 import type { CombatTarget, DealDamage } from '../core/CombatResolver';
-import type { Vector2Like } from '../core/types';
+import type { PlayerStats, Vector2Like } from '../core/types';
 
 export class MidnightCompanion {
   readonly sprite: Phaser.GameObjects.Sprite;
@@ -14,8 +14,8 @@ export class MidnightCompanion {
   private seenImpact = 0;
   private flashMs = 0;
 
-  constructor(private readonly scene: Phaser.Scene, player: Vector2Like, navigation?: SceneryNavigation) {
-    this.behavior = new MidnightBehavior(player, navigation);
+  constructor(private readonly scene: Phaser.Scene, player: Vector2Like, navigation?: SceneryNavigation, stats?: PlayerStats) {
+    this.behavior = new MidnightBehavior(player, navigation, stats);
     this.sprite = scene.add.sprite(this.position.x, this.position.y, MIDNIGHT_SPRITE_KEY, 'walk-down-0')
       .setScale(midnightScale(scene)).setDepth(LOOK.depth.companion);
     this.swatArc = scene.add.graphics().setDepth(LOOK.depth.companion + 1);
@@ -39,7 +39,9 @@ export class MidnightCompanion {
       const angle = this.behavior.facing === 'right' ? 0 : this.behavior.facing === 'left' ? Math.PI : this.behavior.facing === 'up' ? -Math.PI / 2 : Math.PI / 2;
       const alpha = reducedMotion() ? .3 : this.flashMs / 140 * .65;
       this.swatArc.lineStyle(2, LOOK.color.cream, alpha);
-      for (let i = 0; i < 3; i++) this.swatArc.beginPath().arc(this.position.x, this.position.y, 24 + i * 5, angle - .65, angle + .65).strokePath();
+      const arc = this.behavior.swatPower.arcDegrees * Math.PI / 360;
+      const reach = this.behavior.swatPower.range;
+      for (let i = 0; i < 3; i++) this.swatArc.beginPath().arc(this.position.x, this.position.y, reach - 14 + i * 5, angle - arc, angle + arc).strokePath();
     }
   }
 

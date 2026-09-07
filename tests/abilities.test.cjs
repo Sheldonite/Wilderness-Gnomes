@@ -45,7 +45,7 @@ test('Mystery gates Double Pounce, and recruitment disappears after selection', 
 });
 
 test('all ability ranks have real next-benefit descriptions; stale cards cannot apply twice', () => {
-  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true; stats.level = 10;
+  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem(); stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true; stats.level = 10;
   for (const id of ABILITY_IDS) {
     for (let rank = 1; rank <= 10; rank++) {
       const offer = upgrades.getAvailable(stats).find(c => c.id === id);

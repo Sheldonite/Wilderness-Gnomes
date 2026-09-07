@@ -100,14 +100,14 @@ export class UpgradeSystem {
   getAvailable(stats: PlayerStats): UpgradeDefinition[] {
     const abilities = ABILITY_IDS.filter(id => stats.abilityRanks[id] < MAX_ABILITY_RANK &&
       rankUnlocked(stats.abilityRanks[id] + 1, stats.level) &&
-      (id !== 'mystery-double-pounce' || stats.hasMysteryCompanion)).map(id => {
+      (id !== 'mystery-double-pounce' || stats.hasMysteryCompanion) && (id !== 'midnight-mighty-swat' || stats.hasMidnightCompanion)).map(id => {
       const rank = (stats.abilityRanks[id] + 1) as AbilityRank;
       const tier = rank === AWAKENING_RANK || rank === ASCENSION_RANK ? tierName(id, rank) : undefined;
       return {
         id, rank, title: tier ? `${ABILITY_NAMES[id]}: ${tier}` : ABILITY_NAMES[id],
         description: describeAbility(id, rank, stats.weaponId),
         category: rank === 1 ? 'NEW ABILITY' : rank === AWAKENING_RANK ? 'AWAKENING' : rank === ASCENSION_RANK ? 'ASCENSION' : `RANK ${rank} OF ${MAX_ABILITY_RANK}`,
-        isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && rankUnlocked(rank, s.level) && (id !== 'mystery-double-pounce' || s.hasMysteryCompanion),
+        isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && rankUnlocked(rank, s.level) && (id !== 'mystery-double-pounce' || s.hasMysteryCompanion) && (id !== 'midnight-mighty-swat' || s.hasMidnightCompanion),
         apply: (s: PlayerStats) => { s.abilityRanks[id] = rank; }
       };
     });

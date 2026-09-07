@@ -12,6 +12,57 @@ function foe(x, y, health = 100) {
 }
 const damage = (enemy, amount) => enemy.takeDamage(amount);
 
+test('Mighty Swat requires Midnight, ranks up once per pick, and resets each run', () => {
+  const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
+  const offer = () => upgrades.getAvailable(stats).find(u => u.id === 'midnight-mighty-swat');
+  assert.equal(offer(), undefined);
+  upgrades.applyUpgrade(upgrades.getAvailable(stats).find(u => u.id === 'gain-companion-midnight'), stats);
+  const first = offer(); assert.equal(first.rank, 1);
+  upgrades.applyUpgrade(first, stats); upgrades.applyUpgrade(first, stats);
+  assert.equal(stats.abilityRanks['midnight-mighty-swat'], 1);
+  assert.equal(offer().rank, 2);
+  assert.equal(new GameManager().playerStats.abilityRanks['midnight-mighty-swat'], 0);
+});
+
+test('swat rank upgrades reach and damage on the existing companion, without duplicate hits', () => {
+  const stats = new GameManager().playerStats;
+  const cat = new MidnightBehavior(player, undefined, stats);
+  stats.abilityRanks['midnight-mighty-swat'] = 3;
+  const near = foe(cat.position.x + 34, cat.position.y, 1000);
+  const extended = foe(cat.position.x + 82, cat.position.y, 1000);
+  cat.update(600, player, [near, extended], damage);
+  cat.update(240, player, [near, extended], damage);
+  assert.equal(near.health, 864); assert.equal(extended.health, 864);
+  cat.update(240, player, [near, extended], damage);
+  assert.equal(near.health, 864);
+});
+
+test('rank five sweeps beside Midnight, and rank ten also hits behind her', () => {
+  for (const rank of [0, 5, 10]) {
+    const stats = new GameManager().playerStats; stats.abilityRanks['midnight-mighty-swat'] = rank;
+    const cat = new MidnightBehavior(player, undefined, stats);
+    const front = foe(cat.position.x + 30, cat.position.y, 1000);
+    const side = foe(cat.position.x, cat.position.y + 50, 1000);
+    const back = foe(cat.position.x - 50, cat.position.y, 1000);
+    cat.update(600, player, [front, side, back], damage);
+    cat.update(240, player, [front, side, back], damage);
+    assert.equal(side.health < 1000, rank >= 5);
+    assert.equal(back.health < 1000, rank === 10);
+  }
+});
+
+test('higher swat ranks shorten the interval without moving the impact frame', () => {
+  const strikes = rank => {
+    const stats = new GameManager().playerStats; stats.abilityRanks['midnight-mighty-swat'] = rank;
+    const cat = new MidnightBehavior(player, undefined, stats), target = foe(cat.position.x + 30, cat.position.y, 10000);
+    let hits = 0;
+    cat.update(600, player, [target], () => hits++);
+    for (let elapsed = 0; elapsed < 4000; elapsed += 10) cat.update(10, player, [target], () => hits++);
+    return hits;
+  };
+  assert.ok(strikes(10) > strikes(0));
+});
+
 test('Midnight recruits once, independently of Mystery, and both flags reset on restart', () => {
   const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
   assert.equal(stats.hasMidnightCompanion, false); assert.equal(stats.hasMysteryCompanion, false);

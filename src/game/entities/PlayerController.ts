@@ -81,7 +81,7 @@ export class PlayerController {
     this.movementDirection = normalize(safe.x - this.sprite.x, safe.y - this.sprite.y);
     this.sprite.setPosition(safe.x, safe.y);
     this.updateAnimation(this.movementDirection);
-    this.updateSecondaryMotion(deltaMs, direction);
+    this.updateSecondaryMotion(deltaMs, this.movementDirection);
     this.aura?.update(deltaMs, this.position);
   }
 
@@ -99,8 +99,13 @@ export class PlayerController {
     const moving = direction.x !== 0 || direction.y !== 0;
     const baseScale = this.character.scale;
 
-    if (reducedMotion()) {
+    if (reducedMotion() || (!moving && this.character.id === 'hailey')) {
       this.sprite.setRotation(0).setScale(baseScale);
+      if (this.character.id === 'hailey' && !moving) {
+        // Her standing frames already breathe, anchored at the soles.
+        if (reducedMotion()) this.sprite.anims.pause(this.sprite.anims.currentAnim?.frames[0]);
+        else this.sprite.anims.resume();
+      }
       return;
     }
 

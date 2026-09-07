@@ -28,7 +28,7 @@ export class CompanionSystem {
     }
 
     this.mystery?.update(deltaMs, playerPosition, playerMovementDirection, enemies, damage);
-    if (this.stats.hasMidnightCompanion && !this.midnight) this.midnight = new MidnightCompanion(this.scene, playerPosition, this.navigation);
+    if (this.stats.hasMidnightCompanion && !this.midnight) this.midnight = new MidnightCompanion(this.scene, playerPosition, this.navigation, this.stats);
     this.midnight?.update(deltaMs, playerPosition, enemies, damage);
   }
 

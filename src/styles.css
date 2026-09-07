@@ -428,6 +428,9 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 .upgrade-comparison small{font-size:9px;letter-spacing:1px;color:#697453}
 .upgrade-comparison>span:last-child{background:#dde6c7;padding:7px;border-radius:6px;color:#294c31}
 .upgrade-description{font-size:12px}
+.upgrade-changes{display:block;margin-top:10px;padding:8px;border-radius:6px;background:#dde6c7;color:#294c31;font-size:12px;line-height:1.5;width:100%}
+.epic-companion .upgrade-changes{background:#dfc8f0;color:#482462}
+.boss-relic .upgrade-changes{background:#e8cfaa;color:#674528}
 .upgrade-owned-list{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:10px;max-height:68px;overflow:auto;font-size:11px}
 .upgrade-owned-list>strong{width:100%;font-size:9px;letter-spacing:1px;color:#687b52}
 .upgrade-owned-list>span{padding:4px 7px;border-radius:5px;background:#dde4cb}.upgrade-owned-list b{color:#79602a}

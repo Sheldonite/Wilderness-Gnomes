@@ -324,6 +324,7 @@ export class GameScene extends Phaser.Scene {
       const chosen = id && ABILITY_IDS.includes(id) ? [id] : ABILITY_IDS;
       if (review !== 'ability-baseline') {
         for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = rank;
+        if (chosen.includes('midnight-mighty-swat')) this.gameManager.playerStats.hasMidnightCompanion = true;
         if (chosen.includes('mystery-double-pounce')) this.gameManager.playerStats.hasMysteryCompanion = true;
       }
       const crowded = review === 'ability-crowd' || review === 'ability-baseline';

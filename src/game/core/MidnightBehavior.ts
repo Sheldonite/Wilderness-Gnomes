@@ -1,7 +1,8 @@
+import { midnightSwatPower } from '../config/midnightSwat';
 import { createNavigationRoute, type SceneryNavigation } from './SceneryNavigation';
 import { BALANCE } from '../config/balance';
 import type { CombatTarget, DealDamage } from './CombatResolver';
-import type { Vector2Like } from './types';
+import type { PlayerStats, Vector2Like } from './types';
 import { clampToArena, distanceSq, normalize } from '../utils/math';
 
 export type CatFacing = 'down' | 'right' | 'up' | 'left';
@@ -23,12 +24,12 @@ export class MidnightBehavior {
   private hitApplied = false;
   private aim: Vector2Like = { x: 0, y: 1 };
 
-  constructor(playerPosition: Vector2Like, private readonly navigation?: SceneryNavigation) {
+  constructor(playerPosition: Vector2Like, private readonly navigation?: SceneryNavigation, private readonly stats?: PlayerStats) {
     this.position = navigation?.nearest(this.followPoint(playerPosition), 12) ?? this.followPoint(playerPosition);
   }
 
   update(deltaMs: number, player: Vector2Like, enemies: CombatTarget[], damage: DealDamage): void {
-    const b = BALANCE.companion;
+    const b = BALANCE.companion, power = this.swatPower;
     this.moving = false;
     this.cooldownMs = Math.max(0, this.cooldownMs - deltaMs);
     if (this.state === 'swatting') {
@@ -37,9 +38,9 @@ export class MidnightBehavior {
         this.hitApplied = true;
         this.impactSerial++;
         for (const enemy of enemies) {
-          if (enemy.isDead || (this.navigation && !this.navigation.clear(this.position, enemy.position, 2)) || distanceSq(this.position, enemy.position) > (b.midnightSwatRange + enemy.radius) ** 2) continue;
+          if (enemy.isDead || (this.navigation && !this.navigation.clear(this.position, enemy.position, 2)) || distanceSq(this.position, enemy.position) > (power.range + enemy.radius) ** 2) continue;
           const direction = normalize(enemy.position.x - this.position.x, enemy.position.y - this.position.y);
-          if (direction.x * this.aim.x + direction.y * this.aim.y >= .5 || distanceSq(this.position, enemy.position) < 1) damage(enemy, b.midnightDamage);
+          if (direction.x * this.aim.x + direction.y * this.aim.y >= Math.cos(power.arcDegrees * Math.PI / 360) - 1e-9 || distanceSq(this.position, enemy.position) < 1) damage(enemy, power.damage);
         }
       }
       if (this.swatAgeMs >= b.midnightSwatDurationMs) this.state = 'returning';
@@ -65,13 +66,15 @@ export class MidnightBehavior {
     this.facing = catFacing(direction);
     if (nearest <= b.midnightApproachRange ** 2 && (!this.navigation || this.navigation.clear(this.position, target.position, 2))) {
       this.state = 'swatting'; this.swatAgeMs = 0; this.hitApplied = false; this.swatSerial++;
-      // Match the visible cardinal paw strike to its 120-degree hit cone.
+      // Keep the strike aimed with the visible paw; higher ranks widen its arc.
       this.aim = this.facing === 'left' ? { x: -1, y: 0 } : this.facing === 'right' ? { x: 1, y: 0 } : this.facing === 'up' ? { x: 0, y: -1 } : { x: 0, y: 1 };
-      this.cooldownMs = b.midnightCooldownMs;
+      this.cooldownMs = power.cooldownMs;
       return;
     }
     this.move(target.position, deltaMs, b.midnightApproachRange - 2);
   }
+
+  get swatPower() { return midnightSwatPower(this.stats?.abilityRanks['midnight-mighty-swat'] ?? 0); }
 
   private followPoint(player: Vector2Like): Vector2Like {
     return clampToArena({ x: player.x + BALANCE.companion.midnightFollowDistance, y: player.y + BALANCE.companion.midnightFollowDistance * .55 }, 12);

@@ -37,7 +37,7 @@ export function icon(name: string): string {
 
 export const UPGRADE_ICONS: Record<UpgradeId, string> = {
   crownfire: 'crownfire', stormcall: 'stormcall', 'phoenix-heart': 'phoenix',
-  'gain-companion-midnight': 'paw',
+  'gain-companion-midnight': 'paw', 'midnight-mighty-swat': 'paw',
   'ricochet-charm': 'ricochet', 'firefly-orbit': 'firefly', 'bramble-snare': 'roots', 'spore-trail': 'mushroom',
   'acorn-shower': 'acorn', 'barkskin-ward': 'shield', 'woodland-magnet': 'magnet', 'mystery-double-pounce': 'pounce',
   'projectile-damage': 'spell', 'fire-rate': 'clock', 'move-speed': 'boot',

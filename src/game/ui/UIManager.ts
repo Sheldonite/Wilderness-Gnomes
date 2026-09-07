@@ -1,5 +1,5 @@
 import { isBossAbility } from '../config/bossAbilities';
-import { ownedUpgrades, upgradeRank, upgradeName, upgradeBenefit, upgradePreview, isAbility, isRanked, upgradeMaxRank } from '../core/UpgradeProgress';
+import { ownedUpgrades, upgradeRank, upgradeName, upgradeBenefit, upgradePreview, upgradeSummary, upgradeChanges, isAbility, isRanked, upgradeMaxRank } from '../core/UpgradeProgress';
 import type { GameManager } from '../core/GameManager';
 import type { HudSnapshot, UpgradeDefinition, UpgradeSource } from '../core/types';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
@@ -113,9 +113,9 @@ export class UIManager {
 
   showLevelUp(choices: UpgradeDefinition[], onChoose: (choice: UpgradeDefinition) => void, source: UpgradeSource = 'level'): void {
     const chest = source !== 'level', boss = source === 'boss';
-    const list = this.createOverlay(boss ? 'A power worth fighting for' : chest ? 'A woodland treasure' : 'A little more magic',
-      boss ? 'Choose one boss relic. Unlock a new power or strengthen one you own.' : chest ? 'Choose one free upgrade. Your level and XP stay the same.' : 'The woods have a gift for you. Choose your next blessing.',
-      boss ? 'BOSS VANQUISHED · EXCLUSIVE ABILITY' : chest ? 'TREASURE CHEST · FREE UPGRADE' : `LEVEL ${this.gameManager.level} · WOODLAND WISDOM`, chest ? 'chest' : 'star', 'upgrade-panel');
+    const list = this.createOverlay(boss ? 'Boss relic' : chest ? 'Treasure!' : 'Level up!',
+      boss ? 'Choose one relic.' : chest ? 'Choose a free upgrade.' : 'Choose an upgrade.',
+      boss ? 'BOSS DEFEATED' : chest ? 'FREE UPGRADE' : `LEVEL ${this.gameManager.level}`, chest ? 'chest' : 'star', 'upgrade-panel');
     list.classList.add('upgrade-grid');
     let selected = false;
     choices.forEach((choice, index) => {
@@ -131,7 +131,10 @@ export class UIManager {
       const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
         ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
         : UPGRADE_ICONS[choice.id];
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC · EXCLUSIVE' : progress.current ? 'STRENGTHEN OWNED UPGRADE' : isCompanion ? 'EPIC COMPANION' : 'NEW UPGRADE'}</span><strong>${choice.title}</strong><span class="upgrade-rank">${progress.current ? `Rank ${progress.current} &rarr; ${progress.next}` : `Unlock rank 1`}${progress.capped ? ` / ${progress.maxRank}` : ''}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>${progress.capped ? `<span class="rank-pips" aria-hidden="true">${Array.from({ length: progress.maxRank }, (_, i) => i + 1).map(rank => `<i class="${rank <= progress.current ? 'filled' : rank === progress.next ? 'next' : ''}"></i>`).join('')}</span>` : ''}<span class="upgrade-comparison"><span><small>NOW</small>${progress.before}</span><span><small>AFTER THIS PICK</small><b>${progress.after}</b></span></span><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">${progress.current ? 'Make it stronger' : 'Add to your build'} ${icon('arrow')}</span>`;
+      const summary = upgradeSummary(choice, this.gameManager.playerStats);
+      const changes = progress.current || choice.id === 'midnight-mighty-swat' ? upgradeChanges(choice, this.gameManager.playerStats) : '';
+      button.title = choice.description;
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}">` : icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC' : isCompanion ? 'COMPANION' : progress.current ? 'UPGRADE' : 'NEW'}</span><strong>${upgradeName(choice.id, this.gameManager.playerStats)}</strong>${progress.capped ? `<span class="upgrade-rank">Rank ${progress.current} &rarr; ${progress.next} / ${progress.maxRank}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>` : isCompanion ? '<span class="upgrade-rank">One-time unlock</span>' : `<span class="upgrade-rank">Picks ${progress.current} &rarr; ${progress.next}</span>`}<span class="upgrade-description">${summary}</span>${changes ? `<span class="upgrade-changes">${changes}</span>` : ''}<span class="upgrade-select">Choose ${icon('arrow')}</span>`;
       const select = () => {
         if (selected) return; selected = true;
         this.clearOverlay(); onChoose(choice); this.refreshBuild();
@@ -142,8 +145,8 @@ export class UIManager {
       button.addEventListener('click', select); this.choices.push(select); list.append(button);
     });
     const owned = ownedUpgrades(this.gameManager.playerStats);
-    if (owned.length) list.insertAdjacentHTML('afterend', `<div class="upgrade-owned-list" aria-label="Already in your build"><strong>ALREADY IN YOUR BUILD</strong>${owned.map(id => `<span>${upgradeName(id, this.gameManager.playerStats)} <b>${upgradeRank(id, this.gameManager.playerStats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b></span>`).join('')}</div>`);
-    list.insertAdjacentHTML('afterend', '<p class="overlay-hint">CHOOSE WITH <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> OR CLICK A CARD</p>');
+    if (owned.length) list.insertAdjacentHTML('afterend', `<div class="upgrade-owned-list" aria-label="Already in your build"><strong>YOUR BUILD</strong>${owned.map(id => `<span>${upgradeName(id, this.gameManager.playerStats)} <b>${upgradeRank(id, this.gameManager.playerStats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b></span>`).join('')}</div>`);
+    list.insertAdjacentHTML('afterend', '<p class="overlay-hint"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · or click</p>');
     this.focusFirst();
   }
 
