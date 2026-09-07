@@ -25,9 +25,9 @@ C = 192; COLS = 8; ROWS = 8; SS = 3          # cell size, frames per row, supers
 # screen-space facing per row: (x, y); y>0 faces the camera
 FACING = [(0, 1), (0, 1), (1, 1), (1, 0), (-1, -1), (0, -1), (-1, 0), (-1, 1)]
 IDLE_ROW = 0
-SWING = math.radians(32)      # thigh swing amplitude
-FLEX = math.radians(62)       # knee flex at mid swing
-LEG_WIDTH = 21                # jeans thickness at 192px
+SWING = math.radians(40)      # thigh swing amplitude
+FLEX = math.radians(55)       # knee flex at mid swing
+LEG_WIDTH = 24                # jeans thickness at 192px
 FOOT_H = 9
 OUTLINE = (24, 22, 30, 255)
 SHOE = (188, 32, 34, 255); SHOE_DARK = (132, 22, 26, 255); SOLE = (236, 226, 208, 255)
@@ -123,23 +123,43 @@ def leg_points(hip, phase, length, facing):
     return knee, ankle, sx, sy, theta - flex
 
 
+def quad(p, q, wp, wq):
+    """Corners of a tapered segment from p (width wp) to q (width wq)."""
+    dx, dy = q[0] - p[0], q[1] - p[1]
+    n = math.hypot(dx, dy) or 1
+    nx, ny = -dy / n, dx / n
+    return [(p[0] + nx * wp / 2, p[1] + ny * wp / 2), (q[0] + nx * wq / 2, q[1] + ny * wq / 2),
+            (q[0] - nx * wq / 2, q[1] - ny * wq / 2), (p[0] - nx * wp / 2, p[1] - ny * wp / 2)]
+
+
 def draw_leg(draw, hip, knee, ankle, sx, sy, shin_angle, colour, width, scale):
-    """One leg: outlined thick polyline plus a shoe, drawn at supersampled scale."""
-    pts = [(p[0] * scale, p[1] * scale) for p in (hip, knee, ankle)]
-    w = width * scale
-    draw.line(pts, fill=OUTLINE, width=int(w + 5 * scale), joint='curve')
-    for p in pts: draw.ellipse([p[0] - (w + 5 * scale) / 2, p[1] - (w + 5 * scale) / 2, p[0] + (w + 5 * scale) / 2, p[1] + (w + 5 * scale) / 2], fill=OUTLINE)
-    draw.line(pts, fill=colour, width=int(w), joint='curve')
-    for p in pts: draw.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=colour)
-    # shoe: elongated along the facing direction, sitting at the ankle
+    """One trouser leg as two tapered panels with a straight cuff, then a sneaker."""
+    S = lambda pts: [(x * scale, y * scale) for x, y in pts]
+    w_hip, w_knee, w_ankle = width * 1.15, width * 0.95, width * 0.78
+    o = 4.5
+    thigh = quad(hip, knee, w_hip, w_knee); shin = quad(knee, ankle, w_knee, w_ankle)
+    thigh_o = quad(hip, knee, w_hip + o, w_knee + o); shin_o = quad(knee, ankle, w_knee + o, w_ankle + o)
+    for poly in (thigh_o, shin_o): draw.polygon(S(poly), fill=OUTLINE)
+    kr = (w_knee + o) / 2
+    draw.ellipse(S([(knee[0] - kr, knee[1] - kr), (knee[0] + kr, knee[1] + kr)]), fill=OUTLINE)
+    for poly in (thigh, shin): draw.polygon(S(poly), fill=colour)
+    kr = w_knee / 2
+    draw.ellipse(S([(knee[0] - kr, knee[1] - kr), (knee[0] + kr, knee[1] + kr)]), fill=colour)
+    # crease line down the shin for a little form
+    crease = (ankle[0] * 0.5 + knee[0] * 0.5, ankle[1] * 0.5 + knee[1] * 0.5)
+    draw.line(S([knee, crease]), fill=tuple(int(v * 0.8) for v in colour[:3]) + (255,), width=int(2 * scale))
+    # sneaker: rounded box pointing the way of travel, heel just behind the ankle
     ax, ay = ankle
-    length = 13 + 9 * abs(sx)
-    height = FOOT_H + 3 * abs(sy)
-    lead = 6 * sx + 2 * math.sin(shin_angle) * sx
-    box = [(ax + lead - length / 2) * scale, (ay - 2) * scale, (ax + lead + length / 2) * scale, (ay + height) * scale]
-    draw.ellipse([box[0] - 2.5 * scale, box[1] - 2.5 * scale, box[2] + 2.5 * scale, box[3] + 2.5 * scale], fill=OUTLINE)
-    draw.ellipse(box, fill=SHOE if sy >= 0 else SHOE_DARK)
-    draw.rectangle([box[0] + 1.5 * scale, box[3] - 3.5 * scale, box[2] - 1.5 * scale, box[3] - 1 * scale], fill=SOLE)
+    length = 15 + 11 * abs(sx)
+    height = FOOT_H + 2 * abs(sy)
+    heel = 6 if sx == 0 else 5
+    x0 = ax - heel if sx >= 0 else ax - (length - heel)
+    if sx == 0: x0 = ax - length / 2
+    box = [x0, ay - 1, x0 + length, ay + height]
+    r = height * 0.5
+    draw.rounded_rectangle(S([(box[0] - 2.5, box[1] - 2.5), (box[2] + 2.5, box[3] + 2.5)]), radius=(r + 2.5) * scale, fill=OUTLINE)
+    draw.rounded_rectangle(S([(box[0], box[1]), (box[2], box[3])]), radius=r * scale, fill=SHOE if sy >= 0 else SHOE_DARK)
+    draw.rounded_rectangle(S([(box[0] + 1, box[3] - 3.5), (box[2] - 1, box[3] - 1)]), radius=1.5 * scale, fill=SOLE)
 
 
 def render_row(frame, row):
@@ -151,7 +171,9 @@ def render_row(frame, row):
     facing = FACING[row]
     fx, fy = facing
     leg_len = ground - FOOT_H - hip_y
-    spread = (hip_r - hip_l) * 0.28
+    fnorm = math.hypot(fx, fy) or 1
+    side = abs(fx) / fnorm                                           # 1 in profile, 0 straight on
+    spread = (hip_r - hip_l) * 0.27 * (1 - side) + 4 * side          # legs stack in profile
     cx = (hip_l + hip_r) / 2 + (2 if fx == 0 else 0)
     hips = [(cx - spread, hip_y + 3), (cx + spread, hip_y + 3)]     # left leg, right leg (screen space)
     far = 0 if fx >= 0 else 1                                        # leg on the far side is drawn first
