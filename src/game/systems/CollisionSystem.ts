@@ -34,21 +34,19 @@ export class CollisionSystem {
     gameManager: GameManager,
     enemies: EnemyController[]
   ): void {
-    const minDistance = player.radius + BALANCE.enemy.radius;
-    const minDistanceSq = minDistance * minDistance;
-
     for (const enemy of enemies) {
       if (enemy.isDead) {
         continue;
       }
 
-      if (distanceSq(player.position, enemy.position) > minDistanceSq) {
+      const minDistance = player.radius + enemy.radius;
+      if (distanceSq(player.position, enemy.position) > minDistance * minDistance) {
         continue;
       }
 
       if (timeMs - enemy.lastContactDamageAt >= BALANCE.enemy.contactDamageCooldownMs) {
         enemy.lastContactDamageAt = timeMs;
-        gameManager.damagePlayer(BALANCE.enemy.contactDamage, 'contact');
+        gameManager.damagePlayer(enemy.contactDamage, 'contact');
         if (gameManager.state !== 'Playing') return;
       }
     }

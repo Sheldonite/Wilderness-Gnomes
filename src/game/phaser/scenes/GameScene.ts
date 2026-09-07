@@ -203,6 +203,13 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.elapsedMs = 187000; this.gameManager.kills = 42; this.gameManager.level = 6;
       this.gameManager.xpToNextLevel = Math.ceil(BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, 5));
       this.gameManager.playerStats.health = 0; this.gameManager.state = 'GameOver';
+    } else if (review === 'deer') {
+      this.gameManager.level = 10; this.gameManager.xpToNextLevel = 100000;
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      for (let i = 0; i < 8; i++) {
+        const angle = i * 0.785;
+        this.enemies.push(new EnemyController(this, 1600 + Math.cos(angle) * 260, 1600 + Math.sin(angle) * 260, 0, i % 3 === 2 ? 'fawn' : 'doe'));
+      }
     } else if (review === 'ranged') {
       this.gameManager.level = 5; this.gameManager.xpToNextLevel = 100000;
       this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;

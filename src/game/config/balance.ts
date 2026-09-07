@@ -14,6 +14,12 @@ export const BALANCE = {
     separationRadius: 34,
     xpValue: 8
   },
+  deer: {
+    unlockLevel: 10,          // from here every spawn is a deer; squirrels stop
+    fawnChance: 0.35,
+    doe: { health: 70, speed: 118, contactDamage: 12, radius: 22, scale: 1.05 },
+    fawn: { health: 34, speed: 150, contactDamage: 6, radius: 15, scale: 0.85 }
+  },
   rangedEnemy: {
     unlockLevel: 5,
     spawnChance: 0.2,

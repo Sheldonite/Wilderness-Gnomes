@@ -1,8 +1,12 @@
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import {
+  DOE_SPRITE_KEY,
+  DOE_WALK_ANIMATION_BY_DIRECTION,
   ENEMY_SPRITE_KEY,
   ENEMY_WALK_ANIMATION_BY_DIRECTION,
+  FAWN_SPRITE_KEY,
+  FAWN_WALK_ANIMATION_BY_DIRECTION,
   GREY_ENEMY_SPRITE_KEY,
   GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION
 } from '../config/enemySprite';
@@ -11,43 +15,67 @@ import { RangedSquirrelBehavior } from '../core/SquirrelBehavior';
 import { clampToArena, normalize } from '../utils/math';
 
 let nextEnemyId = 1;
-const ENEMY_SPRITE_SCALE = 0.72;
 
-/** Brown squirrels charge; grey squirrels hang back and throw acorns. */
-export type EnemyVariant = 'brown' | 'grey';
+/** Brown squirrels charge, grey squirrels throw acorns, and from level 10 the woods send does and fawns. */
+export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn';
+
+interface VariantProfile {
+  textureKey: string;
+  walkAnimations: Record<string, string>;
+  scale: number;
+  health: number;
+  speed: number;
+  contactDamage: number;
+  radius: number;
+  ranged: boolean;
+}
+
+const VARIANTS: Record<EnemyVariant, VariantProfile> = {
+  brown: { textureKey: ENEMY_SPRITE_KEY, walkAnimations: ENEMY_WALK_ANIMATION_BY_DIRECTION, scale: 0.72,
+    health: BALANCE.enemy.health, speed: BALANCE.enemy.speed, contactDamage: BALANCE.enemy.contactDamage, radius: BALANCE.enemy.radius, ranged: false },
+  grey: { textureKey: GREY_ENEMY_SPRITE_KEY, walkAnimations: GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION, scale: 0.72,
+    health: BALANCE.rangedEnemy.health, speed: BALANCE.rangedEnemy.speed, contactDamage: BALANCE.enemy.contactDamage, radius: BALANCE.enemy.radius, ranged: true },
+  doe: { textureKey: DOE_SPRITE_KEY, walkAnimations: DOE_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.doe.scale,
+    health: BALANCE.deer.doe.health, speed: BALANCE.deer.doe.speed, contactDamage: BALANCE.deer.doe.contactDamage, radius: BALANCE.deer.doe.radius, ranged: false },
+  fawn: { textureKey: FAWN_SPRITE_KEY, walkAnimations: FAWN_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.fawn.scale,
+    health: BALANCE.deer.fawn.health, speed: BALANCE.deer.fawn.speed, contactDamage: BALANCE.deer.fawn.contactDamage, radius: BALANCE.deer.fawn.radius, ranged: false }
+};
 
 export class EnemyController {
   readonly id = nextEnemyId++;
-  readonly radius = BALANCE.enemy.radius;
+  readonly radius: number;
+  readonly contactDamage: number;
   readonly sprite: Phaser.GameObjects.Sprite;
-  health: number = BALANCE.enemy.health;
+  health: number;
   isDead = false;
   slowMultiplier = 1;
   lastContactDamageAt = -Infinity;
   private readonly ranged?: RangedSquirrelBehavior;
+  private readonly profile: VariantProfile;
   private readonly walkAnimations: Record<string, string>;
 
   constructor(scene: Phaser.Scene, x: number, y: number, difficultyMinutes: number, readonly variant: EnemyVariant = 'brown') {
-    const ranged = variant === 'grey';
-    this.sprite = scene.add.sprite(x, y, ranged ? GREY_ENEMY_SPRITE_KEY : ENEMY_SPRITE_KEY, 0);
-    this.walkAnimations = ranged ? GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION : ENEMY_WALK_ANIMATION_BY_DIRECTION;
+    const profile = VARIANTS[variant];
+    this.profile = profile;
+    this.radius = profile.radius;
+    this.contactDamage = profile.contactDamage;
+    this.sprite = scene.add.sprite(x, y, profile.textureKey, 0);
+    this.walkAnimations = profile.walkAnimations;
     this.sprite.setDepth(10);
-    this.sprite.setScale(ENEMY_SPRITE_SCALE);
+    this.sprite.setScale(profile.scale);
     this.sprite.play(this.walkAnimations['0,1']);
     scene.events.emit('presentation:actor', this.sprite);
-    const baseHealth = ranged ? BALANCE.rangedEnemy.health : BALANCE.enemy.health;
-    this.health = Math.round(baseHealth + difficultyMinutes * 8);
-    if (ranged) this.ranged = new RangedSquirrelBehavior();
+    this.health = Math.round(profile.health + difficultyMinutes * 8);
+    if (profile.ranged) this.ranged = new RangedSquirrelBehavior();
   }
 
   get isRanged(): boolean {
-    return this.variant === 'grey';
+    return this.profile.ranged;
   }
 
   update(deltaMs: number, target: Vector2Like, difficultyMinutes: number): void {
     if (this.isDead) return;
-    const baseSpeed = this.isRanged ? BALANCE.rangedEnemy.speed : BALANCE.enemy.speed;
-    const speed = (baseSpeed + difficultyMinutes * 8) * this.slowMultiplier;
+    const speed = (this.profile.speed + difficultyMinutes * 8) * this.slowMultiplier;
     const direction = this.ranged
       ? this.ranged.steer(this.position, target)
       : normalize(target.x - this.sprite.x, target.y - this.sprite.y);

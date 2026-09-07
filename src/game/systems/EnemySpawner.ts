@@ -3,7 +3,7 @@ import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { Vector2Like } from '../core/types';
 import { EnemyController, type EnemyVariant } from '../entities/EnemyController';
-import { rollRangedSpawn } from '../core/SquirrelBehavior';
+import { rollSpawnVariant } from '../core/SquirrelBehavior';
 
 export class EnemySpawner {
   private spawnTimerMs = 0;
@@ -37,8 +37,7 @@ export class EnemySpawner {
     }
 
     this.spawnTimerMs = 0;
-    const ranged = rollRangedSpawn(playerLevel);
-    enemies.push(this.spawnEnemy(playerPosition, camera, difficultyMinutes, ranged ? 'grey' : 'brown'));
+    enemies.push(this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel)));
   }
 
   private spawnEnemy(
@@ -67,8 +66,9 @@ export class EnemySpawner {
       y = Phaser.Math.Between(Math.floor(view.top - padding), Math.floor(view.bottom + padding));
     }
 
-    x = Phaser.Math.Clamp(x, BALANCE.enemy.radius, GAME_CONFIG.arena.width - BALANCE.enemy.radius);
-    y = Phaser.Math.Clamp(y, BALANCE.enemy.radius, GAME_CONFIG.arena.height - BALANCE.enemy.radius);
+    const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.doe.radius);
+    x = Phaser.Math.Clamp(x, margin, GAME_CONFIG.arena.width - margin);
+    y = Phaser.Math.Clamp(y, margin, GAME_CONFIG.arena.height - margin);
 
     return new EnemyController(this.scene, x, y, difficultyMinutes, variant);
   }

@@ -5,6 +5,8 @@ import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } fr
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import haileySpriteSheetUrl from '../../../assets/sprites/Hailey-Walk.png';
 import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
+import doeSpriteSheetUrl from '../../../assets/sprites/deer-doe-spritesheet.png';
+import fawnSpriteSheetUrl from '../../../assets/sprites/deer-fawn-spritesheet.png';
 import familiarCatSpriteSheetUrl from '../../../assets/sprites/familiar-cat-spritesheet.png';
 import familiarCatPounceSpriteSheetUrl from '../../../assets/sprites/familiar-cat-pounce-spritesheet.png';
 import {
@@ -30,7 +32,11 @@ import {
   ENEMY_FRAME_SIZE,
   ENEMY_SPRITE_KEY,
   GREY_ENEMY_ANIMATION_PREFIX,
-  GREY_ENEMY_SPRITE_KEY
+  GREY_ENEMY_SPRITE_KEY,
+  DOE_ANIMATION_PREFIX,
+  DOE_SPRITE_KEY,
+  FAWN_ANIMATION_PREFIX,
+  FAWN_SPRITE_KEY
 } from '../../config/enemySprite';
 import {
   applyPlayerSpriteAdjustments,
@@ -72,6 +78,8 @@ export class BootScene extends Phaser.Scene {
       frameWidth: ENEMY_FRAME_SIZE,
       frameHeight: ENEMY_FRAME_SIZE
     });
+    this.load.spritesheet(DOE_SPRITE_KEY, doeSpriteSheetUrl, { frameWidth: ENEMY_FRAME_SIZE, frameHeight: ENEMY_FRAME_SIZE });
+    this.load.spritesheet(FAWN_SPRITE_KEY, fawnSpriteSheetUrl, { frameWidth: ENEMY_FRAME_SIZE, frameHeight: ENEMY_FRAME_SIZE });
     this.load.spritesheet(MYSTERY_SPRITE_KEY, familiarCatSpriteSheetUrl, {
       frameWidth: MYSTERY_FRAME_SIZE,
       frameHeight: MYSTERY_FRAME_SIZE
@@ -85,7 +93,7 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     createStorybookTextures(this);
     this.createGreySquirrelTexture();
-    [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
+    [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, DOE_SPRITE_KEY, FAWN_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
     // The wizard sheet is authored at 192px and drawn at ~40%; linear filtering keeps the downscale smooth.
     this.textures.get(PLAYER_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
     applyPlayerSpriteAdjustments(this);
@@ -144,7 +152,13 @@ export class BootScene extends Phaser.Scene {
   }
 
   private createEnemyAnimations(): void {
-    for (const [prefix, textureKey] of [[ENEMY_ANIMATION_PREFIX, ENEMY_SPRITE_KEY], [GREY_ENEMY_ANIMATION_PREFIX, GREY_ENEMY_SPRITE_KEY]] as const) {
+    const sheets = [
+      [ENEMY_ANIMATION_PREFIX, ENEMY_SPRITE_KEY],
+      [GREY_ENEMY_ANIMATION_PREFIX, GREY_ENEMY_SPRITE_KEY],
+      [DOE_ANIMATION_PREFIX, DOE_SPRITE_KEY],
+      [FAWN_ANIMATION_PREFIX, FAWN_SPRITE_KEY]
+    ] as const;
+    for (const [prefix, textureKey] of sheets) {
       for (const [name, row, frameRate] of ENEMY_ANIMATION_ROWS) {
         const key = `${prefix}-${name}`;
         if (this.anims.exists(key)) {

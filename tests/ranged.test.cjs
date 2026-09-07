@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { RangedSquirrelBehavior, rollRangedSpawn } = require('../artifacts/ability-tests/game/core/SquirrelBehavior.js');
+const { RangedSquirrelBehavior, rollRangedSpawn, rollSpawnVariant } = require('../artifacts/ability-tests/game/core/SquirrelBehavior.js');
 const { BALANCE } = require('../artifacts/ability-tests/game/config/balance.js');
 
 const player = { x: 1000, y: 1000 };
@@ -13,6 +13,16 @@ test('grey squirrels only appear from the unlock level, one in five spawns', () 
   let greys = 0;
   for (let i = 0; i < 10000; i++) if (rollRangedSpawn(R.unlockLevel + 2)) greys++;
   assert.ok(greys > 1700 && greys < 2300, `expected roughly 20% grey, got ${greys / 100}%`);
+});
+
+test('from the deer level only does and fawns spawn, with fawns in the minority', () => {
+  const D = BALANCE.deer;
+  assert.equal(rollSpawnVariant(D.unlockLevel - 1, () => 0.99), 'brown');
+  const counts = { brown: 0, grey: 0, doe: 0, fawn: 0 };
+  for (let i = 0; i < 10000; i++) counts[rollSpawnVariant(D.unlockLevel)]++;
+  assert.equal(counts.brown + counts.grey, 0, 'no squirrels once deer arrive');
+  assert.ok(counts.fawn > 3000 && counts.fawn < 4000, `expected ~35% fawns, got ${counts.fawn / 100}%`);
+  assert.equal(counts.doe + counts.fawn, 10000);
 });
 
 test('a grey squirrel approaches, holds its range, and backs off when crowded', () => {
