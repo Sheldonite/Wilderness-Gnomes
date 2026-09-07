@@ -84,11 +84,11 @@ export const BALANCE = {
     frankieHitRadius: 22,
     frankieDamage: 14,
     frankieCooldownMs: 1700,
-    frankieFeatherMs: 8000,
-    frankieFeatherLifeMs: 14000,
+    frankieFeatherMs: 30000,
+    frankieFeatherLifeMs: 18000,
     frankieFeatherBonus: 2,
     frankieFeatherCap: 40,
-    frankieCollectRange: 30
+    frankieCollectRange: 42
   },
   chest: {
     chancePerLevel: 0.4,

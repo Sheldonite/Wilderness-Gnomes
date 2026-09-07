@@ -38,7 +38,7 @@ import { CombatResolver, type CombatTarget } from '../../core/CombatResolver';
 import { ABILITY_IDS } from '../../config/abilities';
 import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
 import { MIDNIGHT_SPRITE_KEY } from '../../config/midnightSprite';
-import { FRANKIE_SPRITE_KEY } from '../../config/frankieSprite';
+import { FRANKIE_PORTRAIT_KEY } from '../../config/frankieSprite';
 import type { AbilityId, AbilityRank, UpgradeDefinition } from '../../core/types';
 
 export class GameScene extends Phaser.Scene {
@@ -120,7 +120,7 @@ export class GameScene extends Phaser.Scene {
     this.cameraController = new CameraController(this.cameras.main);
     this.uiManager = new UIManager(this.gameManager, () => this.togglePause(), this.selectedCharacter,
       this.textures.getBase64(this.selectedCharacter.textureKey, 0), this.textures.getBase64(MYSTERY_SPRITE_KEY, 0),
-      this.textures.getBase64(MIDNIGHT_SPRITE_KEY, 'walk-down-0'), this.textures.getBase64(FRANKIE_SPRITE_KEY));
+      this.textures.getBase64(MIDNIGHT_SPRITE_KEY, 'walk-down-0'), this.textures.getBase64(FRANKIE_PORTRAIT_KEY));
     this.debugSpriteSheetMenu = import.meta.env.DEV ? new DebugSpriteSheetMenu(this) : undefined;
     this.presentation = new PresentationSystem(this);
     this.abilities = new AbilitySystem(this, this.gameManager.playerStats);

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { LOOK } from '../config/presentation';
-import { FRANKIE_SPRITE_KEY } from '../config/frankieSprite';
+import { FRANKIE_DIVE_KEY, FRANKIE_FLAP_KEY, FRANKIE_SPRITE_KEY } from '../config/frankieSprite';
 import { FrankieFlock } from '../core/FrankieFlock';
 import type { DealDamage } from '../core/CombatResolver';
 import type { PlayerStats, Vector2Like } from '../core/types';
@@ -9,7 +9,7 @@ import type { EnemyController } from './EnemyController';
 /** Renders Frankie's circling flock and their moulted feathers. */
 export class FrankieCompanion {
   readonly flock: FrankieFlock;
-  private readonly birds: Phaser.GameObjects.Image[] = [];
+  private readonly birds: Phaser.GameObjects.Sprite[] = [];
   private readonly featherSprites = new Map<FrankieFlock['feathers'][number], Phaser.GameObjects.Image>();
 
   constructor(
@@ -45,8 +45,10 @@ export class FrankieCompanion {
 
   private syncBirds(): void {
     while (this.birds.length < this.flock.birds.length) {
-      const sprite = this.scene.add.image(0, 0, FRANKIE_SPRITE_KEY);
-      sprite.setDisplaySize(54, 38).setDepth(LOOK.depth.companion + 3);
+      const sprite = this.scene.add.sprite(0, 0, FRANKIE_SPRITE_KEY, 2);
+      sprite.setDisplaySize(54, 54).setDepth(LOOK.depth.companion + 3);
+      sprite.play(FRANKIE_FLAP_KEY);
+      sprite.anims.setProgress((this.birds.length * 0.17) % 1);
       this.birds.push(sprite);
     }
     while (this.birds.length > this.flock.birds.length) this.birds.pop()?.destroy();
@@ -58,7 +60,9 @@ export class FrankieCompanion {
       sprite.setRotation(Math.atan2(bird.facing.y, Math.abs(bird.facing.x) || 1) * 0.4);
       sprite.setDepth(bird.facing.y >= 0 ? 22 : 18);
       const diving = bird.state === 'diving';
-      sprite.setDisplaySize(diving ? 60 : 54, diving ? 42 : 38);
+      sprite.setDisplaySize(diving ? 60 : 54, diving ? 60 : 54);
+      const anim = diving ? FRANKIE_DIVE_KEY : FRANKIE_FLAP_KEY;
+      if (sprite.anims.currentAnim?.key !== anim) sprite.play(anim, true);
     }
   }
 
@@ -73,7 +77,7 @@ export class FrankieCompanion {
       let sprite = this.featherSprites.get(feather);
       if (!sprite) {
         sprite = this.scene.add.image(feather.position.x, feather.position.y, LOOK.texture.feather);
-        sprite.setDisplaySize(16, 16).setDepth(LOOK.depth.pickup);
+        sprite.setDisplaySize(40, 40).setDepth(LOOK.depth.pickup);
         this.featherSprites.set(feather, sprite);
       }
       sprite.setPosition(feather.position.x, feather.position.y);

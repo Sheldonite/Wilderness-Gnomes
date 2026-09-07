@@ -5,7 +5,7 @@ import { STAG_FRAME_SIZE, STAG_TEXTURE, createStagAnimations, stagSheetUrl } fro
 import { ART } from '../../config/presentation';
 import { createStorybookTextures } from '../storybookTextures';
 import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } from '../../config/midnightSprite';
-import { FRANKIE_SPRITE_KEY, FRANKIE_SPRITE_URL } from '../../config/frankieSprite';
+import { FRANKIE_SPRITE_KEY, FRANKIE_SPRITE_URL, FRANKIE_PORTRAIT_KEY, FRANKIE_PORTRAIT_URL, FRANKIE_FRAME_SIZE, createFrankieAnimations } from '../../config/frankieSprite';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import haileySpriteSheetUrl from '../../../assets/sprites/Hailey-Walk.png';
 import haileyIdleUrl from '../../../assets/sprites/Hailey-Idle-Matched.png';
@@ -71,7 +71,11 @@ export class BootScene extends Phaser.Scene {
     this.load.image('heartwood-crossbow', ART.crossbow);
     this.load.image('heartwood-crossbow-top', ART.crossbowTop);
     this.load.image(MIDNIGHT_SOURCE_KEY, MIDNIGHT_SOURCE_URL);
-    this.load.image(FRANKIE_SPRITE_KEY, FRANKIE_SPRITE_URL);
+    this.load.image(FRANKIE_PORTRAIT_KEY, FRANKIE_PORTRAIT_URL);
+    this.load.spritesheet(FRANKIE_SPRITE_KEY, FRANKIE_SPRITE_URL, {
+      frameWidth: FRANKIE_FRAME_SIZE,
+      frameHeight: FRANKIE_FRAME_SIZE
+    });
     this.load.image(OVEN_TEXTURE, ovenSourceUrl);
     this.load.spritesheet(STAG_TEXTURE, stagSheetUrl, { frameWidth: STAG_FRAME_SIZE, frameHeight: STAG_FRAME_SIZE });
     this.load.image('storybook-ground-source', ART.ground);
@@ -116,6 +120,7 @@ export class BootScene extends Phaser.Scene {
     this.textures.get('heartwood-crossbow').setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get('heartwood-crossbow-top').setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get(FRANKIE_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.textures.get(FRANKIE_PORTRAIT_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
     applyPlayerSpriteAdjustments(this);
     alignMysteryFrames(this);
     this.createPlayerAnimations();
@@ -123,6 +128,7 @@ export class BootScene extends Phaser.Scene {
     this.createEnemyAnimations();
     this.createMysteryAnimations();
     createMidnightAnimations(this);
+    createFrankieAnimations(this);
     createOvenFrames(this);
     this.textures.get(STAG_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR);
     createStagAnimations(this);
