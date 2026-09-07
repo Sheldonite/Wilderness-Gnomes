@@ -77,7 +77,7 @@ export class FrankieCompanion {
       let sprite = this.featherSprites.get(feather);
       if (!sprite) {
         sprite = this.scene.add.image(feather.position.x, feather.position.y, LOOK.texture.feather);
-        sprite.setDisplaySize(40, 40).setDepth(LOOK.depth.pickup);
+        sprite.setDisplaySize(48, 52).setRotation(-0.35 + Math.random() * 0.7).setDepth(LOOK.depth.pickup);
         this.featherSprites.set(feather, sprite);
       }
       sprite.setPosition(feather.position.x, feather.position.y);
