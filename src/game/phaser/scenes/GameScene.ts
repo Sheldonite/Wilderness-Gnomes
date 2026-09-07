@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { OvenBossSystem } from '../../systems/OvenBossSystem';
 import { OVEN } from '../../config/ovenBoss';
+import { StagBossSystem } from '../../systems/StagBossSystem';
+import { STAG } from '../../config/stagBoss';
+import { clampToArena } from '../../utils/math';
 import { BALANCE } from '../../config/balance';
 import { GAME_CONFIG } from '../../config/gameConfig';
 import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config/playerCharacters';
@@ -45,6 +48,7 @@ export class GameScene extends Phaser.Scene {
   private abilities!: AbilitySystem;
   private combat!: CombatResolver;
   private oven!: OvenBossSystem;
+  private stag!: StagBossSystem;
   private visualsPaused = false;
   private reviewChoices?: UpgradeDefinition[];
   private keys!: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
@@ -104,6 +108,13 @@ export class GameScene extends Phaser.Scene {
 
     this.scenerySystem.create();
     this.oven = new OvenBossSystem(this, this.gameManager, this.scenerySystem.navigation);
+    this.stag = new StagBossSystem(this, this.gameManager, this.scenerySystem.navigation, (damage, push) => {
+      this.gameManager.damagePlayer(damage);
+      // thrown back along the blow, but never into scenery or off the arena
+      const thrown = clampToArena({ x: this.player.position.x + push.x * STAG.chargeKnockback, y: this.player.position.y + push.y * STAG.chargeKnockback }, this.player.radius);
+      const safe = this.scenerySystem.navigation.move(this.player.position, thrown, this.player.radius);
+      this.player.sprite.setPosition(safe.x, safe.y);
+    });
 
     this.player = new PlayerController(
       this,
@@ -177,6 +188,28 @@ export class GameScene extends Phaser.Scene {
         this.gameManager.playerStats.hasMidnightCompanion = false;
         this.oven.update(0, this.player.position, this.player.radius, this.enemies);
         this.oven.boss!.sprite.setPosition(1780, 1660);
+      }
+      document.body.append(this.reviewControls); return;
+    }
+    if (review === 'stag') {
+      this.reviewNoEnemies = true;
+      this.gameManager.level = 14;
+      this.gameManager.playerStats.level = 14;
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 10000;
+      this.gameManager.playerStats.projectileDamage = 60;
+      this.oven.encounter.spawned = true;   // the level 10 boss has been and gone
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span>STAG REVIEW</span><button>Reach level 15</button><button>Walk trail</button><button>Defeat boss</button><button>End run</button>';
+      const buttons = this.reviewControls.querySelectorAll('button');
+      buttons[0].onclick = () => this.gameManager.addXp(this.gameManager.xpToNextLevel - this.gameManager.xp);
+      buttons[1].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[1].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
+      buttons[2].onclick = () => { if (this.gameManager.state === 'Playing' && this.stag.boss) this.combat.damage(this.stag.boss, STAG.health); };
+      buttons[3].onclick = () => this.finishReviewRun();
+      if (new URLSearchParams(location.search).get('look') === '1') {
+        this.gameManager.level = 15; this.gameManager.playerStats.level = 15;
+        this.gameManager.playerStats.projectileDamage = 0;
+        this.stag.update(0, this.player.position, this.player.radius, this.enemies);
+        this.stag.boss!.sprite.setPosition(1420, 1660);
       }
       document.body.append(this.reviewControls); return;
     }
@@ -335,6 +368,7 @@ export class GameScene extends Phaser.Scene {
     this.player.update(deltaMs, this.keys);
     this.cameraController.update(this.player.position);
     this.oven.update(deltaMs, this.player.position, this.player.radius, this.enemies);
+    this.stag.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     if (this.gameManager.state !== 'Playing') return;
 
     const difficulty = this.gameManager.getDifficultyMinutes();
@@ -435,10 +469,12 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('presentation:defeat', enemy.position);
     this.abilities.simulation.noteKill(enemy.position);
     this.gameManager.addKill();
-    const isBoss = enemy === this.oven.boss;
-    if (isBoss) this.oven.defeated();
+    const isOven = enemy === this.oven.boss, isStag = enemy === this.stag.boss;
+    const isBoss = isOven || isStag;
+    if (isOven) this.oven.defeated();
+    if (isStag) this.stag.defeated();
     if (isBoss || this.xpOrbs.length < BALANCE.xp.maxOrbs) {
-      this.xpOrbs.push(new XPOrb(this, enemy.position.x, enemy.position.y, isBoss ? OVEN.xp : BALANCE.enemy.xpValue));
+      this.xpOrbs.push(new XPOrb(this, enemy.position.x, enemy.position.y, isOven ? OVEN.xp : isStag ? STAG.xp : BALANCE.enemy.xpValue));
     }
 
   }
@@ -546,6 +582,7 @@ export class GameScene extends Phaser.Scene {
     this.companionSystem?.destroy();
     this.abilities?.destroy();
     this.oven?.destroy();
+    this.stag?.destroy();
     this.player?.destroy();
     for (const enemy of this.enemies) {
       enemy.destroy();

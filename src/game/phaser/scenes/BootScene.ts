@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { OVEN_TEXTURE, ovenSourceUrl, createOvenFrames } from '../../config/ovenSprite';
+import { STAG_FRAME_SIZE, STAG_TEXTURE, createStagAnimations, stagSheetUrl } from '../../config/stagSprite';
 import { ART } from '../../config/presentation';
 import { createStorybookTextures } from '../storybookTextures';
 import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } from '../../config/midnightSprite';
@@ -67,6 +68,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('heartwood-crossbow-top', ART.crossbowTop);
     this.load.image(MIDNIGHT_SOURCE_KEY, MIDNIGHT_SOURCE_URL);
     this.load.image(OVEN_TEXTURE, ovenSourceUrl);
+    this.load.spritesheet(STAG_TEXTURE, stagSheetUrl, { frameWidth: STAG_FRAME_SIZE, frameHeight: STAG_FRAME_SIZE });
     this.load.image('storybook-ground-source', ART.ground);
     this.load.image('storybook-props-source', ART.props);
     this.load.image('storybook-water-source', ART.water);
@@ -114,6 +116,8 @@ export class BootScene extends Phaser.Scene {
     this.createMysteryAnimations();
     createMidnightAnimations(this);
     createOvenFrames(this);
+    this.textures.get(STAG_TEXTURE).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    createStagAnimations(this);
     this.scene.start('StartScene');
   }
 
