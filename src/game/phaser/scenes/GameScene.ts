@@ -399,6 +399,8 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.playerStats.health = 0; this.gameManager.state = 'GameOver';
     } else if (review === 'armadillo') {
       this.gameManager.level = 20; this.gameManager.xpToNextLevel = 100000;
+      // Level skips would otherwise summon the boss arena and clear the reviewed creatures.
+      this.gameManager.bossGate.defeat('oven'); this.gameManager.bossGate.defeat('stag');
       this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
       for (let i = 0; i < 6; i++) {
         const angle = i * 1.05;
@@ -406,6 +408,8 @@ export class GameScene extends Phaser.Scene {
       }
     } else if (review === 'deer') {
       this.gameManager.level = 10; this.gameManager.xpToNextLevel = 100000;
+      // Level skips would otherwise summon the boss arena and clear the reviewed creatures.
+      this.gameManager.bossGate.defeat('oven'); this.gameManager.bossGate.defeat('stag');
       this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
       for (let i = 0; i < 8; i++) {
         const angle = i * 0.785;
