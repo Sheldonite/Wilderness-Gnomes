@@ -19,14 +19,14 @@ export const BALANCE = {
     spawnChance: 0.2,
     health: 22,
     speed: 84,
-    preferredRange: 250,
-    retreatRange: 150,
-    throwRange: 330,
+    preferredRange: 500,
+    retreatRange: 300,
+    throwRange: 660,
     throwCooldownMs: 2100,
-    acornSpeed: 300,
+    acornSpeed: 360,
     acornDamage: 6,
     acornRadius: 7,
-    acornLifetimeMs: 1600
+    acornLifetimeMs: 4000   // 1440px of travel
   },
   spawner: {
     initialSpawnIntervalMs: 1200,
