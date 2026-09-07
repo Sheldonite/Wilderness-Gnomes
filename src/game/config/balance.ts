@@ -85,7 +85,7 @@ export const BALANCE = {
   },
   leveling: {
     baseThreshold: 24,
-    thresholdGrowth: 1.35,
+    thresholdGrowth: 1.22,
     choices: 3
   }
 } as const;
