@@ -1,3 +1,5 @@
+// Desktop builds restore file-backed saves before any module touches localStorage.
+import { mirrorDesktopSaves } from './desktop/saves';
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './game/config/gameConfig';
 import { BootScene } from './game/phaser/scenes/BootScene';
@@ -10,6 +12,7 @@ import './game/ui/sheldon.css';
 import { installPerformanceReadout } from './game/ui/PerformanceReadout';
 
 installPerformanceReadout();
+mirrorDesktopSaves();
 
 // Development aid: `?renderer=canvas` forces the Canvas renderer for environments without WebGL.
 const forceCanvas = import.meta.env.DEV && new URLSearchParams(location.search).get('renderer') === 'canvas';

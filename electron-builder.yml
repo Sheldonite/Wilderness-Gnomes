@@ -1,0 +1,28 @@
+appId: com.sheldonite.wildernessgnomes
+productName: Wilderness Gnomes
+copyright: Copyright © 2026 Sheldonite
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - electron/**
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  artifactName: ${productName}-Setup-${version}.${ext}
+nsis:
+  oneClick: true
+  perMachine: false
+  # Keep %APPDATA%\wilderness-gnomes (localStorage and saves\progress.json) on uninstall and update.
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: always
+  shortcutName: Wilderness Gnomes
+publish:
+  provider: github
+  owner: Sheldonite
+  repo: Wilderness-Gnomes
+  releaseType: release

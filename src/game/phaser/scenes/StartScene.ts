@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { mountDesktopUpdates } from '../../../desktop/updates';
 import { PLAYER_CHARACTERS, type PlayerCharacterId } from '../../config/playerCharacters';
 import { ART } from '../../config/presentation';
 import type { WeaponId } from '../../core/types';
@@ -83,9 +84,11 @@ export class StartScene extends Phaser.Scene {
       this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId });
     });
     window.addEventListener('keydown', this.keyboardHandler);
+    const unmountUpdates = mountDesktopUpdates(this.root.querySelector('.title-screen')!);
     this.selectCharacter(this.selectedCharacterId);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('keydown', this.keyboardHandler);
+      unmountUpdates();
       this.root!.innerHTML = '';
     });
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review')) this.startGame();

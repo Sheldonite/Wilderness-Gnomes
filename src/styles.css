@@ -456,3 +456,9 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 .upgrade-receipt strong,.upgrade-receipt span{display:block}.upgrade-receipt span{font-size:12px;margin-top:5px}
 .upgrade-panel .upgrade-art{height:50px;margin-bottom:5px}.upgrade-panel .upgrade-art svg{height:44px}
 @media(max-height:700px){.upgrade-panel{padding:16px 22px}.upgrade-panel h2{font-size:27px}.upgrade-panel .eyebrow{margin-bottom:5px}.upgrade-panel .panel-intro{font-size:12px;margin-bottom:8px}.upgrade-panel .upgrade-card{min-height:0;padding:12px 10px}.upgrade-panel .upgrade-art{height:30px}.upgrade-panel .upgrade-art svg{height:28px}.upgrade-panel .upgrade-art img{height:35px}.upgrade-panel .upgrade-card strong{font-size:18px}.upgrade-panel .upgrade-description{font-size:11px;margin:4px 0}.upgrade-panel .upgrade-select{margin-top:7px;padding-top:7px}.upgrade-panel .overlay-hint{margin-top:8px!important}.upgrade-panel .upgrade-comparison{margin:5px 0}.upgrade-panel .upgrade-rank{font-size:15px;margin-top:5px}}
+.desktop-updates{position:absolute;right:25px;bottom:62px;z-index:4;display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid #e4c68055;border-radius:5px;background:#182e23b0;color:#f0dab0;font-size:11px;letter-spacing:.4px;backdrop-filter:blur(4px)}
+.desktop-updates .desktop-version{font-family:Georgia,serif;color:#e2c27f}
+.desktop-updates .desktop-update-status{max-width:280px}
+.desktop-updates .desktop-update-action{border:1px solid #e4c680;border-radius:4px;background:linear-gradient(110deg,#e2c27f,#f0d599);color:#30412c;font-family:Georgia,serif;font-size:12px;padding:5px 11px;cursor:pointer}
+.desktop-updates .desktop-update-action:hover{background:#ffe3a3}
+@media(max-width:600px){.desktop-updates{right:8px;bottom:70px;font-size:10px}}
