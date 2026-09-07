@@ -18,6 +18,7 @@ export class PlayerController {
   private readonly arm?: Phaser.GameObjects.Image;
   private readonly armWidth: number = 0;
   private readonly armHeight: number = 0;
+  private readonly orbitRadius: number = 0;
   private aimAngle = 0;
   private displayedAim = 0;
   private recoil = 0;
@@ -48,6 +49,7 @@ export class PlayerController {
       const source = this.arm.width / Math.max(1, this.arm.height);
       this.armWidth = width;
       this.armHeight = width / source;
+      this.orbitRadius = arm.orbitRadius ?? 36;
       this.arm.setDisplaySize(this.armWidth, this.armHeight).setDepth(21);
     }
   }
@@ -124,20 +126,18 @@ export class PlayerController {
   private updateArm(deltaMs: number): void {
     if (!this.arm) return;
     const calm = reducedMotion();
-    const turn = calm ? 1 : 1 - Math.exp(-14 * (deltaMs / 1000));
+    const turn = calm ? 1 : 1 - Math.exp(-10 * (deltaMs / 1000));
     this.displayedAim = lerpAngle(this.displayedAim, this.aimAngle, turn);
     this.recoil = calm ? 0 : Math.max(0, this.recoil - deltaMs / 160);
 
-    const hold = 5;
-    const hands = this.character.id === 'hailey' ? 10 : 7;
     const kick = this.recoil * this.recoil;
-    const along = hold - kick * 11;
+    const radius = this.orbitRadius - kick * 8;
     this.arm.setPosition(
-      this.sprite.x + Math.cos(this.displayedAim) * along,
-      this.sprite.y + Math.sin(this.displayedAim) * along + hands
+      this.sprite.x + Math.cos(this.displayedAim) * radius,
+      this.sprite.y + Math.sin(this.displayedAim) * radius
     );
-    this.arm.setRotation(this.displayedAim - kick * 0.1);
-    this.arm.setDisplaySize(this.armWidth * (1 - kick * 0.06), this.armHeight);
+    this.arm.setRotation(this.displayedAim);
+    this.arm.setDisplaySize(this.armWidth, this.armHeight);
     this.arm.setDepth(Math.sin(this.displayedAim) >= 0.12 ? 21 : 19);
   }
 

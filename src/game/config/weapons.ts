@@ -26,6 +26,7 @@ export interface WeaponDefinition {
   overlayTexture?: string;
   overlayOrigin?: { x: number; y: number };
   overlayWidth?: number;
+  orbitRadius?: number;
   muzzleOffset?: number;
 }
 
@@ -77,7 +78,8 @@ export const WEAPONS: Record<WeaponId, WeaponDefinition> = {
     overlayTexture: 'heartwood-crossbow-top',
     overlayOrigin: { x: 0.39, y: 0.5 },
     overlayWidth: 46,
-    muzzleOffset: 30
+    orbitRadius: 36,
+    muzzleOffset: 64
   }
 };
 
