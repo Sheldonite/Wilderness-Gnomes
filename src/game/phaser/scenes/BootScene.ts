@@ -80,7 +80,9 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     createStorybookTextures(this);
-    [PLAYER_SPRITE_KEY, HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
+    [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
+    // The wizard sheet is authored at 192px and drawn at ~40%; linear filtering keeps the downscale smooth.
+    this.textures.get(PLAYER_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
     applyPlayerSpriteAdjustments(this);
     alignMysteryFrames(this);
     this.createPlayerAnimations();
@@ -105,6 +107,8 @@ export class BootScene extends Phaser.Scene {
           end: start + PLAYER_FRAMES_PER_ROW - 1
         }),
         frameRate,
+        // Walk rows are half a stride, so bouncing back through them completes the cycle.
+        yoyo: name.startsWith('walk'),
         repeat: -1
       });
     }

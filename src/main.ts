@@ -8,8 +8,11 @@ import { installPerformanceReadout } from './game/ui/PerformanceReadout';
 
 installPerformanceReadout();
 
+// Development aid: `?renderer=canvas` forces the Canvas renderer for environments without WebGL.
+const forceCanvas = import.meta.env.DEV && new URLSearchParams(location.search).get('renderer') === 'canvas';
+
 new Phaser.Game({
-  type: Phaser.AUTO,
+  type: forceCanvas ? Phaser.CANVAS : Phaser.AUTO,
   parent: 'game-root',
   backgroundColor: GAME_CONFIG.backgroundColor,
   pixelArt: false,

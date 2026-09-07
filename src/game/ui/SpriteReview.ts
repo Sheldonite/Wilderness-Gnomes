@@ -19,7 +19,7 @@ export function showSpriteReview(scene: Phaser.Scene): void {
       if (row < 2) {
         const character = PLAYER_CHARACTERS[row === 0 ? 'wizard' : 'hailey'];
         const choice = col ? character.animationForDirection({ x: vectors[col][0], y: vectors[col][1] }) : character.idleAnimation;
-        sprite = scene.add.sprite(x, y + 66, character.textureKey).setScale(row ? .4 : .88).setFlipX(Boolean(choice.flipX));
+        sprite = scene.add.sprite(x, y + 66, character.textureKey).setScale(row ? .4 : .45).setFlipX(Boolean(choice.flipX));
         sprite.play(choice.key);
       } else {
         const pounce = row === 3;

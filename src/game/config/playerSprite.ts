@@ -1,23 +1,30 @@
 import Phaser from 'phaser';
 
+/**
+ * The Code Wizard sheet is generated from `code-wizard-main-alpha-large.png`
+ * with every frame cropped to its alpha bounds, then anchored on its feet and
+ * the centre of its lower body inside a square cell. Frames therefore need no
+ * per-frame cut or offset corrections at runtime; the adjustment API below is
+ * kept only for the development sprite-sheet tuning menu.
+ */
 export const PLAYER_SPRITE_KEY = 'player-code-wizard';
 export const PLAYER_ANIMATION_PREFIX = 'player';
-export const PLAYER_FRAME_SIZE = 96;
+export const PLAYER_FRAME_SIZE = 192;
 export const PLAYER_FRAMES_PER_ROW = 4;
-export const PLAYER_SPRITE_SHEET_WIDTH = 384;
-export const PLAYER_SPRITE_SHEET_HEIGHT = 864;
-export const PLAYER_SPRITE_ADJUSTMENTS_STORAGE_KEY = 'wilderness-gnomes-player-sprite-adjustments';
+export const PLAYER_SPRITE_SHEET_WIDTH = 768;
+export const PLAYER_SPRITE_SHEET_HEIGHT = 1536;
+export const PLAYER_SPRITE_ADJUSTMENTS_STORAGE_KEY = 'wilderness-gnomes-player-sprite-adjustments-v2';
 
+/** [animation name, sheet row, frame rate]. Walk cycles play forward then back (yoyo). */
 export const PLAYER_ANIMATION_ROWS = [
-  ['idle-down', 0, 6],
-  ['walk-down', 1, 8],
-  ['walk-down-right', 2, 8],
-  ['walk-right', 3, 8],
-  ['walk-up-right', 4, 8],
-  ['walk-up', 5, 8],
-  ['walk-up-left', 6, 8],
-  ['walk-left', 7, 8],
-  ['walk-down-left', 8, 8]
+  ['idle-down', 0, 3],
+  ['walk-down', 1, 9],
+  ['walk-down-right', 2, 9],
+  ['walk-right', 3, 9],
+  ['walk-up-left', 4, 9],
+  ['walk-up', 5, 9],
+  ['walk-left', 6, 9],
+  ['walk-down-left', 7, 9]
 ] as const;
 
 export interface PlayerSpriteFrameDefinition {
@@ -38,225 +45,6 @@ export interface PlayerSpriteFrameAdjustment {
 }
 
 export type PlayerSpriteAdjustmentMap = Record<string, PlayerSpriteFrameAdjustment>;
-
-export const PLAYER_DEFAULT_SPRITE_ADJUSTMENTS: PlayerSpriteAdjustmentMap = {
-  'idle-down-1': {
-    sourceX: 0,
-    sourceY: 0,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'idle-down-2': {
-    sourceX: 96,
-    sourceY: 0,
-    offsetX: 5,
-    offsetY: 0
-  },
-  'idle-down-3': {
-    sourceX: 192,
-    sourceY: 0,
-    offsetX: 8,
-    offsetY: 0
-  },
-  'idle-down-4': {
-    sourceX: 288,
-    sourceY: 0,
-    offsetX: 11,
-    offsetY: 0
-  },
-  'walk-down-1': {
-    sourceX: 0,
-    sourceY: 106,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-down-2': {
-    sourceX: 96,
-    sourceY: 106,
-    offsetX: 11,
-    offsetY: 0
-  },
-  'walk-down-3': {
-    sourceX: 192,
-    sourceY: 106,
-    offsetX: 15,
-    offsetY: 0
-  },
-  'walk-down-4': {
-    sourceX: 288,
-    sourceY: 106,
-    offsetX: 23,
-    offsetY: 0
-  },
-  'walk-down-right-1': {
-    sourceX: 0,
-    sourceY: 206,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-down-right-2': {
-    sourceX: 96,
-    sourceY: 206,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-down-right-3': {
-    sourceX: 192,
-    sourceY: 206,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-down-right-4': {
-    sourceX: 288,
-    sourceY: 204,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-right-1': {
-    sourceX: 0,
-    sourceY: 311,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-right-2': {
-    sourceX: 96,
-    sourceY: 312,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-right-3': {
-    sourceX: 192,
-    sourceY: 309,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-right-4': {
-    sourceX: 288,
-    sourceY: 312,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-right-1': {
-    sourceX: 0,
-    sourceY: 312,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-right-2': {
-    sourceX: 96,
-    sourceY: 312,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-right-3': {
-    sourceX: 192,
-    sourceY: 313,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-right-4': {
-    sourceX: 280,
-    sourceY: 312,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-1': {
-    sourceX: 0,
-    sourceY: 515,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-2': {
-    sourceX: 96,
-    sourceY: 515,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-3': {
-    sourceX: 187,
-    sourceY: 514,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-4': {
-    sourceX: 276,
-    sourceY: 515,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-left-1': {
-    sourceX: 0,
-    sourceY: 414,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-left-2': {
-    sourceX: 96,
-    sourceY: 616,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-left-3': {
-    sourceX: 192,
-    sourceY: 617,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-up-left-4': {
-    sourceX: 278,
-    sourceY: 615,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-left-1': {
-    sourceX: 0,
-    sourceY: 616,
-    offsetX: -9,
-    offsetY: 0
-  },
-  'walk-left-2': {
-    sourceX: 96,
-    sourceY: 616,
-    offsetX: -1,
-    offsetY: 0
-  },
-  'walk-left-3': {
-    sourceX: 192,
-    sourceY: 619,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-left-4': {
-    sourceX: 281,
-    sourceY: 617,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-down-left-1': {
-    sourceX: 0,
-    sourceY: 727,
-    offsetX: 0,
-    offsetY: -1
-  },
-  'walk-down-left-2': {
-    sourceX: 93,
-    sourceY: 729,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-down-left-3': {
-    sourceX: 188,
-    sourceY: 727,
-    offsetX: 0,
-    offsetY: 0
-  },
-  'walk-down-left-4': {
-    sourceX: 279,
-    sourceY: 726,
-    offsetX: 0,
-    offsetY: 0
-  }
-};
 
 export function getPlayerSpriteFrameDefinitions(): PlayerSpriteFrameDefinition[] {
   return PLAYER_ANIMATION_ROWS.flatMap(([animationName, row]) => {
@@ -279,7 +67,7 @@ export function getPlayerSpriteFrameDefinitions(): PlayerSpriteFrameDefinition[]
 export function getDefaultPlayerSpriteAdjustment(
   frame: PlayerSpriteFrameDefinition
 ): PlayerSpriteFrameAdjustment {
-  return PLAYER_DEFAULT_SPRITE_ADJUSTMENTS[frame.key] ?? {
+  return {
     sourceX: frame.defaultSourceX,
     sourceY: frame.defaultSourceY,
     offsetX: 0,
@@ -327,11 +115,14 @@ export function applyPlayerSpriteFrameAdjustment(
   frame.y = adjustment.offsetY;
 }
 
+/** Only frames the developer has tuned in the debug menu are touched; the sheet is pre-aligned. */
 export function applyPlayerSpriteAdjustments(scene: Phaser.Scene): void {
   const adjustments = loadPlayerSpriteAdjustments();
 
   for (const frame of getPlayerSpriteFrameDefinitions()) {
-    const adjustment = adjustments[frame.key] ?? getDefaultPlayerSpriteAdjustment(frame);
-    applyPlayerSpriteFrameAdjustment(scene, frame, adjustment);
+    const adjustment = adjustments[frame.key];
+    if (adjustment) {
+      applyPlayerSpriteFrameAdjustment(scene, frame, adjustment);
+    }
   }
 }

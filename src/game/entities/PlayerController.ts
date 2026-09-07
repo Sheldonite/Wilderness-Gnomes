@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
+import { reducedMotion } from '../config/presentation';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { clampToArena, normalize } from '../utils/math';
 import { PlayerAura } from './PlayerAura';
@@ -11,6 +12,9 @@ export class PlayerController {
   readonly radius = BALANCE.player.radius;
   private movementDirection: Vector2Like = { x: 0, y: 0 };
   private aura?: PlayerAura;
+  /** Phase of the procedural stride bob, in radians. */
+  private stridePhase = 0;
+  private idleTime = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -47,7 +51,49 @@ export class PlayerController {
 
     this.sprite.setPosition(next.x, next.y);
     this.updateAnimation(direction);
+    this.updateSecondaryMotion(deltaMs, direction);
     this.aura?.update(deltaMs, this.position);
+  }
+
+  /**
+   * The wizard sheet only has four subtle frames per direction, so a small bob,
+   * lean and squash are layered on top to sell weight and momentum. This is
+   * purely visual: it moves the drawing via origin, rotation and scale, never
+   * the sprite's world position that gameplay reads.
+   */
+  private updateSecondaryMotion(deltaMs: number, direction: Vector2Like): void {
+    const moving = direction.x !== 0 || direction.y !== 0;
+    const baseScale = this.character.scale;
+    const frameHeight = this.sprite.height;
+
+    if (reducedMotion()) {
+      this.sprite.setOrigin(0.5, 0.5).setRotation(0).setScale(baseScale);
+      return;
+    }
+
+    if (moving) {
+      this.idleTime = 0;
+      // Three bounces per second, roughly matching the walk animation's stride.
+      this.stridePhase += (deltaMs / 1000) * Math.PI * 2 * 3;
+      const bounce = Math.abs(Math.sin(this.stridePhase));
+      const bobPixels = 3 * bounce;
+      const squash = 1 + 0.035 * bounce;
+      const lean = direction.x * 0.05;
+      this.sprite
+        .setOrigin(0.5, 0.5 + bobPixels / frameHeight)
+        .setRotation(lean)
+        .setScale(baseScale * (2 - squash), baseScale * squash);
+      return;
+    }
+
+    // Idle: settle the stride and breathe gently.
+    this.stridePhase = 0;
+    this.idleTime += deltaMs;
+    const breath = Math.sin((this.idleTime / 1000) * Math.PI * 2 * 0.6);
+    this.sprite
+      .setOrigin(0.5, 0.5)
+      .setRotation(0)
+      .setScale(baseScale * (1 - 0.006 * breath), baseScale * (1 + 0.012 * breath));
   }
 
   destroy(): void {

@@ -33,7 +33,7 @@ const WIZARD_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> 
   '0,1': { key: 'player-walk-down' },
   '1,1': { key: 'player-walk-down-right' },
   '1,0': { key: 'player-walk-right' },
-  '1,-1': { key: 'player-walk-up-right' },
+  '1,-1': { key: 'player-walk-up-left', flipX: true },
   '0,-1': { key: 'player-walk-up' },
   '-1,-1': { key: 'player-walk-up-left' },
   '-1,0': { key: 'player-walk-left' },
@@ -56,7 +56,7 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
     id: 'wizard',
     name: 'Code Wizard',
     textureKey: PLAYER_SPRITE_KEY,
-    scale: 0.75,
+    scale: 0.4,
     idleAnimation: { key: 'player-idle-down' },
     aura: false,
     animationForDirection: (direction) =>
