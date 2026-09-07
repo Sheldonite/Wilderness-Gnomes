@@ -44,9 +44,10 @@ export class UpgradeSystem {
     {
       id: 'max-health',
       title: 'Hardier Heart',
-      description: '+20 max health and heal 20',
+      description: '+20 max health, heal 20, and +1 health every 5 seconds per pick',
       apply: (stats) => {
         stats.maxHealth += 20;
+        stats.heartRegen += 1;
         stats.health = Math.min(stats.maxHealth, stats.health + 20);
       }
     },

@@ -33,6 +33,7 @@ export class GameManager {
   wardLeaves = 0;
   private nextLeafAt = 0;
   private barkBurstPending = false;
+  private heartRegenMs = 0;
 
   constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile) {
     const arm = getWeapon(weaponId);
@@ -41,6 +42,7 @@ export class GameManager {
     this.playerStats = {
       level: 1,
       upgradeCounts: {},
+      heartRegen: 0,
       abilityRanks: emptyAbilityRanks(),
       bossAbilityRanks: { crownfire: 0, stormcall: 0, 'phoenix-heart': 0 },
       weaponId: arm.id,
@@ -69,6 +71,13 @@ export class GameManager {
     }
 
     this.elapsedMs += deltaMs;
+    if (this.playerStats.heartRegen > 0 && deltaMs > 0) {
+      this.heartRegenMs += deltaMs;
+      const ticks = Math.floor(this.heartRegenMs / 5000);
+      this.heartRegenMs %= 5000;
+      this.playerStats.health = Math.min(this.playerStats.maxHealth,
+        this.playerStats.health + ticks * this.playerStats.heartRegen);
+    }
     if (this.marketBonuses.regenerationPerSecond > 0 && deltaMs > 0) {
       this.playerStats.health = Math.min(this.playerStats.maxHealth,
         this.playerStats.health + this.marketBonuses.regenerationPerSecond * deltaMs / 1000);

@@ -7,5 +7,5 @@
     "rootDir": "src",
     "outDir": "artifacts/ability-tests"
   },
-  "include": ["src/game/core/*.ts", "src/game/systems/UpgradeSystem.ts"]
+  "include": ["src/game/core/*.ts", "src/game/systems/UpgradeSystem.ts", "src/game/ui/UIManager.ts"]
 }

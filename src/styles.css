@@ -464,3 +464,5 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 @media(max-width:600px){.desktop-updates{right:8px;bottom:70px;font-size:10px}}
 .desktop-updates .desktop-shell-link{border:0;background:none;color:#f0dab0aa;font-size:10px;text-decoration:underline;cursor:pointer;padding:0}
 .desktop-updates .desktop-shell-link:hover{color:#ffe3a3}
+
+.feather-bonus{margin-left:4px;padding:3px 6px;border-radius:6px;background:#ffffff18;color:#ffe4a0;white-space:nowrap;font-weight:700}

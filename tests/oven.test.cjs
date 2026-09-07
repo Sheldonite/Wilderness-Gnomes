@@ -43,7 +43,7 @@ test('half health shortens the break and projectile count remains bounded',()=>{
  fight.update(OVEN.flightMs,boss,player,18,.5,()=>{});
  fight.update(OVEN.hotCooldownMs-1,boss,player,18,.5,()=>{});assert.equal(fight.phase,'walking');
  fight.update(1,boss,player,18,.5,()=>{});assert.equal(fight.phase,'windup');
- for(let i=0;i<2000;i++){fight.update(50,boss,player,18,.5,()=>{});assert.ok(fight.tacos.length<=3);}
+ for(let i=0;i<2000;i++){fight.update(50,boss,player,18,.5,()=>{});assert.ok(fight.tacos.length<=OVEN.maxTacos);assert.ok(fight.salsa.length<=OVEN.maxTacos);}
 });
 test('defeat cancels every warning and taco and shared combat awards one boss death',()=>{
  const fight=ready();fight.update(OVEN.windupMs,boss,player,18,1,()=>{});
@@ -51,4 +51,35 @@ test('defeat cancels every warning and taco and shared combat awards one boss de
  const combat=new CombatResolver(()=>{awards++;fight.defeat();});combat.damage(target,1200);combat.damage(target,1200);
  assert.equal(awards,1);assert.equal(fight.tacos.length,0);assert.equal(fight.warnings.length,0);
  fight.update(10000,boss,player,18,0,()=>assert.fail('post-defeat damage'));
+});
+
+test('Oven alternates the taco toss with a telegraphed ring that leaves the center safe',()=>{
+ assert.equal(OVEN.name,'Oven');
+ const fight=ready();assert.equal(fight.attack,'toss');
+ fight.update(OVEN.windupMs,boss,player,18,1,()=>{});
+ fight.update(OVEN.flightMs,boss,player,18,1,()=>{});
+ fight.update(OVEN.cooldownMs,boss,player,18,1,()=>{});
+ assert.equal(fight.attack,'ring');assert.equal(fight.warnings.length,5);
+ const targets=fight.warnings.map(p=>({...p}));
+ for(const target of targets)assert.ok(Math.hypot(target.x-player.x,target.y-player.y)>OVEN.blastRadius+18);
+ fight.update(OVEN.windupMs,boss,{x:2000,y:1800},18,1,()=>assert.fail('windup damage'));
+ assert.deepEqual(fight.tacos.map(t=>t.target),targets);
+ fight.update(OVEN.flightMs,boss,player,18,1,()=>assert.fail('ring center should be safe'));
+ assert.equal(fight.salsa.length,5);
+ fight.update(OVEN.cooldownMs,boss,player,18,1,()=>{});
+ assert.equal(fight.attack,'toss');
+});
+
+test('burning salsa has a grace period, cannot stack overlapping damage, expires and clears on defeat',()=>{
+ const fight=ready();let damage=0;const hit=d=>damage+=d;
+ fight.update(OVEN.windupMs,boss,player,200,1,hit);
+ fight.update(OVEN.flightMs,boss,player,200,1,hit);
+ assert.equal(damage,OVEN.damage);assert.equal(fight.salsa.length,3);
+ fight.update(OVEN.salsaTickMs-1,boss,player,200,1,hit);assert.equal(damage,OVEN.damage);
+ fight.update(1,boss,player,200,1,hit);assert.equal(damage,OVEN.damage+OVEN.salsaDamage);
+ fight.update(100,boss,{x:1000,y:1000},18,1,hit);
+ fight.update(OVEN.salsaTickMs-1,boss,player,200,1,hit);assert.equal(damage,OVEN.damage+OVEN.salsaDamage);
+ fight.update(OVEN.salsaLifeMs,boss,{x:1000,y:1000},18,1,hit);assert.equal(fight.salsa.length,0);
+ fight.salsa.push({...player,age:0});fight.defeat();assert.equal(fight.salsa.length,0);
+ fight.update(5000,boss,player,18,0,()=>assert.fail('post-defeat burn'));
 });

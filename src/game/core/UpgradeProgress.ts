@@ -51,7 +51,7 @@ export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
     case 'projectile-damage': return `${Number(stats.projectileDamage.toFixed(2))} damage per shot`;
     case 'fire-rate': return `${(stats.weaponCooldownMs / 1000).toFixed(2)}s between shots`;
     case 'projectile-count': return `${stats.projectileCount} shots per volley`;
-    case 'max-health': return `${stats.maxHealth} maximum health`;
+    case 'max-health': return `${stats.maxHealth} max health · Regen ${stats.heartRegen} HP/5s`;
     case 'move-speed': return `${Number(stats.speed.toFixed(2))} movement speed`;
     case 'gain-companion-mystery': return rank ? `${Number(stats.mysteryDamage.toFixed(2))} damage per pounce` : 'Not recruited yet';
     case 'gain-companion-midnight': return rank ? 'Swatting companion' : 'Not recruited yet';
@@ -84,7 +84,7 @@ export function upgradeChanges(choice: UpgradeDefinition, stats: PlayerStats): s
       case 'projectile-damage': return { Damage: s.projectileDamage };
       case 'fire-rate': return { 'Cooldown (s)': s.weaponCooldownMs / 1000 };
       case 'move-speed': return { Speed: s.speed };
-      case 'max-health': return { 'Max health': s.maxHealth, Health: s.health };
+      case 'max-health': return { 'Max health': s.maxHealth, Health: s.health, 'Regen (HP/5s)': s.heartRegen };
       case 'projectile-count': return { Shots: s.projectileCount };
       case 'ricochet-charm': return { Bounces: r };
       case 'firefly-orbit': return { Fireflies: c.firefly.count[r], Damage: isAwakened(r) ? c.firefly.swarm[t].damage : c.firefly.damage };
@@ -133,7 +133,7 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
     case 'projectile-damage': return '+8 damage per shot.';
     case 'fire-rate': return `Shot cooldown: ${(stats.weaponCooldownMs / 1000).toFixed(2)}s → ${(Math.max(160, Math.floor(stats.weaponCooldownMs * .85)) / 1000).toFixed(2)}s.`;
     case 'move-speed': return '+24 movement speed.';
-    case 'max-health': return '+20 max health. Heal 20.';
+    case 'max-health': return '+20 max health. Heal 20. +1 HP/5s.';
     case 'projectile-count': return '+1 shot per volley.';
     case 'gain-companion-mystery': return `Pouncing companion. ${Number(stats.mysteryDamage.toFixed(2))} damage per hit.`;
     case 'gain-companion-midnight': return `Swatting companion. ${BALANCE.companion.midnightDamage} damage to nearby foes.`;

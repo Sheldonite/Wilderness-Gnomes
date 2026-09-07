@@ -71,10 +71,10 @@ export class UIManager {
 
   update(snapshot: HudSnapshot): void {
     if (this.receiptUntil && this.gameManager.elapsedMs >= this.receiptUntil) { this.query('.upgrade-receipt').hidden = true; this.receiptUntil = 0; }
+    this.refreshBuild();
     const fingerprint = JSON.stringify(snapshot);
     if (fingerprint === this.lastSnapshot) return;
     this.lastSnapshot = fingerprint;
-    this.refreshBuild();
     this.healthFill.style.transform = `scaleX(${Math.max(0, Math.min(1, snapshot.health / snapshot.maxHealth))})`;
     this.xpFill.style.transform = `scaleX(${Math.max(0, Math.min(1, snapshot.xp / snapshot.xpToNextLevel))})`;
     this.healthValue.textContent = `${Math.ceil(snapshot.health)} / ${snapshot.maxHealth}`;
@@ -100,7 +100,7 @@ export class UIManager {
     list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon(arm.icon)} ${arm.name} · ${arm.shortTrait}</p>`);
     const friends = [this.gameManager.playerStats.hasMysteryCompanion ? 'Mystery · pounce' : '',
       this.gameManager.playerStats.hasMidnightCompanion ? 'Midnight · swat' : '',
-      this.gameManager.playerStats.hasFrankieCompanion ? `Frankie · ${this.gameManager.playerStats.frankieCount} buzzard${this.gameManager.playerStats.frankieCount === 1 ? '' : 's'}` : ''].filter(Boolean);
+      this.gameManager.playerStats.hasFrankieCompanion ? `Frankie · ${upgradeBenefit('gain-companion-frankie', this.gameManager.playerStats)}` : ''].filter(Boolean);
     if (friends.length) list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${friends.join(' &nbsp; / &nbsp; ')}</p>`);
     const stats = this.gameManager.playerStats;
     const owned = ownedUpgrades(stats).filter(id => !id.startsWith('gain-companion'));
@@ -170,12 +170,12 @@ export class UIManager {
 
   private refreshBuild(): void {
     const stats = this.gameManager.playerStats;
-    const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.hasMysteryCompanion, stats.hasMidnightCompanion, stats.hasFrankieCompanion, stats.frankieCount]);
+    const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.hasMysteryCompanion, stats.hasMidnightCompanion, stats.hasFrankieCompanion, stats.frankieCount, stats.frankieFeatherBonus]);
     if (key === this.buildFingerprint) return;
     this.buildFingerprint = key;
     const owned = ownedUpgrades(stats), strip = this.query('.build-strip');
     strip.hidden = !owned.length;
-    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isRanked(id) ? ` of ${upgradeMaxRank(id)}` : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b></span>`).join('');
+    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isRanked(id) ? ` of ${upgradeMaxRank(id)}` : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b>${id === 'gain-companion-frankie' ? `<span class="feather-bonus">+${stats.frankieFeatherBonus} feather damage</span>` : ''}</span>`).join('');
   }
 
   private createOverlay(title: string, body: string, eyebrow: string, emblem: string, className: string): HTMLElement {

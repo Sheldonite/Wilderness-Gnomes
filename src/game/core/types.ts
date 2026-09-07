@@ -27,6 +27,8 @@ export interface Vector2Like {
 }
 
 export interface PlayerStats {
+  /** Health restored every five active seconds by Hardier Heart. */
+  heartRegen: number;
   /** Current player level; ability ranks past the awakening are gated on it. */
   level: number;
   upgradeCounts: Partial<Record<UpgradeId, number>>;

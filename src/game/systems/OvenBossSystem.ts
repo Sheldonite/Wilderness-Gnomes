@@ -50,10 +50,22 @@ export class OvenBossSystem {
     if (!this.boss || this.boss.isDead) return;
     this.encounter.update(deltaMs, this.boss.position, player, playerRadius, this.boss.health / OVEN.health, damage => this.game.damagePlayer(damage));
     const phase = this.encounter.phase;
-    const message = phase === 'arrival' ? 'Order up! First boss!' : phase === 'windup' ? 'Extra crispy! Move out of the circles!' : this.boss.health <= OVEN.health / 2 ? 'Too hot to handle!' : 'Dodge the flaming tacos!';
+    const message = phase === 'arrival' ? 'Order up! Flaming tacos!' : phase === 'windup' ? this.encounter.attack === 'ring' ? 'Taco ring! Find a gap!' : 'Extra crispy! Dodge the circles!' : this.encounter.salsa.length ? 'Hot salsa! Keep off the flames!' : this.boss.health <= OVEN.health / 2 ? 'Too hot to handle!' : 'Dodge the flaming tacos!';
     if (this.caption.textContent !== message) this.caption.textContent = message;
     this.fill.style.transform = `scaleX(${Math.max(0, this.boss.health / OVEN.health)})`;
     this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuenow', String(Math.max(0, Math.ceil(this.boss.health))));
+    for (const p of this.encounter.salsa) {
+      const alpha = .65 * Math.min(1, (OVEN.salsaLifeMs - p.age) / 500);
+      this.graphics.fillStyle(0xb82f19, alpha).fillCircle(p.x, p.y, OVEN.salsaRadius);
+      this.graphics.lineStyle(2, 0xff9b36, alpha).strokeCircle(p.x, p.y, OVEN.salsaRadius);
+      for (let i = 0; i < 5; i++) {
+        const angle = i * Math.PI * 2 / 5;
+        const x = p.x + Math.cos(angle) * 17, y = p.y + Math.sin(angle) * 17;
+        const flicker = reducedMotion() ? 0 : Math.sin(p.age / 110 + i) * 3;
+        this.graphics.fillStyle(0xffac36, alpha).fillTriangle(x - 5, y + 5, x + 5, y + 5, x + flicker, y - 11);
+        this.graphics.fillStyle(0xffe9a1, alpha).fillCircle(x, y + 1, 2);
+      }
+    }
     for (const p of this.encounter.warnings) {
       this.graphics.fillStyle(0xe76825, .16).fillCircle(p.x, p.y, OVEN.blastRadius);
       this.graphics.lineStyle(3, 0xffcf73, .95).strokeCircle(p.x, p.y, OVEN.blastRadius);
