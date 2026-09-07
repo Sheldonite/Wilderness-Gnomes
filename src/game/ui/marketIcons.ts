@@ -1,6 +1,7 @@
 import type { MarketItem } from '../config/marketItems';
 
 const wares: Record<MarketItem['icon'], string> = {
+  parcel: '<path d="m6 10 25-5 11 8v23l-25 6L6 32Zm0 0 11 9 25-6M17 19v23M18 8l11 8v7M15 38v7h-5m23-7v7h5"/><circle cx="24" cy="26" r="1"/><circle cx="35" cy="24" r="1"/><path d="M26 31q4 4 8-2"/>',
   blade: '<path d="m13 28 12-12 7-3 11-11-3 11-13 13-7 2M9 24l15 15M5 39l9-9 5 5-9 9Z"/>',
   gear: '<path d="m18 3 2 6 8 0 2-6 7 4-3 6 4 7 7 0v8l-7 1-4 7 3 5-7 4-3-6h-7l-3 6-7-4 3-5-4-7-6-1v-8l6-1 4-7-3-5Z"/><circle cx="24" cy="24" r="8"/>',
   peach: '<path d="M24 14C10 4 0 17 8 32c4 9 11 14 16 11 5 3 14-4 18-13 5-13-5-22-18-16Zm0 0c-6 8 1 20 0 29M24 14V5c7-6 15-3 14 0-4 5-9 7-14 5"/>',

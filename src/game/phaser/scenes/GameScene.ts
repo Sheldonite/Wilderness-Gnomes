@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CosmeticGlow } from '../../market/CosmeticGlow';
 import { OvenBossSystem } from '../../systems/OvenBossSystem';
 import { OVEN } from '../../config/ovenBoss';
 import { StagBossSystem } from '../../systems/StagBossSystem';
@@ -41,6 +42,7 @@ import { FRANKIE_SPRITE_KEY } from '../../config/frankieSprite';
 import type { AbilityId, AbilityRank, UpgradeDefinition } from '../../core/types';
 
 export class GameScene extends Phaser.Scene {
+  private cosmetic!: CosmeticGlow;
   private gameManager!: GameManager;
   private player!: PlayerController;
   private cameraController!: CameraController;
@@ -107,6 +109,7 @@ export class GameScene extends Phaser.Scene {
       : null;
     this.selectedWeaponId = getWeapon(reviewWeapon ?? data.weaponId).id;
     this.practiceRun = import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review');
+    this.cosmetic = new CosmeticGlow(this);
     this.gameManager = new GameManager(this.selectedWeaponId, this.practiceRun ? emptyMarketProfile() : marketProgress.refresh());
     this.scenerySystem = new ScenerySystem(this);
     this.enemySpawner = new EnemySpawner(this, this.scenerySystem.navigation);
@@ -472,6 +475,7 @@ export class GameScene extends Phaser.Scene {
       this.reviewPathMs = 0;
     }
     this.player.update(deltaMs, this.keys);
+    this.cosmetic.update(deltaMs, this.player.position, this.practiceRun ? null : marketProgress.equippedCosmetic);
     const requiredBoss = this.gameManager.bossGate.required(this.gameManager.level);
     if (requiredBoss && !this.bossArena) this.beginBossArena(requiredBoss);
     this.confineToBossArena();

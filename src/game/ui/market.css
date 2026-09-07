@@ -40,3 +40,5 @@
 .title-rock-balance{align-self:flex-end;display:flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid #c3a0ed80;border-radius:8px;background:#29253edb;color:#eadbff;font-size:12px}
 .title-rock-balance svg{width:17px;height:17px}.title-rock-balance small{font-size:10px;color:#d7c1f0}
 @media(max-width:700px){.title-wallet{width:100%;max-width:430px}.title-rock-balance{align-self:center}}
+
+.title-weapons-link{display:flex;align-items:center;justify-content:center;gap:9px;margin:18px auto 0;padding:10px 16px;border:1px solid #e5c67c80;border-radius:8px;background:#263d2de8;color:#f3dda5;font:14px Georgia,serif}.title-weapons-link svg{width:17px;height:17px}.title-weapons-link:hover{background:#405337}.title-weapons-link:focus-visible{outline:2px solid #ffe5a4;outline-offset:3px}

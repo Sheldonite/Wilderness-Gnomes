@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { WEAPONS } from '../../config/weapons';
+import { CosmeticGlow } from '../../market/CosmeticGlow';
+import type { CosmeticId } from '../../config/marketItems';
 import squareUrl from '../../../assets/storybook/newnan-market-square.png';
 import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config/playerCharacters';
 import { MARKET_ITEMS, MARKET_VENDORS, marketItemBenefit, marketItemPrice, type MarketVendorId } from '../../config/marketItems';
@@ -13,6 +16,7 @@ const WIDTH = 1536, HEIGHT = 1024;
 /** A separate peaceful scene: no combat systems, spawners, XP or run clock. */
 export class MarketScene extends Phaser.Scene {
   private world!: MarketWorld;
+  private cosmetic!: CosmeticGlow;
   private player!: Phaser.GameObjects.Sprite;
   private root!: HTMLElement;
   private progress!: MarketProgress;
@@ -50,14 +54,14 @@ export class MarketScene extends Phaser.Scene {
     if (!this.textures.exists('newnan-market-square')) this.load.image('newnan-market-square', squareUrl);
   }
 
-  create(data: {characterId?: string; weaponId?: WeaponId; review?: boolean} = {}): void {
+  create(data: {characterId?: string; weaponId?: WeaponId; review?: boolean; vendorId?: MarketVendorId} = {}): void {
     this.path = []; this.visiting = undefined; this.shop = undefined; this.nearestVendor = undefined;
     this.status = ''; this.zoomed = true; this.leaving = false;
     this.preview = import.meta.env.DEV && Boolean(data.review);
     this.progress = this.preview ? new MarketProgress(null) : marketProgress;
-    if (this.preview) this.progress.settleRun('market-preview-purse', 50);
+    if (this.preview) this.progress.settleRun('market-preview-purse', 90);
     this.progress.refresh();
-    this.character = getPlayerCharacter(data.characterId); this.weaponId = data.weaponId ?? 'spell';
+    this.character = getPlayerCharacter(data.characterId); this.weaponId = this.preview ? data.weaponId ?? 'spell' : this.progress.equippedWeapon;
     this.anims.resumeAll();
     document.getElementById('game-root')?.classList.remove('in-run');
     this.cameras.main.setBackgroundColor('#223b31');
@@ -65,6 +69,7 @@ export class MarketScene extends Phaser.Scene {
     this.world = new MarketWorld(this); this.world.create();
     this.player = this.add.sprite(768, 810, this.character.textureKey).setScale(this.character.scale).setOrigin(.5, 1);
     this.player.play(this.character.idleAnimation.key);
+    this.cosmetic = new CosmeticGlow(this);
     this.destination = this.add.graphics().setDepth(10);
     this.keys = { w: this.input.keyboard!.addKey('W'), a: this.input.keyboard!.addKey('A'), s: this.input.keyboard!.addKey('S'), d: this.input.keyboard!.addKey('D'),
       up: this.input.keyboard!.addKey('UP'), down: this.input.keyboard!.addKey('DOWN'), left: this.input.keyboard!.addKey('LEFT'), right: this.input.keyboard!.addKey('RIGHT') };
@@ -76,7 +81,7 @@ export class MarketScene extends Phaser.Scene {
       <aside class="market-fieldnotes"><span class="market-eyebrow">A LITTLE GOES A LONG WAY</span><h2>From the woods,<br>for the journey.</h2><p>Reach level 10 to bring your first gold back to town.</p><dl><div><dt>Level 10</dt><dd>5 gold</dd></div><div><dt>Level 20</dt><dd>10 gold</dd></div><div><dt>Each level after 20</dt><dd>+1 gold</dd></div></dl><small>Everything you buy stays with you for future adventures.</small></aside>
       <div class="market-map-tools"><button class="market-zoom" aria-label="Look closer at the square">+</button></div>
       <div class="market-interact" hidden><button type="button"></button></div>
-      <footer class="market-footer"><div class="market-directions"><span><kbd>WASD</kbd> / <kbd>↑ ↓ ← →</kbd> to wander · click the square to stroll · <kbd>E</kbd> to shop</span><button class="market-adventure">Back to the woods ${icon('arrow')}</button></div><nav class="market-directory" aria-label="Market vendors">${MARKET_VENDORS.map(v => `<button data-vendor="${v.id}" style="--vendor-color:#${v.accent.toString(16)}"><span class="vendor-symbol">${marketItemIcon(MARKET_ITEMS.find(item => item.vendorId === v.id)!.icon)}</span><span><strong>${v.name}</strong><small>${v.keeper} · ${v.id === 'forge' ? 'Forge & gear' : v.id === 'apothecary' ? 'Remedies & tonics' : v.id === 'outfitter' ? 'Clothing & comfort' : 'Charms & oddities'}</small></span><b>↗</b></button>`).join('')}</nav></footer>
+      <footer class="market-footer"><div class="market-directions"><span><kbd>WASD</kbd> / <kbd>↑ ↓ ← →</kbd> to wander · click the square to stroll · <kbd>E</kbd> to shop</span><button class="market-adventure">Back to the woods ${icon('arrow')}</button></div><nav class="market-directory" aria-label="Market vendors">${MARKET_VENDORS.map(v => `<button data-vendor="${v.id}" style="--vendor-color:#${v.accent.toString(16)}"><span class="vendor-symbol">${marketItemIcon(MARKET_ITEMS.find(item => item.vendorId === v.id)!.icon)}</span><span><strong>${v.name}</strong><small>${v.keeper} · ${v.tagline}</small></span><b>↗</b></button>`).join('')}</nav></footer>
       <div class="market-toast" role="status" aria-live="polite" hidden></div>
       ${this.preview ? '<div class="market-preview">Preview purse · purchases stay in this preview</div>' : ''}
     </div>`;
@@ -93,8 +98,8 @@ export class MarketScene extends Phaser.Scene {
     this.scale.on('resize', this.onResize);
     this.resize();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
-    if (this.preview) {
-      const requested = new URLSearchParams(location.search).get('shop');
+    if (this.preview || data.vendorId) {
+      const requested = data.vendorId ?? new URLSearchParams(location.search).get('shop');
       const vendor = this.world.vendors.find(v => v.id === requested);
       if (vendor) { this.player.setPosition(vendor.interactionX, vendor.interactionY).setDepth(vendor.interactionY); this.nearestVendor=vendor.id; this.openShop(vendor.id); }
     }
@@ -129,7 +134,7 @@ export class MarketScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (!this.world || this.leaving) return;
     const dt = Math.min(delta, 50); this.world.update(dt);
-    if (this.shop) return;
+    if (this.shop) { this.cosmetic.update(dt, this.player, this.progress.equippedCosmetic); return; }
     let dx = Number(this.keys.d.isDown || this.keys.right.isDown) - Number(this.keys.a.isDown || this.keys.left.isDown);
     let dy = Number(this.keys.s.isDown || this.keys.down.isDown) - Number(this.keys.w.isDown || this.keys.up.isDown);
     if (dx || dy) { this.path = []; this.visiting = undefined; this.destination.clear(); }
@@ -142,6 +147,7 @@ export class MarketScene extends Phaser.Scene {
     const length = Math.hypot(dx, dy), before = {x:this.player.x,y:this.player.y};
     const safe = length ? this.world.move(before, {x:before.x + dx/length*travel,y:before.y + dy/length*travel},18) : before;
     this.player.setPosition(safe.x,safe.y).setDepth(safe.y);
+    this.cosmetic.update(dt, this.player, this.progress.equippedCosmetic);
     const moving = Math.hypot(safe.x-before.x,safe.y-before.y) > .01;
     const animation = moving ? this.character.animationForDirection({x:(safe.x-before.x)/travel,y:(safe.y-before.y)/travel}) : this.character.idleAnimation;
     this.player.play(animation.key,true).setFlipX(Boolean(animation.flipX));
@@ -170,9 +176,15 @@ export class MarketScene extends Phaser.Scene {
     const vendor = MARKET_VENDORS.find(v=>v.id===this.shop)!;
     const profile = this.progress.profile;
     const panel = document.createElement('div'); panel.className='market-shop-overlay';
-    panel.innerHTML = `<section class="market-shop" role="dialog" aria-modal="true" aria-labelledby="shop-title" aria-describedby="shop-greeting" style="--shop-color:#${vendor.accent.toString(16)}"><button class="shop-close" aria-label="Close shop">${icon('cross')}</button><p class="market-eyebrow">MARKET DAY · ${vendor.keeper.toUpperCase()}'S STALL</p><h2 id="shop-title">${vendor.name}</h2><p id="shop-greeting" class="shop-greeting">“${vendor.greeting}”</p><div class="shop-summary"><span>${icon('leaf')} Yours for every future adventure</span><b>${icon('gold')} ${profile.gold} gold</b></div><div class="market-items">${MARKET_ITEMS.filter(item=>item.vendorId===this.shop).map(item=>{
+    panel.innerHTML = `<section class="market-shop" role="dialog" aria-modal="true" aria-labelledby="shop-title" aria-describedby="shop-greeting" style="--shop-color:#${vendor.accent.toString(16)}"><button class="shop-close" aria-label="Close shop">${icon('cross')}</button><p class="market-eyebrow">MARKET DAY · ${vendor.keeper.toUpperCase()}'S STALL</p><h2 id="shop-title">${vendor.name}</h2><p id="shop-greeting" class="shop-greeting">“${vendor.greeting}”</p><div class="shop-summary"><span>${icon('leaf')} Yours for every future adventure</span><b>${icon('gold')} ${profile.gold} gold</b></div><div class="market-items">${this.shop==='forge'?`<article class="market-item fully-owned"><div class="market-item-art">${marketItemIcon('charm')}<span>${this.weaponId==='spell'?'✓ EQUIPPED':'✓ OWNED'}</span></div><h3>${WEAPONS.spell.name}</h3><p class="market-item-story">${WEAPONS.spell.description}</p><p class="market-item-rule">Your starting weapon. Always available.</p><button data-weapon="spell" ${this.weaponId==='spell'?'disabled':''}>${this.weaponId==='spell'?'Equipped':'Equip'}</button></article>`:''}${MARKET_ITEMS.filter(item=>item.vendorId===this.shop).map(item=>{
       const rank=profile.ranks[item.id]??0,price=marketItemPrice(item.id,rank),full=price===null,affordable=!full&&profile.gold>=price;
-      return `<article class="market-item ${full?'fully-owned':''}"><div class="market-item-art" style="--item-color:#${item.accent.toString(16)}">${marketItemIcon(item.icon)}<span>${full?'✓ OWNED':rank?`RANK ${rank} / ${item.maxRank}`:'PERMANENT UPGRADE'}</span></div><h3>${item.name}</h3><p class="market-item-story">${item.description}</p><div class="market-item-benefits"><span><small>YOU HAVE</small>${rank?marketItemBenefit(item.id,rank):'Not owned yet'}</span>${!full?`<span><small>AFTER THIS PURCHASE</small><b>${marketItemBenefit(item.id,rank+1)}</b></span>`:''}</div><p class="market-item-rule">${item.effect}</p><button data-buy="${item.id}" ${!affordable?'disabled':''}>${full?'Fully upgraded':`${icon('gold')} ${price} gold <span>${rank?'Improve':'Buy'}</span>`}</button>${!full&&!affordable?`<small class="market-shortfall">${price-profile.gold} more gold needed</small>`:full?'<small class="market-shortfall">Ready for your next adventure</small>':`<small class="market-shortfall">${item.maxRank-rank} ${item.maxRank-rank===1?'rank':'ranks'} remaining</small>`}</article>`;
+      const cosmetic=item.kind==='cosmetic', equipped=cosmetic ? profile.equippedCosmetic===item.id : item.kind==='weapon' && this.weaponId==='crossbow';
+      const action=item.kind==='weapon'&&full
+        ? `<button data-weapon="crossbow" ${equipped?'disabled':''}>${equipped?'Equipped':'Equip'}</button>`
+        : cosmetic&&full
+        ? `<button data-equip="${equipped?'none':item.id}">${equipped?'Unequip':'Equip'}</button>`
+        : `<button data-buy="${item.id}" ${!affordable?'disabled':''}>${full?(item.kind?'Unlocked':'Fully upgraded'):`${icon('gold')} ${price} gold <span>${item.kind==='character'?'Hire':item.kind==='weapon'?'Unlock':rank?'Improve':'Buy'}</span>`}</button>`;
+      return `<article class="market-item ${full?'fully-owned':''}"><div class="market-item-art" style="--item-color:#${item.accent.toString(16)}">${marketItemIcon(item.icon)}<span>${equipped?'✓ EQUIPPED':full?'✓ OWNED':rank?`RANK ${rank} / ${item.maxRank}`:item.kind==='cosmetic'?'COSMETIC':item.kind?'PERMANENT UNLOCK':'PERMANENT UPGRADE'}</span></div><h3>${item.name}</h3><p class="market-item-story">${item.description}</p><div class="market-item-benefits"><span><small>YOU HAVE</small>${rank?marketItemBenefit(item.id,rank):'Not owned yet'}</span>${!full?`<span><small>AFTER THIS PURCHASE</small><b>${marketItemBenefit(item.id,rank+1)}</b></span>`:''}</div><p class="market-item-rule">${item.effect}</p>${action}${!full&&!affordable?`<small class="market-shortfall">${price-profile.gold} more gold needed</small>`:!item.kind?`<small class="market-shortfall">${rank} / ${item.maxRank} ranks owned</small>`:''}</article>`;
     }).join('')}</div><p class="shop-note">Gold is earned when a run ends. Level 10 earns 5; level 20 earns 10; every level after 20 adds 1.</p><div class="shop-feedback" role="status">${this.status}</div></section>`;
     const merchant = this.world.vendors.find(v => v.id === vendor.id)!;
     const portrait = document.createElement('img');
@@ -182,10 +194,25 @@ export class MarketScene extends Phaser.Scene {
     this.root.append(panel);
     panel.querySelector('.shop-close')!.addEventListener('click',()=>this.closeShop());
     panel.addEventListener('click',event=>{if(event.target===panel)this.closeShop();});
+    panel.querySelectorAll<HTMLButtonElement>('[data-weapon]').forEach(button=>button.addEventListener('click',()=>{
+      const id=button.dataset.weapon as WeaponId;
+      if(this.progress.equipWeapon(id)) {
+        this.weaponId=id;
+        this.status=`${WEAPONS[id].name} equipped for your next adventure.`;
+        if(this.progress.storageStatus!=='ready') this.status+=' Saved for this preview or session.';
+      }
+      this.renderShop();
+    }));
+    panel.querySelectorAll<HTMLButtonElement>('[data-equip]').forEach(button=>button.addEventListener('click',()=>{
+      const id=button.dataset.equip==='none'?null:button.dataset.equip as CosmeticId;
+      if(this.progress.equipCosmetic(id)) this.status=id?`${MARKET_ITEMS.find(item=>item.id===id)!.name} equipped.`:'Cosmetic removed.';
+      if(this.progress.storageStatus!=='ready') this.status+=' Saved for this preview or session.';
+      this.renderShop();
+    }));
     panel.querySelectorAll<HTMLButtonElement>('[data-buy]').forEach(button=>button.addEventListener('click',()=>{
       const result=this.progress.purchase(button.dataset.buy!);
       const item=MARKET_ITEMS.find(item=>item.id===button.dataset.buy)!;
-      this.status=result.status==='purchased'?`${item.name} is yours. ${marketItemBenefit(item.id,result.rank)} on future runs.${result.saved?'':' Saved for this preview or session.'}`:result.status==='insufficient-gold'?'Your purse has changed. Earn a little more gold first.':'This item is already fully upgraded.';
+      this.status=result.status==='purchased'?`${item.name} is yours. ${marketItemBenefit(item.id,result.rank)}.${item.kind==='cosmetic'?' Equip it here to wear it.':''}${result.saved?'':' Saved for this preview or session.'}`:result.status==='insufficient-gold'?'Your purse has changed. Earn a little more gold first.':'This item is already fully upgraded.';
       this.root.querySelector('[data-gold]')!.textContent=String(result.balance);
       this.renderShop(button.dataset.buy);
     }));

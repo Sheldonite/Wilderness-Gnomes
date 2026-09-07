@@ -1,10 +1,14 @@
-import { getMarketItem, type MarketItemId } from '../config/marketItems';
+import type { WeaponId } from './types';
+import { getMarketItem, type CosmeticId, type MarketItemId } from '../config/marketItems';
 
 export const MARKET_STORAGE_KEY = 'wilderness-gnomes-market-v1';
 export const MARKET_CORRUPT_BACKUP_KEY = `${MARKET_STORAGE_KEY}-corrupt-backup`;
 
 export interface MarketProfile {
   version: 1;
+  shopVersion: 2;
+  equippedWeapon: WeaponId;
+  equippedCosmetic: CosmeticId | null;
   gold: number;
   rocks: number;
   collectedRocks: string[];
@@ -40,7 +44,7 @@ export interface RunSettlementResult extends TransactionResult {
 }
 
 export function emptyMarketProfile(): MarketProfile {
-  return { version: 1, gold: 0, rocks: 0, collectedRocks: [], ranks: {}, settledRuns: [] };
+  return { version: 1, shopVersion: 2, equippedWeapon: 'spell', equippedCosmetic: null, gold: 0, rocks: 0, collectedRocks: [], ranks: {}, settledRuns: [] };
 }
 
 /** Milestone rewards are totals for the run, not payments made at each level. */
@@ -97,12 +101,20 @@ export function parseMarketProfile(serialized: string): MarketProfile | null {
       if (!item || !Number.isInteger(rank) || (rank as number) < 0 || (rank as number) > item.maxRank) return null;
       ranks[item.id] = rank as number;
     }
+    // Existing players keep the characters and arms that were freely available before shops.
+    if (value.shopVersion === undefined) { ranks['unlock-hailey'] = 1; ranks['unlock-crossbow'] = 1; }
+    else if (value.shopVersion !== 2) return null;
+    const equippedWeapon = value.equippedWeapon ?? 'spell';
+    if (equippedWeapon !== 'spell' && (equippedWeapon !== 'crossbow' || !ranks['unlock-crossbow'])) return null;
+    const equippedCosmetic = value.equippedCosmetic ?? null;
+    if (equippedCosmetic !== null && (typeof equippedCosmetic !== 'string' ||
+      getMarketItem(equippedCosmetic)?.kind !== 'cosmetic' || !ranks[equippedCosmetic as MarketItemId])) return null;
     if (!value.settledRuns.every(validRunId) || new Set(value.settledRuns).size !== value.settledRuns.length) return null;
     const rocks = value.rocks === undefined ? 0 : value.rocks;
     const collectedRocks = value.collectedRocks === undefined ? [] : value.collectedRocks;
     if (!Number.isSafeInteger(rocks) || (rocks as number) < 0 || !Array.isArray(collectedRocks) ||
       !collectedRocks.every(validRunId) || new Set(collectedRocks).size !== collectedRocks.length) return null;
-    return { version: 1, gold: value.gold as number, rocks: rocks as number, collectedRocks: [...collectedRocks], ranks, settledRuns: [...value.settledRuns] };
+    return { version: 1, shopVersion: 2, equippedWeapon, equippedCosmetic: equippedCosmetic as CosmeticId | null, gold: value.gold as number, rocks: rocks as number, collectedRocks: [...collectedRocks], ranks, settledRuns: [...value.settledRuns] };
   } catch {
     return null;
   }
@@ -124,6 +136,8 @@ export class MarketProgress {
     this.refresh();
   }
 
+  get equippedWeapon(): WeaponId { return this.current.equippedWeapon; }
+  get equippedCosmetic(): CosmeticId | null { return this.current.equippedCosmetic; }
   get storageStatus(): MarketStorageStatus { return this.status; }
   get profile(): MarketProfile {
     return { ...this.current, ranks: { ...this.current.ranks }, settledRuns: [...this.current.settledRuns], collectedRocks: [...this.current.collectedRocks] };
@@ -204,6 +218,23 @@ export class MarketProgress {
     const goldEarned = Math.min(goldForLevel(level), Number.MAX_SAFE_INTEGER - this.current.gold);
     this.persist({ ...this.current, gold: this.current.gold + goldEarned, settledRuns: [...this.current.settledRuns, runId] });
     return { status: 'awarded', goldEarned, ...this.result() };
+  }
+
+  characterUnlocked(id: string): boolean { return id === 'wizard' || (id === 'hailey' && !!this.current.ranks['unlock-hailey']); }
+  weaponUnlocked(id: string): boolean { return id === 'spell' || (id === 'crossbow' && !!this.current.ranks['unlock-crossbow']); }
+
+  equipWeapon(id: WeaponId): boolean {
+    this.refresh();
+    if (!this.weaponUnlocked(id)) return false;
+    this.persist({ ...this.current, equippedWeapon: id });
+    return true;
+  }
+
+  equipCosmetic(id: CosmeticId | null): boolean {
+    this.refresh();
+    if (id !== null && (getMarketItem(id)?.kind !== 'cosmetic' || !this.current.ranks[id])) return false;
+    this.persist({ ...this.current, equippedCosmetic: id });
+    return true;
   }
 
   purchase(itemId: string): MarketPurchaseResult {

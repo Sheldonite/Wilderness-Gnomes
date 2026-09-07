@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { makeMarketBoothArt } from './MarketBoothArt';
 import { reducedMotion } from '../config/presentation';
 import { MARKET_VENDORS, type MarketVendorId } from '../config/marketItems';
 
@@ -31,8 +32,6 @@ type Person = {
 const WIDTH = 1536;
 const HEIGHT = 1024;
 const INK = '#34362c';
-const WOOD = '#664332';
-const LIGHT_WOOD = '#b88750';
 const CREAM = '#f2dfad';
 const STALL_SCALE = 1.45;
 const PERSON_FRAME_WIDTH = 96;
@@ -50,9 +49,9 @@ const SWATCHES: Record<MarketVendorId, [string, string, string]> = {
 export class MarketWorld {
   readonly vendors: readonly MarketVendor[] = ([
     { id: 'forge', name: 'Hearth & Hammer', keeper: 'Bram', title: 'Blacksmith', x: 500, y: 655, interactionX: 500, interactionY: 730, color: 0xe3b967 },
-    { id: 'apothecary', name: 'Wildflower Remedies', keeper: 'Clover', title: 'Herbalist', x: 1056, y: 655, interactionX: 1056, interactionY: 730, color: 0xa3cf98 },
-    { id: 'outfitter', name: 'The Wandering Stitch', keeper: 'Mabel', title: 'Outfitter', x: 472, y: 835, interactionX: 472, interactionY: 937, color: 0x9cbfdc },
-    { id: 'curios', name: 'Moonlit Curios', keeper: 'Orin', title: 'Curio Keeper', x: 1066, y: 835, interactionX: 1066, interactionY: 937, color: 0xd6a6e5 }
+    { id: 'apothecary', name: 'Wildflower Remedies', keeper: 'Clover', title: 'Upgrade Keeper', x: 1056, y: 655, interactionX: 1056, interactionY: 730, color: 0xa3cf98 },
+    { id: 'outfitter', name: 'The Wandering Stitch', keeper: 'Mabel', title: 'Stylist', x: 472, y: 835, interactionX: 472, interactionY: 937, color: 0x9cbfdc },
+    { id: 'curios', name: 'Moonlit Curios', keeper: 'Orin', title: 'Recruiter', x: 1066, y: 835, interactionX: 1066, interactionY: 937, color: 0xd6a6e5 }
   ] as Array<Omit<MarketVendor, 'portraitKey' | 'portraitFrame'>>).map(vendor => {
     const catalog = MARKET_VENDORS.find(item => item.id === vendor.id)!;
     return { ...vendor, name: catalog.name, keeper: catalog.keeper, portraitKey: `market-person-vendor-${vendor.id}`, portraitFrame: 12 };
@@ -71,7 +70,7 @@ export class MarketWorld {
   constructor(private readonly scene: Phaser.Scene) {}
 
   create(): void {
-    this.makeStallTextures();
+    makeMarketBoothArt(this.scene);
     this.makePropTextures();
     const ground = this.scene.add.graphics().setDepth(1);
     this.objects.push(ground);
@@ -83,9 +82,9 @@ export class MarketWorld {
         ground.lineStyle(1, vendor.color, .18).strokeRect(vendor.x - 55 + r * 3, vendor.y + 60 + r * 3, 110 - r * 6, 31 - r * 6);
       }
       this.objects.push(this.scene.add.image(vendor.x, vendor.y + 38, `market-stall-${vendor.id}-back`)
-        .setOrigin(.5, 1).setScale(STALL_SCALE).setDepth(vendor.y - 78));
+        .setOrigin(.5, 1).setDisplaySize(160 * STALL_SCALE, 140 * STALL_SCALE).setDepth(vendor.y - 78));
       this.objects.push(this.scene.add.image(vendor.x, vendor.y + 38, `market-stall-${vendor.id}-front`)
-        .setOrigin(.5, 1).setScale(STALL_SCALE).setDepth(vendor.y + 38));
+        .setOrigin(.5, 1).setDisplaySize(160 * STALL_SCALE, 140 * STALL_SCALE).setDepth(vendor.y + 38));
       this.addVendor(vendor);
       this.addProp(vendor.x - 128, vendor.y + 20, vendor.id === 'forge' ? 'barrel' : 'flowers');
       this.addProp(vendor.x + 130, vendor.y + 27, vendor.id === 'curios' ? 'flowers' : 'crate');
@@ -266,7 +265,7 @@ export class MarketWorld {
       outfitter: { coat: '#637c9c', light: '#a7c0d0', shade: '#3c4a6b', skin: '#986747', skinShade: '#644636', hair: '#dcceb1', hat: 'cap', role: 'outfitter' },
       curios: { coat: '#835d91', light: '#c59fb1', shade: '#553d6a', skin: '#ddba96', skinShade: '#a67f66', hair: '#ddd8c5', hat: 'pointed', beard: true, role: 'curios' }
     };
-    this.addPerson(`vendor-${vendor.id}`, vendor.x, vendor.y + 17, palettes[vendor.id], [], 0, this.vendors.indexOf(vendor) * .77);
+    this.addPerson(`vendor-${vendor.id}`, vendor.x, vendor.y + 30, palettes[vendor.id], [], 0, this.vendors.indexOf(vendor) * .77);
   }
 
   private addVisitors(): void {
@@ -363,109 +362,6 @@ export class MarketWorld {
       data[index + 2] = Math.min(255, source[index + 2] * (light - .025));
     }
     ctx.putImageData(pixels, 0, 0);
-  }
-
-  private makeStallTextures(): void {
-    for (const vendor of this.vendors) {
-      const [cloth, shine, shade] = SWATCHES[vendor.id];
-      this.canvas(`market-stall-${vendor.id}-back`, 160, 140, ctx => {
-        const r = (x: number, y: number, w: number, h: number, color: string) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
-        // Wooden joints, braced legs, recessed shelves and a fabric back panel.
-        r(19, 36, 122, 87, '#604c36'); r(23, 41, 114, 75, '#786143');
-        for (let i = 0; i < 9; i++) r(26 + i * 12, 43, 1, 67, '#5f503a');
-        r(26, 69, 110, 4, LIGHT_WOOD); r(26, 74, 110, 3, '#463a2d');
-        r(18, 39, 5, 92, WOOD); r(137, 39, 5, 92, WOOD);
-        r(18, 40, 2, 88, '#b28a53'); r(137, 40, 2, 88, '#b28a53');
-        r(13, 129, 15, 5, '#493c2e'); r(132, 129, 15, 5, '#493c2e');
-        // Cloth slope uses broken highlights, alternating broad canvas stripes and a scalloped valance.
-        r(27, 20, 108, 5, '#3d3a30'); r(16, 25, 128, 10, INK); r(8, 35, 144, 19, INK);
-        r(28, 21, 106, 5, cloth); r(18, 26, 124, 10, cloth); r(10, 36, 140, 17, cloth);
-        for (let i = 0; i < 7; i++) {
-          r(29 + i * 15, 21, 8, 5, i % 2 ? shine : shade);
-          r(19 + i * 18, 26, 10, 10, i % 2 ? shine : shade);
-          r(11 + i * 20, 36, 11, 17, i % 2 ? shine : shade);
-          r(11 + i * 20, 50, 11, 7, i % 2 ? shine : cloth);
-          r(13 + i * 20, 57, 7, 3, i % 2 ? shine : cloth);
-          r(12 + i * 20, 36, 2, 10, i % 2 ? CREAM : cloth);
-          // Canvas folds taper toward the ridge; fine broken thread follows the seams.
-          r(15 + i * 20, 39, 1, 6, i % 2 ? cloth : shine);
-          for (let stitch = 0; stitch < 4; stitch++) r(20 + i * 20, 38 + stitch * 3, 1, 1, i % 2 ? cloth : shine);
-        }
-        r(10, 48, 140, 3, shade); r(10, 47, 140, 1, shine);
-        // Handpainted suspended sign on a carved plank.
-        r(44, 57, 1, 7, '#c1b786'); r(115, 57, 1, 7, '#c1b786');
-        r(27, 62, 106, 15, INK); r(29, 63, 102, 12, '#6d4734'); r(30, 64, 100, 1, LIGHT_WOOD);
-        ctx.fillStyle = CREAM; ctx.font = 'bold 7px Georgia, serif'; ctx.textAlign = 'center';
-        ctx.fillText(vendor.name.toUpperCase(), 80, 72);
-        r(31, 68, 2, 2, '#c7a26d'); r(126, 68, 2, 2, '#c7a26d');
-        // Wares on the rear shelves keep the trades legible above the counter.
-        if (vendor.id === 'forge') {
-          for (let i = 0; i < 3; i++) this.drawSword(ctx, 39 + i * 10, 79, i === 1 ? '#dac77f' : '#b9c5bb', 17 + i * 2);
-          this.drawShield(ctx, 106, 85, '#987147');
-          r(118, 91, 10, 7, '#393c39'); r(122, 84, 3, 11, '#a6aaa0');
-        } else if (vendor.id === 'apothecary') {
-          for (let i = 0; i < 4; i++) this.drawBottle(ctx, 32 + i * 10, 86, ['#a7cd8b', '#d4a776', '#9eced2', '#d9abc5'][i], 12);
-          for (let i = 0; i < 4; i++) {
-            r(108 + i * 5, 78, 1, 9, '#abaf7a');
-            r(106 + i * 5, 83, 3, 9 + i % 2 * 3, ['#8bab70', '#6f9561'][i % 2]);
-            r(105 + i * 5, 88, 3, 2, '#b5c38b');
-          }
-        } else if (vendor.id === 'outfitter') {
-          for (let i = 0; i < 4; i++) { r(30 + i * 7, 81, 6, 14, ['#c79676', '#a5bb99', '#b6a1bf', '#e3c787'][i]); r(30 + i * 7, 82, 2, 12, CREAM); }
-          this.drawBoot(ctx, 111, 81, '#a77148'); this.drawBoot(ctx, 122, 81, '#805b42');
-        } else {
-          this.drawBottle(ctx, 36, 88, '#b99cdd', 15); this.drawBottle(ctx, 49, 89, '#8ec1bc', 12);
-          r(104, 81, 22, 2, '#c4a275');
-          for (let i = 0; i < 3; i++) { r(107 + i * 7, 84, 1, 10, '#d1b478'); this.drawGem(ctx, 105 + i * 7, 92 + i % 2 * 2, ['#b4c7e7', '#d1a1dd', '#acd7bf'][i]); }
-        }
-        // Hanging lamps, visible in daylight as warm glass rather than spotlights.
-        for (const x of [14, 145]) {
-          r(x, 54, 1, 11, '#5f5036'); r(x - 3, 64, 7, 2, '#544738');
-          r(x - 3, 66, 7, 10, '#8c6639'); r(x - 2, 67, 5, 7, '#edc87a'); r(x, 68, 1, 5, '#fff0b7');
-          r(x - 4, 76, 9, 2, '#544738');
-        }
-      });
-      this.canvas(`market-stall-${vendor.id}-front`, 160, 140, ctx => {
-        // A lower counter reveals each merchant's shoulders, apron and moving hands.
-        ctx.translate(0, 7);
-        const r = (x: number, y: number, w: number, h: number, color: string) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
-        r(21, 104, 118, 27, WOOD); r(23, 105, 114, 24, '#91613d');
-        for (let i = 0; i < 10; i++) { r(25 + i * 11, 106, 1, 20, '#624830'); r(27 + i * 11, 109 + i % 3 * 2, 6, 1, '#ac7b49'); r(30 + i * 11, 116 - i % 3 * 2, 3, 1, '#674b34'); }
-        r(18, 101, 124, 5, '#493b2e'); r(18, 101, 124, 2, '#c4975b');
-        r(30, 106, 100, 21, cloth); r(33, 107, 94, 2, shine); r(33, 122, 94, 2, shine);
-        for (let i = 0; i < 15; i++) { r(34 + i * 6, 111, 1, 9 + i % 3, shade); r(35 + i * 6, 114 + i % 4, 1, 5, cloth); }
-        for (let i = 0; i < 12; i++) { r(33 + i * 8, 127, 2, 4 + i % 2, shade); r(33 + i * 8, 125, 2, 2, shine); }
-        r(28, 129, 6, 8, '#4b3e30'); r(126, 129, 6, 8, '#4b3e30');
-        // Distinct shop emblems are woven into the cloth apron.
-        ctx.strokeStyle = shine; ctx.lineWidth = 1; ctx.strokeRect(68, 109, 24, 13);
-        if (vendor.id === 'forge') {
-          this.drawSword(ctx, 79, 110, CREAM, 10);
-          // Anvil, steel wares and a live brazier.
-          r(34, 91, 31, 3, '#bac1ad'); r(31, 93, 31, 4, '#68736c'); r(38, 97, 16, 4, '#48524e'); r(34, 100, 25, 2, '#abb2a1');
-          this.drawSword(ctx, 87, 85, '#ced4b9', 16);
-          r(103, 94, 20, 8, '#423e35'); r(100, 93, 26, 3, '#767663');
-          for (let i = 0; i < 4; i++) { r(104 + i * 5, 92 - i % 2 * 3, 4, 5 + i % 2 * 3, '#cf8440'); r(105 + i * 5, 93 - i % 2 * 2, 2, 4, '#f5ce73'); }
-        } else if (vendor.id === 'apothecary') {
-          this.drawBottle(ctx, 77, 111, CREAM, 10);
-          for (let i = 0; i < 3; i++) this.drawBottle(ctx, 36 + i * 12, 85 - i % 2 * 2, ['#b2d77b', '#d8a0ba', '#8ecbd2'][i], 16 + i % 2 * 2);
-          r(88, 97, 17, 4, '#626f55'); r(85, 94, 23, 3, '#afb98d'); r(103, 87, 3, 8, '#b3a37b');
-          r(117, 95, 15, 7, '#a97e4e'); r(119, 96, 11, 1, '#e0c48c');
-          for (let i = 0; i < 5; i++) { r(117 + i * 3, 91 - i % 3, 2, 5, '#758c54'); r(118 + i * 3, 90 - i % 3, 2, 2, '#bbbd78'); }
-        } else if (vendor.id === 'outfitter') {
-          this.drawBoot(ctx, 77, 110, CREAM);
-          this.drawBoot(ctx, 35, 87, '#be8d57'); this.drawBoot(ctx, 47, 86, '#a57545');
-          for (let i = 0; i < 3; i++) { r(67, 98 - i * 4, 21 - i * 2, 4, ['#b5c79c', '#c5a2bb', '#d5be82'][i]); r(69, 98 - i * 4, 15, 1, CREAM); }
-          r(104, 94, 23, 7, '#57685a'); r(107, 91, 17, 5, '#b7b38b'); r(104, 92, 23, 1, '#d7c99e');
-          r(95, 94, 3, 7, '#dec987'); r(93, 95, 7, 2, '#a8966b');
-        } else {
-          this.drawGem(ctx, 77, 111, CREAM);
-          r(32, 98, 18, 4, '#ceb37b'); r(33, 93, 16, 5, '#6c4c76'); r(35, 90, 12, 5, '#926fb0'); r(37, 87, 8, 5, '#bc9acf'); r(38, 87, 3, 3, '#f2d9ea');
-          this.drawBottle(ctx, 61, 87, '#a0c7c0', 14); this.drawBottle(ctx, 74, 91, '#c1a2d2', 10);
-          r(95, 94, 29, 7, '#775646'); r(98, 95, 23, 5, '#c39b75');
-          this.drawGem(ctx, 100, 92, '#d1a8e3'); this.drawGem(ctx, 109, 92, '#a4ccd8'); this.drawGem(ctx, 117, 93, '#f0d08d');
-        }
-      });
-    }
   }
 
   private drawBottle(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, h: number): void {

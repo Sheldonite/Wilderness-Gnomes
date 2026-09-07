@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { PLAYER_CHARACTERS, type PlayerCharacterId } from '../../config/playerCharacters';
 import { ART } from '../../config/presentation';
-import { WEAPONS, type WeaponDefinition } from '../../config/weapons';
 import type { WeaponId } from '../../core/types';
 import { icon } from '../../ui/icons';
 import { showSpriteReview } from '../../ui/SpriteReview';
@@ -17,8 +16,6 @@ export class StartScene extends Phaser.Scene {
   private readonly keyboardHandler = (event: KeyboardEvent) => {
     if (event.code === 'Digit1') this.selectCharacter('wizard');
     if (event.code === 'Digit2') this.selectCharacter('hailey');
-    if (event.code === 'Digit3') this.selectWeapon('spell');
-    if (event.code === 'Digit4') this.selectWeapon('crossbow');
     // Native focused buttons retain their normal Enter/Space behavior.
     if ((event.code === 'Space' || event.code === 'Enter') && !(document.activeElement instanceof HTMLButtonElement)) {
       event.preventDefault(); this.startGame();
@@ -36,6 +33,8 @@ export class StartScene extends Phaser.Scene {
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'sprites') { showSpriteReview(this); return; }
     this.starting = false;
     marketProgress.refresh();
+    if(!marketProgress.characterUnlocked(this.selectedCharacterId)) this.selectedCharacterId='wizard';
+    this.selectedWeaponId=marketProgress.equippedWeapon;
     document.getElementById('game-root')?.classList.remove('in-run');
     this.root = document.getElementById('ui-root')!;
     this.root.innerHTML = `
@@ -44,7 +43,7 @@ export class StartScene extends Phaser.Scene {
           <span class="brand-mark">${icon('leaf')} <span>WILDERNESS GNOMES</span></span>
           <div class="title-wallet"><button class="title-market-link" type="button" aria-label="Visit Market Day. You have ${marketProgress.profile.gold.toLocaleString()} gold.">
             <span class="title-gold-balance">${icon('gold')}<span><small>YOUR GOLD</small><strong>${marketProgress.profile.gold.toLocaleString()}</strong></span></span>
-            <span class="title-market-invite">${icon('market')}<span><strong>Market Day</strong><small>Spend gold on upgrades</small></span></span>
+            <span class="title-market-invite">${icon('market')}<span><strong>Market Day</strong><small>Gear, style & new wanderers</small></span></span>
             <span class="title-market-arrow">${icon('arrow')}</span>
           </button><span class="title-rock-balance">${icon('rock')} <strong>${marketProgress.profile.rocks.toLocaleString()} rare rocks</strong><small>Kept between runs</small></span></div>
         </header>
@@ -59,13 +58,7 @@ export class StartScene extends Phaser.Scene {
               ${this.characterCard('hailey', 'An adventurous heart.', '2')}
             </div>
           </fieldset>
-          <fieldset class="weapon-selection">
-            <legend>CHOOSE YOUR ARM</legend>
-            <div class="weapon-cards">
-              ${this.weaponCard(WEAPONS.spell)}
-              ${this.weaponCard(WEAPONS.crossbow)}
-            </div>
-          </fieldset>
+          <button class="title-weapons-link" type="button">Choose your weapon at Market Day ${icon('arrow')}</button>
           <button class="begin-button" type="button">Begin Adventure ${icon('arrow')}</button>
           <p class="begin-hint">PRESS <kbd>SPACE</kbd> OR <kbd>ENTER</kbd> TO BEGIN</p>
         </section>
@@ -76,7 +69,10 @@ export class StartScene extends Phaser.Scene {
         <div class="title-pollen" aria-hidden="true">${'<i></i>'.repeat(12)}</div>
       </main>`;
     this.root.querySelectorAll<HTMLButtonElement>('[data-character]').forEach(button => button.addEventListener('click', () => this.selectCharacter(button.dataset.character as PlayerCharacterId)));
-    this.root.querySelectorAll<HTMLButtonElement>('[data-weapon]').forEach(button => button.addEventListener('click', () => this.selectWeapon(button.dataset.weapon as WeaponId)));
+    this.root.querySelector('.title-weapons-link')!.addEventListener('click', () => {
+      if (this.starting) return; this.starting=true;
+      this.scene.start('MarketScene', {characterId:this.selectedCharacterId, vendorId:'forge'});
+    });
     this.root.querySelector('.begin-button')!.addEventListener('click', () => this.startGame());
     this.root.querySelector('.title-market-link')!.addEventListener('click', () => {
       if (this.starting) return; this.starting = true;
@@ -84,7 +80,6 @@ export class StartScene extends Phaser.Scene {
     });
     window.addEventListener('keydown', this.keyboardHandler);
     this.selectCharacter(this.selectedCharacterId);
-    this.selectWeapon(this.selectedWeaponId);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('keydown', this.keyboardHandler);
       this.root!.innerHTML = '';
@@ -98,22 +93,12 @@ export class StartScene extends Phaser.Scene {
     return `<button class="wanderer-card" type="button" data-character="${id}" aria-pressed="false">
       <span class="choice-key">${key}</span><span class="selection-tick" aria-hidden="true">✓</span>
       <span class="wanderer-portrait"><img src="${portrait}" alt="" class="portrait-${id}"></span>
-      <span class="wanderer-copy"><strong>${character.name}</strong><small>${description}</small></span>
-    </button>`;
-  }
-
-  private weaponCard(weapon: WeaponDefinition): string {
-    const portrait = this.textures.exists(weapon.armTexture ?? weapon.texture)
-      ? this.textures.getBase64(weapon.armTexture ?? weapon.texture)
-      : this.textures.getBase64(weapon.texture);
-    return `<button class="weapon-card" type="button" data-weapon="${weapon.id}" aria-pressed="false">
-      <span class="choice-key">${weapon.key}</span><span class="selection-tick" aria-hidden="true">✓</span>
-      <span class="weapon-portrait"><img src="${portrait}" alt="" class="portrait-${weapon.id}"></span>
-      <span class="wanderer-copy"><strong>${weapon.name}</strong><small>${weapon.description}</small></span>
+      <span class="wanderer-copy"><strong>${character.name}</strong><small>${marketProgress.characterUnlocked(id)?description:'Unlock at Staffing Company · 15 gold'}</small></span>
     </button>`;
   }
 
   private selectCharacter(id: PlayerCharacterId): void {
+    if (!this.reviewActive && !marketProgress.characterUnlocked(id)) { this.scene.start('MarketScene', {characterId:this.selectedCharacterId, weaponId:this.selectedWeaponId, vendorId:'curios'}); return; }
     this.selectedCharacterId = id;
     this.root?.querySelectorAll<HTMLButtonElement>('[data-character]').forEach(button => {
       const selected = button.dataset.character === id;
@@ -121,16 +106,13 @@ export class StartScene extends Phaser.Scene {
     });
   }
 
-  private selectWeapon(id: WeaponId): void {
-    this.selectedWeaponId = id;
-    this.root?.querySelectorAll<HTMLButtonElement>('[data-weapon]').forEach(button => {
-      const selected = button.dataset.weapon === id;
-      button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
-    });
-  }
-
   private startGame(): void {
     if (this.starting) return;
+    marketProgress.refresh();
+    if (!this.reviewActive) {
+      if (!marketProgress.characterUnlocked(this.selectedCharacterId)) this.selectedCharacterId='wizard';
+      this.selectedWeaponId=marketProgress.equippedWeapon;
+    }
     this.starting = true;
     const review = this.reviewActive ? new URLSearchParams(location.search) : null;
     const reviewCharacter = review?.get('character');

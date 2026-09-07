@@ -212,12 +212,12 @@ test('temporary save failure can recover without losing session purchases or dup
   assert.deepEqual(new MarketProgress(storage).profile, market.profile);
 });
 
-test('market has four unique vendors with two priced, described items each', () => {
+test('market has four distinct trades with priced and described inventory', () => {
   assert.equal(MARKET_VENDORS.length, 4);
   assert.equal(new Set(MARKET_VENDORS.map(vendor => vendor.id)).size, 4);
-  assert.equal(MARKET_ITEMS.length, 8);
-  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 8);
-  for (const vendor of MARKET_VENDORS) assert.equal(MARKET_ITEMS.filter(item => item.vendorId === vendor.id).length, 2);
+  assert.equal(MARKET_ITEMS.length, 14);
+  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 14);
+  for (const vendor of MARKET_VENDORS) assert.ok(MARKET_ITEMS.some(item => item.vendorId === vendor.id));
   for (const item of MARKET_ITEMS) {
     assert.ok(item.name && item.description && item.effect && item.icon);
     assert.equal(item.prices.length, item.maxRank);
@@ -286,4 +286,105 @@ test('purchased cloak reduces actual damage and tonic heals only while playing, 
   assert.equal(game.state, 'GameOver');
   game.update(5000);
   assert.equal(game.playerStats.health, 0);
+});
+
+
+test('new players unlock Hailey and crossbow once, and keep them after reload', () => {
+  const storage = memoryStorage(fundedProfile(40)), market = new MarketProgress(storage);
+  assert.equal(market.characterUnlocked('wizard'), true);
+  assert.equal(market.characterUnlocked('hailey'), false);
+  assert.equal(market.weaponUnlocked('spell'), true);
+  assert.equal(market.weaponUnlocked('crossbow'), false);
+  assert.equal(market.purchase('unlock-hailey').status, 'purchased');
+  assert.equal(market.purchase('unlock-crossbow').status, 'purchased');
+  const reloaded = new MarketProgress(storage);
+  assert.equal(reloaded.characterUnlocked('hailey'), true);
+  assert.equal(reloaded.weaponUnlocked('crossbow'), true);
+  assert.equal(reloaded.profile.gold, 10);
+  assert.equal(reloaded.purchase('unlock-hailey').status, 'max-rank');
+  assert.equal(reloaded.profile.gold, 10);
+});
+
+test('old saves retain their free roster, weapons, rocks, purchases and receipts', () => {
+  const old = { version:1, gold:8, rocks:3, collectedRocks:['rock'], ranks:{'trail-boots':2}, settledRuns:['run'] };
+  const market = new MarketProgress(memoryStorage(old));
+  assert.equal(market.characterUnlocked('hailey'), true);
+  assert.equal(market.weaponUnlocked('crossbow'), true);
+  assert.equal(market.profile.ranks['trail-boots'], 2);
+  assert.equal(market.profile.rocks, 3);
+  assert.equal(market.profile.gold, 8);
+  market.purchase('honey-glow');
+  assert.equal(market.profile.shopVersion, 2);
+  assert.deepEqual(market.profile.settledRuns, ['run']);
+});
+
+test('cosmetics require ownership, equip one at a time, persist, and never change combat stats', () => {
+  const storage = memoryStorage(fundedProfile(20)), market = new MarketProgress(storage);
+  const base = marketBonuses(market.profile);
+  assert.equal(market.equipCosmetic('honey-glow'), false);
+  assert.equal(market.equipCosmetic('trail-boots'), false);
+  market.purchase('honey-glow'); market.purchase('violet-glow');
+  assert.equal(market.equipCosmetic('honey-glow'), true);
+  assert.equal(new MarketProgress(storage).profile.equippedCosmetic, 'honey-glow');
+  market.equipCosmetic('violet-glow');
+  assert.equal(new MarketProgress(storage).profile.equippedCosmetic, 'violet-glow');
+  assert.deepEqual(marketBonuses(market.profile), base);
+  market.equipCosmetic(null);
+  assert.equal(new MarketProgress(storage).profile.equippedCosmetic, null);
+  assert.equal(market.profile.gold, 10);
+  assert.equal(parseMarketProfile(JSON.stringify({...emptyMarketProfile(), equippedCosmetic:'violet-glow'})), null);
+});
+
+test('booth categories match their actual goods and moving goods preserves old bonuses', () => {
+  assert.deepEqual(MARKET_VENDORS.map(v=>v.name), ['Weapons','Cosmetics','Upgrades','Staffing Company']);
+  assert.ok(MARKET_ITEMS.filter(i=>i.vendorId==='outfitter').every(i=>i.kind==='cosmetic'));
+  assert.ok(MARKET_ITEMS.filter(i=>i.vendorId==='curios').every(i=>i.kind==='character'));
+  assert.ok(MARKET_ITEMS.filter(i=>i.vendorId==='apothecary').every(i=>!i.kind));
+  assert.equal(marketBonuses({ranks:{'trail-boots':2}}).speedMultiplier, 1.1);
+});
+
+
+test('weapon equipment requires ownership, survives reload, and can switch back for free', () => {
+  const storage=memoryStorage(fundedProfile(20)), market=new MarketProgress(storage);
+  assert.equal(market.equippedWeapon, 'spell');
+  assert.equal(market.equipWeapon('crossbow'), false);
+  assert.equal(market.equipWeapon('unknown'), false);
+  market.purchase('unlock-crossbow');
+  assert.equal(market.equipWeapon('crossbow'), true);
+  assert.equal(new MarketProgress(storage).equippedWeapon, 'crossbow');
+  assert.equal(market.profile.gold, 5);
+  assert.equal(market.equipWeapon('spell'), true);
+  assert.equal(new MarketProgress(storage).equippedWeapon, 'spell');
+  assert.equal(market.profile.gold, 5);
+  const prior=market.profile; delete prior.equippedWeapon;
+  assert.equal(parseMarketProfile(JSON.stringify(prior)).equippedWeapon, 'spell');
+  assert.equal(parseMarketProfile(JSON.stringify({...emptyMarketProfile(),equippedWeapon:'crossbow'})), null);
+});
+
+
+test('glitter trail can be bought, equipped and reloaded without changing combat bonuses', () => {
+  const storage=memoryStorage(fundedProfile(10)), market=new MarketProgress(storage);
+  const bonuses=marketBonuses(market.profile);
+  assert.equal(market.equipCosmetic('glitter-trail'),false);
+  assert.equal(market.purchase('glitter-trail').status,'purchased');
+  assert.equal(market.equipCosmetic('glitter-trail'),true);
+  assert.equal(new MarketProgress(storage).equippedCosmetic,'glitter-trail');
+  assert.deepEqual(marketBonuses(market.profile),bonuses);
+  assert.equal(market.profile.gold,5);
+});
+
+
+test('UPS Buddy is a saved cosmetic and grants no combat bonuses or fighting companions', () => {
+  const storage=memoryStorage(fundedProfile(10)), market=new MarketProgress(storage);
+  const base=marketBonuses(market.profile);
+  assert.equal(market.equipCosmetic('ups-buddy'),false);
+  assert.equal(market.purchase('ups-buddy').status,'purchased');
+  assert.equal(market.equipCosmetic('ups-buddy'),true);
+  const loaded=new MarketProgress(storage);
+  assert.equal(loaded.equippedCosmetic,'ups-buddy');
+  assert.equal(loaded.profile.gold,5);
+  assert.deepEqual(marketBonuses(loaded.profile),base);
+  const game=new GameManager('spell',loaded.profile);
+  assert.equal(game.playerStats.hasMysteryCompanion,false);
+  assert.equal(game.playerStats.hasMidnightCompanion,false);
 });

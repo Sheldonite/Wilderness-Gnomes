@@ -9,7 +9,7 @@ test('existing gold saves gain an empty rock wallet without losing purchases or 
   const old = { version: 1, gold: 20, ranks: { 'trail-boots': 1 }, settledRuns: ['old-run'] };
   const parsed = parseMarketProfile(JSON.stringify(old));
   assert.equal(parsed.rocks, 0); assert.deepEqual(parsed.collectedRocks, []);
-  assert.equal(parsed.gold, 20); assert.deepEqual(parsed.ranks, old.ranks); assert.deepEqual(parsed.settledRuns, old.settledRuns);
+  assert.equal(parsed.gold, 20); assert.deepEqual(parsed.ranks, {...old.ranks, 'unlock-hailey':1, 'unlock-crossbow':1}); assert.deepEqual(parsed.settledRuns, old.settledRuns);
   for (const rocks of [-1, 1.5, '10']) assert.equal(parseMarketProfile(JSON.stringify({ ...old, rocks })), null);
 });
 
