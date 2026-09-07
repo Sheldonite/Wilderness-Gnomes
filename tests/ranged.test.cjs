@@ -23,6 +23,11 @@ test('from the deer level only does and fawns spawn, with fawns in the minority'
   assert.equal(counts.brown + counts.grey, 0, 'no squirrels once deer arrive');
   assert.ok(counts.fawn > 3000 && counts.fawn < 4000, `expected ~35% fawns, got ${counts.fawn / 100}%`);
   assert.equal(counts.doe + counts.fawn, 10000);
+  const late = { brown: 0, grey: 0, doe: 0, fawn: 0, buck: 0 };
+  for (let i = 0; i < 10000; i++) late[rollSpawnVariant(D.buckLevel)]++;
+  assert.ok(late.buck > 1700 && late.buck < 2300, `expected ~20% bucks, got ${late.buck / 100}%`);
+  assert.equal(late.brown + late.grey, 0);
+  assert.equal(rollSpawnVariant(D.buckLevel - 1, () => 0), 'fawn', 'no bucks before their level');
 });
 
 test('a grey squirrel approaches, holds its range, and backs off when crowded', () => {

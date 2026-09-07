@@ -208,7 +208,7 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
       for (let i = 0; i < 8; i++) {
         const angle = i * 0.785;
-        this.enemies.push(new EnemyController(this, 1600 + Math.cos(angle) * 260, 1600 + Math.sin(angle) * 260, 0, i % 3 === 2 ? 'fawn' : 'doe'));
+        this.enemies.push(new EnemyController(this, 1600 + Math.cos(angle) * 260, 1600 + Math.sin(angle) * 260, 0, i % 4 === 3 ? 'buck' : i % 3 === 2 ? 'fawn' : 'doe'));
       }
     } else if (review === 'ranged') {
       this.gameManager.level = 5; this.gameManager.xpToNextLevel = 100000;

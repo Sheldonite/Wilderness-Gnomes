@@ -8,6 +8,8 @@ export const DOE_SPRITE_KEY = 'enemy-doe';
 export const DOE_ANIMATION_PREFIX = 'enemy-doe';
 export const FAWN_SPRITE_KEY = 'enemy-fawn';
 export const FAWN_ANIMATION_PREFIX = 'enemy-fawn';
+export const BUCK_SPRITE_KEY = 'enemy-buck';
+export const BUCK_ANIMATION_PREFIX = 'enemy-buck';
 export const ENEMY_FRAME_SIZE = 64;
 export const ENEMY_FRAMES_PER_ROW = 4;
 
@@ -41,3 +43,4 @@ export const ENEMY_WALK_ANIMATION_BY_DIRECTION = withPrefix(ENEMY_ANIMATION_PREF
 export const GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION = withPrefix(GREY_ENEMY_ANIMATION_PREFIX);
 export const DOE_WALK_ANIMATION_BY_DIRECTION = withPrefix(DOE_ANIMATION_PREFIX);
 export const FAWN_WALK_ANIMATION_BY_DIRECTION = withPrefix(FAWN_ANIMATION_PREFIX);
+export const BUCK_WALK_ANIMATION_BY_DIRECTION = withPrefix(BUCK_ANIMATION_PREFIX);

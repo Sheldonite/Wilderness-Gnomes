@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import {
+  BUCK_SPRITE_KEY,
+  BUCK_WALK_ANIMATION_BY_DIRECTION,
   DOE_SPRITE_KEY,
   DOE_WALK_ANIMATION_BY_DIRECTION,
   ENEMY_SPRITE_KEY,
@@ -17,7 +19,7 @@ import { clampToArena, normalize } from '../utils/math';
 let nextEnemyId = 1;
 
 /** Brown squirrels charge, grey squirrels throw acorns, and from level 10 the woods send does and fawns. */
-export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn';
+export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck';
 
 interface VariantProfile {
   textureKey: string;
@@ -38,7 +40,9 @@ const VARIANTS: Record<EnemyVariant, VariantProfile> = {
   doe: { textureKey: DOE_SPRITE_KEY, walkAnimations: DOE_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.doe.scale,
     health: BALANCE.deer.doe.health, speed: BALANCE.deer.doe.speed, contactDamage: BALANCE.deer.doe.contactDamage, radius: BALANCE.deer.doe.radius, ranged: false },
   fawn: { textureKey: FAWN_SPRITE_KEY, walkAnimations: FAWN_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.fawn.scale,
-    health: BALANCE.deer.fawn.health, speed: BALANCE.deer.fawn.speed, contactDamage: BALANCE.deer.fawn.contactDamage, radius: BALANCE.deer.fawn.radius, ranged: false }
+    health: BALANCE.deer.fawn.health, speed: BALANCE.deer.fawn.speed, contactDamage: BALANCE.deer.fawn.contactDamage, radius: BALANCE.deer.fawn.radius, ranged: false },
+  buck: { textureKey: BUCK_SPRITE_KEY, walkAnimations: BUCK_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.buck.scale,
+    health: BALANCE.deer.buck.health, speed: BALANCE.deer.buck.speed, contactDamage: BALANCE.deer.buck.contactDamage, radius: BALANCE.deer.buck.radius, ranged: false }
 };
 
 export class EnemyController {
