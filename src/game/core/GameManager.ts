@@ -3,13 +3,21 @@ import { ABILITIES, awakeningTier, emptyAbilityRanks } from '../config/abilities
 import { getWeapon } from '../config/weapons';
 import type { GameRunState, HudSnapshot, PlayerStats, WeaponId } from './types';
 
+/** XP needed to finish the given level: exponential early, then a fixed step per level. */
+export function xpThreshold(level: number): number {
+  const { baseThreshold, thresholdGrowth, linearFromLevel, linearStepXp } = BALANCE.leveling;
+  const capped = Math.min(level, linearFromLevel);
+  const exponential = baseThreshold * Math.pow(thresholdGrowth, capped - 1);
+  return Math.ceil(exponential + Math.max(0, level - linearFromLevel) * linearStepXp);
+}
+
 export class GameManager {
   state: GameRunState = 'Playing';
   elapsedMs = 0;
   kills = 0;
   level = 1;
   xp = 0;
-  xpToNextLevel: number = BALANCE.leveling.baseThreshold;
+  xpToNextLevel: number = xpThreshold(1);
   readonly playerStats: PlayerStats;
   private wardWasUnlocked = false;
   private wardReadyAt = 0;
@@ -95,9 +103,7 @@ export class GameManager {
     this.xp -= this.xpToNextLevel;
     this.level += 1;
     this.playerStats.level = this.level;
-    this.xpToNextLevel = Math.ceil(
-      BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, this.level - 1)
-    );
+    this.xpToNextLevel = xpThreshold(this.level);
     this.state = 'LevelUpPaused';
   }
 

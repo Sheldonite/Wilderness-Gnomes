@@ -6,7 +6,7 @@ import { GAME_CONFIG } from '../../config/gameConfig';
 import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config/playerCharacters';
 import { getWeapon } from '../../config/weapons';
 import type { WeaponId } from '../../core/types';
-import { GameManager } from '../../core/GameManager';
+import { GameManager, xpThreshold } from '../../core/GameManager';
 import { EnemyController } from '../../entities/EnemyController';
 import { PlayerController } from '../../entities/PlayerController';
 import { Projectile } from '../../entities/Projectile';
@@ -264,7 +264,7 @@ export class GameScene extends Phaser.Scene {
       this.reviewChoices = this.upgradeSystem.getReviewChoices();
     } else if (review === 'gameover') {
       this.gameManager.elapsedMs = 187000; this.gameManager.kills = 42; this.gameManager.level = 6;
-      this.gameManager.xpToNextLevel = Math.ceil(BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, 5));
+      this.gameManager.xpToNextLevel = xpThreshold(6);
       this.gameManager.playerStats.health = 0; this.gameManager.state = 'GameOver';
     } else if (review === 'deer') {
       this.gameManager.level = 10; this.gameManager.xpToNextLevel = 100000;

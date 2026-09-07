@@ -86,6 +86,8 @@ export const BALANCE = {
   leveling: {
     baseThreshold: 24,
     thresholdGrowth: 1.22,
+    linearFromLevel: 10,        // past here each level needs a fixed amount more, not a percentage
+    linearStepXp: 30,
     choices: 3
   }
 } as const;

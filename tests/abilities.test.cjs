@@ -62,8 +62,7 @@ test('all ability ranks have real next-benefit descriptions; stale cards cannot 
 });
 
 test('queued XP levels are preserved and resume one selection at a time', () => {
-  const { BALANCE } = require('../artifacts/ability-tests/game/config/balance.js');
-  const threshold = level => Math.ceil(BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, level - 1));
+  const { xpThreshold: threshold } = require('../artifacts/ability-tests/game/core/GameManager.js');
   // enough XP for exactly two level-ups, with some left over
   const grant = threshold(1) + threshold(2) + Math.floor(threshold(3) / 2);
   const manager = new GameManager();
