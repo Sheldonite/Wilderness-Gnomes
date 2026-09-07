@@ -14,6 +14,20 @@ export const BALANCE = {
     separationRadius: 34,
     xpValue: 8
   },
+  rangedEnemy: {
+    unlockLevel: 5,
+    spawnChance: 0.2,
+    health: 22,
+    speed: 84,
+    preferredRange: 250,
+    retreatRange: 150,
+    throwRange: 330,
+    throwCooldownMs: 2100,
+    acornSpeed: 300,
+    acornDamage: 6,
+    acornRadius: 7,
+    acornLifetimeMs: 1600
+  },
   spawner: {
     initialSpawnIntervalMs: 1200,
     minSpawnIntervalMs: 260,

@@ -28,7 +28,9 @@ import {
   ENEMY_ANIMATION_ROWS,
   ENEMY_FRAMES_PER_ROW,
   ENEMY_FRAME_SIZE,
-  ENEMY_SPRITE_KEY
+  ENEMY_SPRITE_KEY,
+  GREY_ENEMY_ANIMATION_PREFIX,
+  GREY_ENEMY_SPRITE_KEY
 } from '../../config/enemySprite';
 import {
   applyPlayerSpriteAdjustments,
@@ -82,7 +84,8 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     createStorybookTextures(this);
-    [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
+    this.createGreySquirrelTexture();
+    [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
     // The wizard sheet is authored at 192px and drawn at ~40%; linear filtering keeps the downscale smooth.
     this.textures.get(PLAYER_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
     applyPlayerSpriteAdjustments(this);
@@ -115,23 +118,50 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  private createEnemyAnimations(): void {
-    for (const [name, row, frameRate] of ENEMY_ANIMATION_ROWS) {
-      const key = `${ENEMY_ANIMATION_PREFIX}-${name}`;
-      if (this.anims.exists(key)) {
-        continue;
-      }
+  /** Grey squirrels reuse the brown sheet with the fur desaturated and cooled; eyes and nose keep their dark ink. */
+  private createGreySquirrelTexture(): void {
+    const source = this.textures.get(ENEMY_SPRITE_KEY).getSourceImage() as HTMLImageElement;
+    const canvas = this.textures.createCanvas(GREY_ENEMY_SPRITE_KEY, source.width, source.height)!;
+    const ctx = canvas.context;
+    ctx.drawImage(source, 0, 0);
+    const pixels = ctx.getImageData(0, 0, source.width, source.height);
+    const d = pixels.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 10) continue;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const lum = 0.3 * r + 0.59 * g + 0.11 * b;
+      const warm = r > g + 20 && g > b;                    // brown or orange fur
+      if (!warm || lum < 40) continue;
+      const v = Math.min(255, lum * 1.08 + 12);
+      d[i] = Math.round(v * 0.94); d[i + 1] = Math.round(v * 0.96); d[i + 2] = Math.round(Math.min(255, v * 1.04));
+    }
+    ctx.putImageData(pixels, 0, 0);
+    canvas.refresh();
+    for (let frame = 0; frame < (source.width / ENEMY_FRAME_SIZE) * (source.height / ENEMY_FRAME_SIZE); frame++) {
+      const x = (frame % ENEMY_FRAMES_PER_ROW) * ENEMY_FRAME_SIZE, y = Math.floor(frame / ENEMY_FRAMES_PER_ROW) * ENEMY_FRAME_SIZE;
+      canvas.add(frame, 0, x, y, ENEMY_FRAME_SIZE, ENEMY_FRAME_SIZE);
+    }
+  }
 
-      const start = row * ENEMY_FRAMES_PER_ROW;
-      this.anims.create({
-        key,
-        frames: this.anims.generateFrameNumbers(ENEMY_SPRITE_KEY, {
-          start,
-          end: start + ENEMY_FRAMES_PER_ROW - 1
-        }),
-        frameRate,
-        repeat: -1
-      });
+  private createEnemyAnimations(): void {
+    for (const [prefix, textureKey] of [[ENEMY_ANIMATION_PREFIX, ENEMY_SPRITE_KEY], [GREY_ENEMY_ANIMATION_PREFIX, GREY_ENEMY_SPRITE_KEY]] as const) {
+      for (const [name, row, frameRate] of ENEMY_ANIMATION_ROWS) {
+        const key = `${prefix}-${name}`;
+        if (this.anims.exists(key)) {
+          continue;
+        }
+
+        const start = row * ENEMY_FRAMES_PER_ROW;
+        this.anims.create({
+          key,
+          frames: this.anims.generateFrameNumbers(textureKey, {
+            start,
+            end: start + ENEMY_FRAMES_PER_ROW - 1
+          }),
+          frameRate,
+          repeat: -1
+        });
+      }
     }
   }
 

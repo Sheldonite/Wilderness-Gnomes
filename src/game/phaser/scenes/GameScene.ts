@@ -7,6 +7,7 @@ import { EnemyController } from '../../entities/EnemyController';
 import { PlayerController } from '../../entities/PlayerController';
 import { Projectile } from '../../entities/Projectile';
 import { XPOrb } from '../../entities/XPOrb';
+import { Acorn } from '../../entities/Acorn';
 import { CameraController } from '../camera/CameraController';
 import { CompanionSystem } from '../../systems/CompanionSystem';
 import { CollisionSystem } from '../../systems/CollisionSystem';
@@ -45,6 +46,7 @@ export class GameScene extends Phaser.Scene {
   private enemies: EnemyController[] = [];
   private projectiles: Projectile[] = [];
   private xpOrbs: XPOrb[] = [];
+  private acorns: Acorn[] = [];
   private levelUpDisplayed = false;
   private pausedDisplayed = false;
   private gameOverDisplayed = false;
@@ -201,6 +203,13 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.elapsedMs = 187000; this.gameManager.kills = 42; this.gameManager.level = 6;
       this.gameManager.xpToNextLevel = Math.ceil(BALANCE.leveling.baseThreshold * Math.pow(BALANCE.leveling.thresholdGrowth, 5));
       this.gameManager.playerStats.health = 0; this.gameManager.state = 'GameOver';
+    } else if (review === 'ranged') {
+      this.gameManager.level = 5; this.gameManager.xpToNextLevel = 100000;
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      for (let i = 0; i < 6; i++) {
+        const angle = i * 1.05;
+        this.enemies.push(new EnemyController(this, 1600 + Math.cos(angle) * 300, 1600 + Math.sin(angle) * 300, 0, i % 2 ? 'grey' : 'brown'));
+      }
     } else if (review === 'companion') {
       this.gameManager.level = 2; this.gameManager.xpToNextLevel = 33;
       this.gameManager.playerStats.hasMysteryCompanion = true;
@@ -257,7 +266,7 @@ export class GameScene extends Phaser.Scene {
     this.cameraController.update(this.player.position);
 
     const difficulty = this.gameManager.getDifficultyMinutes();
-    this.enemySpawner.update(deltaMs, this.player.position, this.cameras.main, this.enemies, difficulty);
+    this.enemySpawner.update(deltaMs, this.player.position, this.cameras.main, this.enemies, difficulty, this.gameManager.level);
     this.weaponSystem.update(
       deltaMs,
       this.player.position,
@@ -269,6 +278,11 @@ export class GameScene extends Phaser.Scene {
     this.abilities.update(deltaMs, this.player.position, this.enemies, this.xpOrbs, this.combat.damage);
     for (const enemy of this.enemies) {
       enemy.update(deltaMs, this.player.position, difficulty);
+      const throwVelocity = enemy.tryThrow(this.player.position);
+      if (throwVelocity) this.acorns.push(new Acorn(this, enemy.position.x, enemy.position.y - 10, throwVelocity));
+    }
+    for (const acorn of this.acorns) {
+      acorn.update(deltaMs);
     }
 
     this.companionSystem.update(
@@ -295,7 +309,8 @@ export class GameScene extends Phaser.Scene {
       this.enemies,
       this.projectiles,
       this.xpOrbs,
-      this.combat.damage
+      this.combat.damage,
+      this.acorns
     );
     if (this.gameManager.playerStats.health < healthBefore) this.events.emit('presentation:hit', this.player.sprite);
     this.abilities.sync(this.player.position, this.gameManager.wardStatus);
@@ -404,6 +419,8 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.projectiles = this.projectiles.filter((projectile) => !projectile.isDead);
+    for (const acorn of this.acorns) if (acorn.isDead) acorn.destroy();
+    this.acorns = this.acorns.filter(acorn => !acorn.isDead);
 
     for (const orb of this.xpOrbs) {
       if (orb.isCollected) {
@@ -432,9 +449,13 @@ export class GameScene extends Phaser.Scene {
     for (const orb of this.xpOrbs) {
       orb.destroy();
     }
+    for (const acorn of this.acorns) {
+      acorn.destroy();
+    }
     this.enemies = [];
     this.projectiles = [];
     this.xpOrbs = [];
+    this.acorns = [];
     this.presentation?.destroy();
   }
 }

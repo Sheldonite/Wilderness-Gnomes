@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { Vector2Like } from '../core/types';
-import { EnemyController } from '../entities/EnemyController';
+import { EnemyController, type EnemyVariant } from '../entities/EnemyController';
+import { rollRangedSpawn } from '../core/SquirrelBehavior';
 
 export class EnemySpawner {
   private spawnTimerMs = 0;
@@ -14,7 +15,8 @@ export class EnemySpawner {
     playerPosition: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera,
     enemies: EnemyController[],
-    difficultyMinutes: number
+    difficultyMinutes: number,
+    playerLevel: number
   ): void {
     this.spawnTimerMs += deltaMs;
     const spawnIntervalMs = Math.max(
@@ -35,13 +37,15 @@ export class EnemySpawner {
     }
 
     this.spawnTimerMs = 0;
-    enemies.push(this.spawnEnemy(playerPosition, camera, difficultyMinutes));
+    const ranged = rollRangedSpawn(playerLevel);
+    enemies.push(this.spawnEnemy(playerPosition, camera, difficultyMinutes, ranged ? 'grey' : 'brown'));
   }
 
   private spawnEnemy(
     playerPosition: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera,
-    difficultyMinutes: number
+    difficultyMinutes: number,
+    variant: EnemyVariant
   ): EnemyController {
     const view = camera.worldView;
     const padding = BALANCE.spawner.spawnOutsideViewPadding;
@@ -66,6 +70,6 @@ export class EnemySpawner {
     x = Phaser.Math.Clamp(x, BALANCE.enemy.radius, GAME_CONFIG.arena.width - BALANCE.enemy.radius);
     y = Phaser.Math.Clamp(y, BALANCE.enemy.radius, GAME_CONFIG.arena.height - BALANCE.enemy.radius);
 
-    return new EnemyController(this.scene, x, y, difficultyMinutes);
+    return new EnemyController(this.scene, x, y, difficultyMinutes, variant);
   }
 }

@@ -1,5 +1,8 @@
 export const ENEMY_SPRITE_KEY = 'enemy-squirrel';
 export const ENEMY_ANIMATION_PREFIX = 'enemy';
+/** Grey squirrels share the brown sheet's layout; the texture is recoloured at boot. */
+export const GREY_ENEMY_SPRITE_KEY = 'enemy-squirrel-grey';
+export const GREY_ENEMY_ANIMATION_PREFIX = 'enemy-grey';
 export const ENEMY_FRAME_SIZE = 64;
 export const ENEMY_FRAMES_PER_ROW = 4;
 
@@ -14,13 +17,20 @@ export const ENEMY_ANIMATION_ROWS = [
   ['walk-down-left', 7, 8]
 ] as const;
 
-export const ENEMY_WALK_ANIMATION_BY_DIRECTION: Record<string, string> = {
-  '0,1': 'enemy-walk-down',
-  '1,1': 'enemy-walk-down-right',
-  '1,0': 'enemy-walk-right',
-  '1,-1': 'enemy-walk-up-right',
-  '0,-1': 'enemy-walk-up',
-  '-1,-1': 'enemy-walk-up-left',
-  '-1,0': 'enemy-walk-left',
-  '-1,1': 'enemy-walk-down-left'
+const WALK_NAME_BY_DIRECTION: Record<string, string> = {
+  '0,1': 'walk-down',
+  '1,1': 'walk-down-right',
+  '1,0': 'walk-right',
+  '1,-1': 'walk-up-right',
+  '0,-1': 'walk-up',
+  '-1,-1': 'walk-up-left',
+  '-1,0': 'walk-left',
+  '-1,1': 'walk-down-left'
 };
+
+function withPrefix(prefix: string): Record<string, string> {
+  return Object.fromEntries(Object.entries(WALK_NAME_BY_DIRECTION).map(([k, v]) => [k, `${prefix}-${v}`]));
+}
+
+export const ENEMY_WALK_ANIMATION_BY_DIRECTION = withPrefix(ENEMY_ANIMATION_PREFIX);
+export const GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION = withPrefix(GREY_ENEMY_ANIMATION_PREFIX);

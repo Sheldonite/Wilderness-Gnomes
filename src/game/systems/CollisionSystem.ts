@@ -4,6 +4,7 @@ import { EnemyController } from '../entities/EnemyController';
 import { PlayerController } from '../entities/PlayerController';
 import { Projectile } from '../entities/Projectile';
 import { XPOrb } from '../entities/XPOrb';
+import { Acorn } from '../entities/Acorn';
 import { distanceSq, normalize } from '../utils/math';
 import type { DealDamage } from '../core/CombatResolver';
 
@@ -15,10 +16,13 @@ export class CollisionSystem {
     enemies: EnemyController[],
     projectiles: Projectile[],
     xpOrbs: XPOrb[],
-    damage: DealDamage
+    damage: DealDamage,
+    acorns: Acorn[] = []
   ): void {
     this.handleEnemySeparation(enemies);
     this.handlePlayerEnemyContact(timeMs, player, gameManager, enemies);
+    if (gameManager.state !== 'Playing') return;
+    this.handleAcornHits(player, gameManager, acorns);
     if (gameManager.state !== 'Playing') return;
     this.handleProjectileEnemyHits(enemies, projectiles, damage);
     this.handleXpCollection(player, gameManager, xpOrbs);
@@ -47,6 +51,17 @@ export class CollisionSystem {
         gameManager.damagePlayer(BALANCE.enemy.contactDamage, 'contact');
         if (gameManager.state !== 'Playing') return;
       }
+    }
+  }
+
+  private handleAcornHits(player: PlayerController, gameManager: GameManager, acorns: Acorn[]): void {
+    for (const acorn of acorns) {
+      if (acorn.isDead) continue;
+      const minDistance = player.radius + acorn.radius;
+      if (distanceSq(player.position, acorn.position) > minDistance * minDistance) continue;
+      acorn.isDead = true;
+      gameManager.damagePlayer(BALANCE.rangedEnemy.acornDamage);
+      if (gameManager.state !== 'Playing') return;
     }
   }
 
