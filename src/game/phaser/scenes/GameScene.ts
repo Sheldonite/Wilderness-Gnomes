@@ -18,10 +18,11 @@ import { Acorn } from '../../entities/Acorn';
 import { CameraController } from '../camera/CameraController';
 import { CompanionSystem } from '../../systems/CompanionSystem';
 import { ChestSystem } from '../../systems/ChestSystem';
+import { RareRockSystem } from '../../systems/RareRockSystem';
 import { BossPowerSystem } from '../../systems/BossPowerSystem';
 import { BOSS_ARENA_RADIUS, insideBossArena, type BossId } from '../../core/BossGate';
 import { BOSS_ABILITY_IDS } from '../../config/bossAbilities';
-import { marketProgress, emptyMarketProfile } from '../../core/MarketProgress';
+import { MarketProgress, marketProgress, emptyMarketProfile } from '../../core/MarketProgress';
 import type { Vector2Like } from '../../core/types';
 import { CollisionSystem } from '../../systems/CollisionSystem';
 import { EnemySpawner } from '../../systems/EnemySpawner';
@@ -46,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   private scenerySystem!: ScenerySystem;
   private companionSystem!: CompanionSystem;
   private chestSystem!: ChestSystem;
+  private rareRocks!: RareRockSystem;
   private bossPowers!: BossPowerSystem;
   private bossArena?: { id: BossId; center: Vector2Like };
   private bossBoundary!: Phaser.GameObjects.Graphics;
@@ -122,6 +124,7 @@ export class GameScene extends Phaser.Scene {
 
     this.scenerySystem.create();
     this.chestSystem = new ChestSystem(this, this.scenerySystem.navigation);
+    this.rareRocks = new RareRockSystem(this, this.scenerySystem.navigation, this.practiceRun ? new MarketProgress(null) : marketProgress, this.practiceRun);
     this.bossPowers = new BossPowerSystem(this);
     this.bossBoundary = this.add.graphics().setDepth(3);
     this.bossArenaLabel = this.add.text(0, 0, 'BOSS ARENA · DEFEAT THE BOSS TO LEAVE', {
@@ -164,6 +167,16 @@ export class GameScene extends Phaser.Scene {
 
   private setupReview(): void {
     const review = new URLSearchParams(location.search).get('review');
+    if (review === 'rocks') {
+      this.reviewNoEnemies = true;
+      this.rareRocks.spawnForReview(this.player.position);
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span>ROCK PREVIEW · NOT SAVED</span><button>Find rock</button><button>Collect rock</button>';
+      const buttons = this.reviewControls.querySelectorAll('button');
+      buttons[0].onclick = () => this.rareRocks.spawnForReview(this.player.position);
+      buttons[1].onclick = () => { const rock = this.rareRocks.positions[0]; if (rock) this.player.sprite.setPosition(rock.x, rock.y); };
+      document.body.append(this.reviewControls); return;
+    }
     if (review === 'boss-rewards') {
       this.gameManager.level = this.gameManager.playerStats.level = 9;
       this.gameManager.xpToNextLevel = xpThreshold(9);
@@ -453,6 +466,7 @@ export class GameScene extends Phaser.Scene {
     if (requiredBoss && !this.bossArena) this.beginBossArena(requiredBoss);
     this.confineToBossArena();
     this.cameraController.update(this.player.position);
+    this.rareRocks.update(deltaMs, this.player.position, !requiredBoss);
     if (this.chestSystem.update(deltaMs, this.player.position, this.gameManager)) {
       this.setPresentationPaused(true);
       this.showLevelUpOnce();
@@ -529,6 +543,7 @@ export class GameScene extends Phaser.Scene {
     const subjects = [this.player.position, ...this.enemies.map(e => e.position), ...this.xpOrbs.map(o => o.position)];
     subjects.push(...this.companionSystem.positions);
     subjects.push(...this.chestSystem.positions);
+    subjects.push(...this.rareRocks.positions);
     this.scenerySystem.update(deltaMs, subjects);
 
     this.cleanupDeadObjects();
@@ -604,7 +619,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.pausedDisplayed = true;
-    this.uiManager.showPaused(() => this.resumeFromPause());
+    this.uiManager.showPaused(() => this.resumeFromPause(), () => {
+      if (this.gameManager.state !== 'Paused') return;
+      if (!this.practiceRun) marketProgress.settleRun(this.gameManager.runId, this.gameManager.level);
+      this.scene.start('StartScene', { skipReview: true });
+    });
   }
 
   private beginBossArena(id: BossId): void {
@@ -718,6 +737,7 @@ export class GameScene extends Phaser.Scene {
     this.uiManager?.destroy();
     this.companionSystem?.destroy();
     this.chestSystem?.destroy();
+    this.rareRocks?.destroy();
     this.bossPowers?.destroy();
     this.bossBoundary?.destroy(); this.bossArenaLabel?.destroy(); this.bossArena = undefined;
     this.abilities?.destroy();

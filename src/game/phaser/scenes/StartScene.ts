@@ -42,7 +42,11 @@ export class StartScene extends Phaser.Scene {
       <main class="title-screen" style="--title-art: url('${ART.title}')">
         <header class="title-masthead">
           <span class="brand-mark">${icon('leaf')} <span>WILDERNESS GNOMES</span></span>
-          <button class="title-market-link" type="button">${icon('gold')} <span>${marketProgress.profile.gold} gold</span> <i></i> ${icon('market')} Market Day</button>
+          <div class="title-wallet"><button class="title-market-link" type="button" aria-label="Visit Market Day. You have ${marketProgress.profile.gold.toLocaleString()} gold.">
+            <span class="title-gold-balance">${icon('gold')}<span><small>YOUR GOLD</small><strong>${marketProgress.profile.gold.toLocaleString()}</strong></span></span>
+            <span class="title-market-invite">${icon('market')}<span><strong>Market Day</strong><small>Spend gold on upgrades</small></span></span>
+            <span class="title-market-arrow">${icon('arrow')}</span>
+          </button><span class="title-rock-balance">${icon('rock')} <strong>${marketProgress.profile.rocks.toLocaleString()} rare rocks</strong><small>Kept between runs</small></span></div>
         </header>
         <section class="title-content" aria-label="Start your adventure">
           <div class="eyebrow title-eyebrow"><span></span> A LITTLE MAGIC. A WILD ADVENTURE. <span></span></div>

@@ -1,6 +1,7 @@
 import type { UpgradeId } from '../core/types';
 
 const paths: Record<string, string> = {
+  rock: '<path d="m3 22 3-12 10-7 11 8 3 12-10 6-12-1Z" fill="#6e568d" stroke="#d8bdff"/><path d="m6 10 10-7 2 15Z" fill="#b89adc" stroke="none"/><path d="m16 3 11 8-9 7Z" fill="#9170b5" stroke="none"/><path d="m7 21 11-3 4 7" stroke="#eadbff"/>',
   gold: '<ellipse cx="16" cy="16" rx="11" ry="13"/><ellipse cx="16" cy="16" rx="7" ry="10"/><path d="M19 10h-5l-2 6h7l-2 6h-5m4-14v16"/>',
   market: '<path d="M4 14v14h24V14M2 13l4-9h20l4 9M2 13c0 5 7 5 7 0 0 5 7 5 7 0 0 5 7 5 7 0 0 5 7 5 7 0M11 28V18h10v10"/>',
   crownfire: '<path d="m3 14 7 5 6-8 6 8 7-5-3 14H6ZM12 9c-3-5 3-6 4-9 1 4 7 5 4 9"/>',

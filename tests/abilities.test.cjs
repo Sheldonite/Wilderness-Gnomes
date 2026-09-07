@@ -211,7 +211,7 @@ test('crossbow starts with heartwood stats and flavored primary upgrades', () =>
   const sharper = upgrades.getAvailable(bow).find(c => c.id === 'projectile-damage');
   assert.equal(sharper.title, 'Honed Quarrels');
   const ricochet = upgrades.getAvailable(bow).find(c => c.id === 'ricochet-charm');
-  assert.match(ricochet.description, /Quarrels punch through 2 additional enemies/);
+  assert.match(ricochet.description, /Shots bounce to 1 additional enemy/);
   assert.ok(!upgrades.getAvailable(spell).some(c => c.title === 'Honed Quarrels'));
 });
 

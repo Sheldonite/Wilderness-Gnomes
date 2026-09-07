@@ -6,6 +6,8 @@ export const MARKET_CORRUPT_BACKUP_KEY = `${MARKET_STORAGE_KEY}-corrupt-backup`;
 export interface MarketProfile {
   version: 1;
   gold: number;
+  rocks: number;
+  collectedRocks: string[];
   ranks: Partial<Record<MarketItemId, number>>;
   /** Persisted receipts prevent a game-over screen or page reload from paying twice. */
   settledRuns: string[];
@@ -38,7 +40,7 @@ export interface RunSettlementResult extends TransactionResult {
 }
 
 export function emptyMarketProfile(): MarketProfile {
-  return { version: 1, gold: 0, ranks: {}, settledRuns: [] };
+  return { version: 1, gold: 0, rocks: 0, collectedRocks: [], ranks: {}, settledRuns: [] };
 }
 
 /** Milestone rewards are totals for the run, not payments made at each level. */
@@ -96,7 +98,11 @@ export function parseMarketProfile(serialized: string): MarketProfile | null {
       ranks[item.id] = rank as number;
     }
     if (!value.settledRuns.every(validRunId) || new Set(value.settledRuns).size !== value.settledRuns.length) return null;
-    return { version: 1, gold: value.gold as number, ranks, settledRuns: [...value.settledRuns] };
+    const rocks = value.rocks === undefined ? 0 : value.rocks;
+    const collectedRocks = value.collectedRocks === undefined ? [] : value.collectedRocks;
+    if (!Number.isSafeInteger(rocks) || (rocks as number) < 0 || !Array.isArray(collectedRocks) ||
+      !collectedRocks.every(validRunId) || new Set(collectedRocks).size !== collectedRocks.length) return null;
+    return { version: 1, gold: value.gold as number, rocks: rocks as number, collectedRocks: [...collectedRocks], ranks, settledRuns: [...value.settledRuns] };
   } catch {
     return null;
   }
@@ -120,7 +126,7 @@ export class MarketProgress {
 
   get storageStatus(): MarketStorageStatus { return this.status; }
   get profile(): MarketProfile {
-    return { ...this.current, ranks: { ...this.current.ranks }, settledRuns: [...this.current.settledRuns] };
+    return { ...this.current, ranks: { ...this.current.ranks }, settledRuns: [...this.current.settledRuns], collectedRocks: [...this.current.collectedRocks] };
   }
 
   /** Refresh before sequential transactions to observe changes saved by other tabs. */
@@ -170,6 +176,19 @@ export class MarketProgress {
 
   private result(): TransactionResult {
     return { balance: this.current.gold, saved: !this.dirty && this.status === 'ready', storageStatus: this.status };
+  }
+
+  /** Bank each find immediately; pickup receipts make retries safe. */
+  collectRock(id: string): { balance: number; saved: boolean; awarded: boolean } {
+    this.refresh();
+    if (!validRunId(id)) return { balance: this.current.rocks, saved: false, awarded: false };
+    if (this.current.collectedRocks.includes(id)) {
+      if (this.dirty) this.persist(this.current);
+      return { balance: this.current.rocks, saved: !this.dirty && this.status === 'ready', awarded: false };
+    }
+    const balance = Math.min(Number.MAX_SAFE_INTEGER, this.current.rocks + 1);
+    const saved = this.persist({ ...this.current, rocks: balance, collectedRocks: [...this.current.collectedRocks, id] });
+    return { balance, saved, awarded: true };
   }
 
   settleRun(runId: string, level: number): RunSettlementResult {

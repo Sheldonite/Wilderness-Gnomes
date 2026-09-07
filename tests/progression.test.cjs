@@ -25,5 +25,5 @@ test('crossbow previews respect its starting damage and piercing rules',()=>{
  const damage=upgrades.getAvailable(stats).find(u=>u.id==='projectile-damage');
  assert.equal(upgradePreview(damage,stats).before,`${stats.projectileDamage} damage per shot`);
  const ricochet=upgrades.getAvailable(stats).find(u=>u.id==='ricochet-charm');
- assert.equal(upgradePreview(ricochet,stats).after,'2 extra pierces');
+ assert.equal(upgradePreview(ricochet,stats).after,'1 extra bounces');
 });

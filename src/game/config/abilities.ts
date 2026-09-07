@@ -1,6 +1,5 @@
 import { describeMidnightSwat } from './midnightSwat';
 import type { AbilityId, AbilityRank, AbilityRanks, WeaponId } from '../core/types';
-import { WEAPONS } from './weapons';
 
 export const ABILITY_IDS: AbilityId[] = ['ricochet-charm', 'firefly-orbit', 'bramble-snare', 'spore-trail',
   'acorn-shower', 'barkskin-ward', 'woodland-magnet', 'mystery-double-pounce', 'midnight-mighty-swat'];
@@ -78,9 +77,7 @@ export function describeAwakening(id: AbilityId, rank: number, weaponId: WeaponI
     case 'ricochet-charm': {
       const ch = c.ricochet.chain[t];
       const again = ch.splitBounces ? ` Each split bolt bounces ${ch.splitBounces} more time.` : '';
-      return weaponId === 'crossbow'
-        ? `${name}: quarrels keep full damage through every pierce, and after the last hit split into ${ch.splitCount} seeking bolts at ${pct(ch.splitDamage)}% damage.${again}`
-        : `${name}: bolts keep full damage on every bounce and reach ${ch.range} pixels. After the final bounce the bolt splits into ${ch.splitCount} seeking bolts at ${pct(ch.splitDamage)}% damage.${again}`;
+      return `${name}: shots keep full damage on every bounce and reach ${ch.range} pixels. After the final hit they split into ${ch.splitCount} seeking bolts at ${pct(ch.splitDamage)}% damage.${again}`;
     }
     case 'firefly-orbit': { const s = c.firefly.swarm[t];
       return `${name}: your ${c.firefly.count[rank]} fireflies leave orbit to hunt foes within ${s.huntRange} pixels, burning for ${s.damage} damage a touch, then drift back when nothing is near.`; }
@@ -104,12 +101,7 @@ export function describeAbility(id: AbilityId, rank: AbilityRank, weaponId: Weap
   switch (id) {
     case 'midnight-mighty-swat': return describeMidnightSwat(rank);
     case 'ricochet-charm': {
-      if (weaponId === 'crossbow') {
-        const extra = WEAPONS.crossbow.baseExtraTargets + rank;
-        const keep = Math.round(WEAPONS.crossbow.extraTargetRetention * 100);
-        return `Quarrels punch through ${extra} additional ${extra === 1 ? 'enemy' : 'enemies'}, retaining ${keep}% damage after each hit.`;
-      }
-      return `Spell bolts bounce to ${rank} additional ${rank === 1 ? 'enemy' : 'enemies'}, retaining 70% damage each bounce.`;
+      return `Shots bounce to ${rank} additional ${rank === 1 ? 'enemy' : 'enemies'}, retaining 70% damage each bounce. Crossbow shots also keep their built-in pierce.`;
     }
     case 'firefly-orbit': return `${ABILITIES.firefly.count[rank]} golden fireflies orbit you, dealing 8 contact damage. Each foe can be hit every 0.5s.`;
     case 'bramble-snare': return `Every 5s, grow roots that slow foes by ${Math.round(ABILITIES.bramble.slow[rank] * 100)}% for ${ABILITIES.bramble.lifeMs[rank] / 1000}s.`;

@@ -12,7 +12,7 @@ button svg{width:22px;height:22px;flex-shrink:0}
 button{touch-action:manipulation}
 kbd{font:10px "Segoe UI",sans-serif;border:1px solid currentColor;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:19px;padding:0 4px;opacity:.8}
 .eyebrow{font-size:10px;font-weight:700;letter-spacing:2.8px;text-transform:uppercase}
-.title-screen{position:absolute;inset:0;pointer-events:auto;background:linear-gradient(180deg,#14231977 0%,#1b2d1840 40%,#192c255c 75%,#132a26c9 100%),var(--title-art) center/cover;display:flex;flex-direction:column;isolation:isolate}
+.title-screen{--title-panel:linear-gradient(120deg,#fff0bd,#e6bd69);--title-panel-hover:linear-gradient(120deg,#fff6d5,#f3cf81);--title-panel-border:#f6d589;position:absolute;inset:0;pointer-events:auto;background:linear-gradient(180deg,#14231977 0%,#1b2d1840 40%,#192c255c 75%,#132a26c9 100%),var(--title-art) center/cover;display:flex;flex-direction:column;isolation:isolate}
 .title-masthead{display:flex;align-items:center;justify-content:space-between;padding:25px 35px;color:#faefd1;z-index:1}
 .brand-mark{display:flex;align-items:center;gap:12px;font-size:10px;letter-spacing:2.6px;font-weight:700}
 .brand-mark svg{width:26px;height:26px;color:#e7ca8c}
@@ -48,6 +48,16 @@ kbd{font:10px "Segoe UI",sans-serif;border:1px solid currentColor;border-radius:
 .weapon-portrait img{height:52px;width:auto}
 .weapon-portrait img.portrait-spell{height:44px}
 .weapon-card .wanderer-copy small{max-width:130px}
+.title-screen :is(.wanderer-card,.weapon-card){border:2px solid var(--title-panel-border);border-radius:12px;background:var(--title-panel);color:#30412c;box-shadow:0 5px 24px #12271d66,0 0 22px #f0ca6f26}
+.title-screen :is(.wanderer-card,.weapon-card):hover{background:var(--title-panel-hover);transform:translateY(-2px);box-shadow:0 7px 28px #12271d88,0 0 26px #f0ca6f44}
+.title-screen :is(.wanderer-card,.weapon-card).selected{border-color:#fff7d6;background:var(--title-panel-hover);box-shadow:0 0 0 3px #385438,0 0 0 5px #f6d589,0 7px 24px #12271d77}
+.title-screen :is(.wanderer-card,.weapon-card):focus-visible{outline:3px solid #fff8dc;outline-offset:7px}
+.title-screen .wanderer-copy strong{font-weight:700}
+.title-screen .wanderer-copy small{color:#4e5734}
+.title-screen .choice-key{border-color:#86662c55;color:#64552e;background:#fff8dc70}
+.title-screen .selection-tick{display:flex;align-items:center;justify-content:center;width:21px;height:21px;top:7px;right:7px;border-radius:50%;background:#304e34;color:#fff4c7;font-weight:700;font-size:13px;box-shadow:0 1px 4px #12271d33}
+@media(max-width:600px){.title-screen .weapon-card{height:auto;min-height:124px}.title-screen .weapon-card .wanderer-copy{gap:4px}.title-screen .weapon-card .wanderer-copy small{line-height:1.35}}
+@media(prefers-reduced-motion:reduce){.title-screen :is(.wanderer-card,.weapon-card):hover{transform:none}}
 .begin-button,.primary-button{display:flex;align-items:center;justify-content:center;gap:27px;min-height:52px;border:1px solid #e4c680;border-radius:5px;background:linear-gradient(110deg,#e2c27f,#f0d599);color:#30412c;font-family:Georgia,serif;font-size:20px;box-shadow:0 4px 16px #182e2350;transition:background .2s,transform .2s}
 .begin-button{width:310px;margin-top:23px}
 .begin-button:hover,.primary-button:hover{background:#ffe3a3;transform:translateY(-2px)}
@@ -428,6 +438,11 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 .upgrade-comparison small{font-size:9px;letter-spacing:1px;color:#697453}
 .upgrade-comparison>span:last-child{background:#dde6c7;padding:7px;border-radius:6px;color:#294c31}
 .upgrade-description{font-size:12px}
+.rare-rock-hud{position:absolute;right:22px;top:110px;display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid #c3a0ed;border-radius:10px;background:#29253ee8;color:#eadbff;max-width:235px}
+.rare-rock-hud>svg{width:25px;height:25px;flex-shrink:0}
+.rare-rock-hud span{display:flex;flex-direction:column;gap:3px}
+.rare-rock-hud strong{font-size:13px}.rare-rock-hud small{font-size:10px;color:#d7c1f0}
+@media(max-width:600px){.rare-rock-hud{top:108px;right:15px;padding:7px 9px}.rare-rock-hud strong{font-size:11px}.rare-rock-hud small{font-size:9px}}
 .upgrade-changes{display:block;margin-top:10px;padding:8px;border-radius:6px;background:#dde6c7;color:#294c31;font-size:12px;line-height:1.5;width:100%}
 .epic-companion .upgrade-changes{background:#dfc8f0;color:#482462}
 .boss-relic .upgrade-changes{background:#e8cfaa;color:#674528}

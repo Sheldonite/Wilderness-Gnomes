@@ -92,7 +92,7 @@ export class UIManager {
     this.root.classList.toggle('run-frozen', this.gameManager.state !== 'Playing');
   }
 
-  showPaused(onResume: () => void): void {
+  showPaused(onResume: () => void, onMainMenu: () => void): void {
     const list = this.createOverlay('A moment of quiet', 'The woodland will wait for you.', 'ADVENTURE PAUSED', 'leaf', 'pause-panel');
     list.innerHTML = '<p class="pause-instruction">Take a breath. Your journey continues when you’re ready.</p>';
     const arm = WEAPONS[this.gameManager.playerStats.weaponId];
@@ -105,6 +105,8 @@ export class UIManager {
     if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your upgrades">${owned.map(id =>
       `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${upgradeName(id, stats)}</strong><small>${isRanked(id) ? `Rank ${upgradeRank(id, stats)} of ${upgradeMaxRank(id)}${isBossAbility(id) ? ' · BOSS RELIC' : upgradeRank(id, stats) === MAX_ABILITY_RANK ? ' · ASCENDED' : upgradeRank(id, stats) >= 5 ? ' · AWAKENED' : ''}` : `Upgraded ${upgradeRank(id, stats)} times`}</small><span class="journal-description">${upgradeBenefit(id, stats)}</span></span></div>`).join('')}</div>`);
     this.addButton(list, 'Back to the woods', onResume, true);
+    this.addButton(list, 'Main Menu', onMainMenu, false);
+    list.insertAdjacentHTML('beforeend', '<p class="overlay-hint">Returning to the menu ends this run. Earned gold and rocks are kept.</p>');
     list.insertAdjacentHTML('beforeend', '<p class="overlay-hint">PRESS <kbd>ESC</kbd> TO RESUME</p>');
     this.focusFirst();
   }

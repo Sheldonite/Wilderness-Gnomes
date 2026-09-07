@@ -2,7 +2,7 @@ import { midnightSwatPower, describeMidnightSwat } from '../config/midnightSwat'
 import { ABILITIES, ABILITY_IDS, ABILITY_NAMES, MAX_ABILITY_RANK, awakeningTier, isAscended, isAwakened, tierName } from '../config/abilities';
 import { BALANCE } from '../config/balance';
 import { BOSS_ABILITY_IDS, BOSS_ABILITY_NAMES, MAX_BOSS_RANK, bossPower, isBossAbility } from '../config/bossAbilities';
-import { CROSSBOW_STAT_UPGRADES, WEAPONS } from '../config/weapons';
+import { CROSSBOW_STAT_UPGRADES } from '../config/weapons';
 import type { AbilityId, PlayerStats, UpgradeDefinition, UpgradeId } from './types';
 
 const STAT_NAMES: Partial<Record<UpgradeId, string>> = {
@@ -37,7 +37,7 @@ export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
   if (id === 'midnight-mighty-swat') return describeMidnightSwat(rank);
   if (isAbility(id) && isAwakened(rank)) return `${isAscended(rank) ? 'Ascended' : 'Awakened'}: ${tierName(id, rank)} (rank ${rank})`;
   switch (id) {
-    case 'ricochet-charm': return stats.weaponId === 'crossbow' ? `${WEAPONS.crossbow.baseExtraTargets + rank} extra pierces` : `${rank} extra bounces`;
+    case 'ricochet-charm': return `${rank} extra bounces`;
     case 'firefly-orbit': return `${ABILITIES.firefly.count[rank]} orbiting fireflies`;
     case 'bramble-snare': return `${Math.round(ABILITIES.bramble.slow[rank] * 100)}% slow · ${ABILITIES.bramble.lifeMs[rank] / 1000}s duration`;
     case 'spore-trail': return `${ABILITIES.spore.damagePerSecond[rank]} damage / second`;
@@ -81,7 +81,7 @@ export function upgradeChanges(choice: UpgradeDefinition, stats: PlayerStats): s
       case 'move-speed': return { Speed: s.speed };
       case 'max-health': return { 'Max health': s.maxHealth, Health: s.health };
       case 'projectile-count': return { Shots: s.projectileCount };
-      case 'ricochet-charm': return s.weaponId === 'crossbow' ? { Pierces: WEAPONS.crossbow.baseExtraTargets + r } : { Bounces: r };
+      case 'ricochet-charm': return { Bounces: r };
       case 'firefly-orbit': return { Fireflies: c.firefly.count[r], Damage: isAwakened(r) ? c.firefly.swarm[t].damage : c.firefly.damage };
       case 'bramble-snare': return { 'Slow (%)': Math.round(c.bramble.slow[r] * 100), 'Duration (s)': c.bramble.lifeMs[r] / 1000, 'Damage/s': isAwakened(r) ? c.bramble.thornwall[t].damagePerSecond : 0 };
       case 'spore-trail': return { 'Damage/s': c.spore.damagePerSecond[r], 'Duration (s)': (isAwakened(r) ? c.spore.bloom[t].lifeMs : c.spore.lifeMs) / 1000 };
@@ -112,7 +112,7 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
   if (isAbility(id) && isAwakened(rank)) {
     const tier = awakeningTier(rank);
     switch (id) {
-      case 'ricochet-charm': return `Full-damage ${stats.weaponId === 'crossbow' ? 'pierces' : 'bounces'} + ${c.ricochet.chain[tier].splitCount} seeking bolts.`;
+      case 'ricochet-charm': return `Full-damage bounces + ${c.ricochet.chain[tier].splitCount} seeking bolts.`;
       case 'firefly-orbit': return `${c.firefly.count[rank]} hunting fireflies. ${c.firefly.swarm[tier].damage} damage each.`;
       case 'bramble-snare': return `Thorns root, block shots, and deal ${c.bramble.thornwall[tier].damagePerSecond} damage/s. ${c.bramble.lifeMs[rank] / 1000}s duration.`;
       case 'spore-trail': return `Spreading mushrooms: ${c.spore.damagePerSecond[rank]} damage/s for ${c.spore.bloom[tier].lifeMs / 1000}s.`;
@@ -130,7 +130,7 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
     case 'projectile-count': return '+1 shot per volley.';
     case 'gain-companion-mystery': return `Pouncing companion. ${Number(stats.mysteryDamage.toFixed(2))} damage per hit.`;
     case 'gain-companion-midnight': return `Swatting companion. ${BALANCE.companion.midnightDamage} damage to nearby foes.`;
-    case 'ricochet-charm': return stats.weaponId === 'crossbow' ? `Shots pierce ${WEAPONS.crossbow.baseExtraTargets + rank} extra foes.` : `Shots bounce to ${rank} extra ${rank === 1 ? 'foe' : 'foes'}.`;
+    case 'ricochet-charm': return `Shots bounce to ${rank} extra ${rank === 1 ? 'foe' : 'foes'}.`;
     case 'firefly-orbit': return `${c.firefly.count[rank]} orbiting fireflies. ${c.firefly.damage} damage each.`;
     case 'bramble-snare': return `Roots slow foes ${pct(c.bramble.slow[rank])}% for ${c.bramble.lifeMs[rank] / 1000}s.`;
     case 'spore-trail': return `Leave mushrooms that deal ${c.spore.damagePerSecond[rank]} damage/s.`;

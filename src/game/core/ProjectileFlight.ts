@@ -17,7 +17,9 @@ export class ProjectileFlight {
     private readonly mode: ExtraTargetMode = 'bounce',
     private retention: number = ABILITIES.ricochet.retention,
     /** Awakening tier for Chain Lightning: -1 for none, 0 awakened, 1 ascended. */
-    private readonly chainTier = -1
+    private readonly chainTier = -1,
+    private piercesRemaining = 0,
+    private readonly pierceRetention = .8
   ) {
     if (chainTier >= 0) this.retention = ABILITIES.ricochet.chain[chainTier].retention;
   }
@@ -32,15 +34,26 @@ export class ProjectileFlight {
   ): Vector2Like | undefined {
     if (this.hitEnemyIds.has(id)) return undefined;
     this.hitEnemyIds.add(id);
-    if (this.extraTargetsRemaining <= 0) return this.finish(position, enemies, continueDirection);
-    this.extraTargetsRemaining--;
-    this.damage *= this.retention;
-    if (this.mode === 'pierce') {
+    if (this.extraTargetsRemaining > 0 && this.mode === 'pierce') {
+      this.extraTargetsRemaining--;
+      this.damage *= this.retention;
       return continueDirection ? normalize(continueDirection.x, continueDirection.y) : { x: 1, y: 0 };
     }
-    const closest = this.nearest(position, enemies, this.chain?.range ?? ABILITIES.ricochet.range);
-    if (!closest) return this.finish(position, enemies, continueDirection);
-    return normalize(closest.position.x - position.x, closest.position.y - position.y);
+    if (this.extraTargetsRemaining > 0) {
+      const closest = this.nearest(position, enemies, this.chain?.range ?? ABILITIES.ricochet.range);
+      if (closest) {
+        this.extraTargetsRemaining--;
+        this.damage *= this.retention;
+        return normalize(closest.position.x - position.x, closest.position.y - position.y);
+      }
+    }
+    // Crossbow keeps its innate pierce after bouncing, or when no bounce target is nearby.
+    if (this.piercesRemaining > 0 && continueDirection) {
+      this.piercesRemaining--;
+      this.damage *= this.chain ? 1 : this.pierceRetention;
+      return normalize(continueDirection.x, continueDirection.y);
+    }
+    return this.finish(position, enemies, continueDirection);
   }
 
   private finish(position: Vector2Like, enemies: CombatTarget[], continueDirection?: Vector2Like): undefined {
