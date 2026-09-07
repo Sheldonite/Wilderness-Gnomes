@@ -1,3 +1,4 @@
+import type { SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import { MIDNIGHT_SPRITE_KEY, midnightScale } from '../config/midnightSprite';
 import { LOOK, reducedMotion } from '../config/presentation';
@@ -13,8 +14,8 @@ export class MidnightCompanion {
   private seenImpact = 0;
   private flashMs = 0;
 
-  constructor(private readonly scene: Phaser.Scene, player: Vector2Like) {
-    this.behavior = new MidnightBehavior(player);
+  constructor(private readonly scene: Phaser.Scene, player: Vector2Like, navigation?: SceneryNavigation) {
+    this.behavior = new MidnightBehavior(player, navigation);
     this.sprite = scene.add.sprite(this.position.x, this.position.y, MIDNIGHT_SPRITE_KEY, 'walk-down-0')
       .setScale(midnightScale(scene)).setDepth(LOOK.depth.companion);
     this.swatArc = scene.add.graphics().setDepth(LOOK.depth.companion + 1);
@@ -30,7 +31,7 @@ export class MidnightCompanion {
         this.sprite.play(`midnight-swat-${this.behavior.facing}`);
       }
     } else if (this.behavior.moving) this.sprite.play(`midnight-walk-${this.behavior.facing}`, true);
-    else { this.sprite.anims.stop(); this.sprite.setFrame(`walk-${this.behavior.facing}-0`); }
+    else { this.sprite.anims.stop(); this.sprite.setFrame('swat-down-0'); }
     this.flashMs = Math.max(0, this.flashMs - deltaMs);
     if (this.seenImpact !== this.behavior.impactSerial) { this.seenImpact = this.behavior.impactSerial; this.flashMs = 140; }
     this.swatArc.clear();

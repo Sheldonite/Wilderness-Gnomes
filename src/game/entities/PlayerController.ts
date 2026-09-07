@@ -1,3 +1,4 @@
+import type { SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
@@ -19,7 +20,8 @@ export class PlayerController {
     private readonly stats: PlayerStats,
     private readonly character: PlayerCharacterDefinition,
     x: number,
-    y: number
+    y: number,
+    private readonly navigation?: SceneryNavigation
   ) {
     this.sprite = scene.add.sprite(x, y, character.textureKey, 0);
     this.sprite.setDepth(20);
@@ -47,8 +49,10 @@ export class PlayerController {
       this.radius
     );
 
-    this.sprite.setPosition(next.x, next.y);
-    this.updateAnimation(direction);
+    const safe = this.navigation?.move(this.position, next, this.radius) ?? next;
+    this.movementDirection = normalize(safe.x - this.sprite.x, safe.y - this.sprite.y);
+    this.sprite.setPosition(safe.x, safe.y);
+    this.updateAnimation(this.movementDirection);
     this.updateSecondaryMotion(deltaMs, direction);
     this.aura?.update(deltaMs, this.position);
   }

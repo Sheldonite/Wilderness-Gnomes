@@ -1,3 +1,4 @@
+import type { SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { EnemyController } from '../entities/EnemyController';
@@ -11,7 +12,8 @@ export class CompanionSystem {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    private readonly stats: PlayerStats
+    private readonly stats: PlayerStats,
+    private readonly navigation?: SceneryNavigation
   ) {}
 
   update(
@@ -22,11 +24,11 @@ export class CompanionSystem {
     damage: DealDamage
   ): void {
     if (this.stats.hasMysteryCompanion && !this.mystery) {
-      this.mystery = new MysteryCompanion(this.scene, this.stats, playerPosition);
+      this.mystery = new MysteryCompanion(this.scene, this.stats, playerPosition, this.navigation);
     }
 
     this.mystery?.update(deltaMs, playerPosition, playerMovementDirection, enemies, damage);
-    if (this.stats.hasMidnightCompanion && !this.midnight) this.midnight = new MidnightCompanion(this.scene, playerPosition);
+    if (this.stats.hasMidnightCompanion && !this.midnight) this.midnight = new MidnightCompanion(this.scene, playerPosition, this.navigation);
     this.midnight?.update(deltaMs, playerPosition, enemies, damage);
   }
 

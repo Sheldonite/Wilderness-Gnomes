@@ -3,7 +3,8 @@ import { LOOK, reducedMotion } from '../config/presentation';
 import type { Vector2Like } from '../core/types';
 
 interface Mote { image: Phaser.GameObjects.Image; age: number; life: number; vx: number; vy: number; size: number; }
-interface Actor { shadow: Phaser.GameObjects.Image; foot: number; flash: number; }
+interface Actor { shadow: Phaser.GameObjects.Image; contact?: Phaser.GameObjects.Ellipse; foot: number; flash: number; }
+export interface ActorShadow { foot: number; width: number; height: number; alpha?: number; contactAlpha?: number }
 
 /** All transient world effects use the gameplay clock, so pause freezes them exactly. */
 export class PresentationSystem {
@@ -11,11 +12,12 @@ export class PresentationSystem {
   private readonly actors = new Map<Phaser.GameObjects.Sprite, Actor>();
   private readonly pollen: Phaser.GameObjects.Image[] = [];
   private elapsed = 0;
-  private readonly register = (sprite: Phaser.GameObjects.Sprite) => {
+  private readonly register = (sprite: Phaser.GameObjects.Sprite, options?: ActorShadow) => {
     const shadow = this.scene.add.image(sprite.x, sprite.y, LOOK.texture.shadow).setDepth(LOOK.depth.shadow);
-    shadow.setDisplaySize(sprite.displayWidth * .65, sprite.displayHeight * .19).setAlpha(.85);
-    this.actors.set(sprite, { shadow, foot: sprite.displayHeight * .4, flash: 0 });
-    sprite.once('destroy', () => { shadow.destroy(); this.actors.delete(sprite); });
+    shadow.setDisplaySize(options?.width ?? sprite.displayWidth * .65, options?.height ?? sprite.displayHeight * .19).setAlpha(options?.alpha ?? .85);
+    const contact = options?.contactAlpha ? this.scene.add.ellipse(sprite.x, sprite.y + options.foot, options.width * .72, options.height * .5, 0x172015, options.contactAlpha).setDepth(LOOK.depth.shadow + .1) : undefined;
+    this.actors.set(sprite, { shadow, contact, foot: options?.foot ?? sprite.displayHeight * .4, flash: 0 });
+    sprite.once('destroy', () => { shadow.destroy(); contact?.destroy(); this.actors.delete(sprite); });
   };
   private readonly hit = (sprite: Phaser.GameObjects.Sprite) => {
     const actor = this.actors.get(sprite); if (actor) { actor.flash = 90; sprite.setTintFill(0xffefd0); }
@@ -49,6 +51,7 @@ export class PresentationSystem {
     const dt = deltaMs / 1000;
     for (const [sprite, actor] of this.actors) {
       actor.shadow.setPosition(sprite.x + 3, sprite.y + actor.foot);
+      actor.contact?.setPosition(sprite.x, sprite.y + actor.foot);
       if (actor.flash > 0) { actor.flash -= deltaMs; if (actor.flash <= 0) sprite.clearTint(); }
     }
     for (const p of this.particles) {
@@ -70,7 +73,7 @@ export class PresentationSystem {
   destroy(): void {
     for (const [event, handler] of [['actor', this.register], ['hit', this.hit], ['defeat', this.defeat], ['collect', this.collect], ['trail', this.trail], ['level', this.level]] as const) this.scene.events.off(`presentation:${event}`, handler);
     this.particles.forEach(p => p.image.destroy()); this.pollen.forEach(p => p.destroy());
-    this.actors.forEach(actor => actor.shadow.destroy()); this.actors.clear();
+    this.actors.forEach(actor => { actor.shadow.destroy(); actor.contact?.destroy(); }); this.actors.clear();
   }
 
   private burst(point: Vector2Like, color: number, count: number, trail = false): void {

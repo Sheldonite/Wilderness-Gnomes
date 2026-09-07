@@ -1,4 +1,6 @@
+import { createNavigationRoute, type SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
+import type { ActorShadow } from '../systems/PresentationSystem';
 import { BALANCE } from '../config/balance';
 import {
   ENEMY_SPRITE_KEY,
@@ -11,20 +13,24 @@ let nextEnemyId = 1;
 const ENEMY_SPRITE_SCALE = 0.72;
 
 export class EnemyController {
+  protected readonly route = createNavigationRoute();
   readonly id = nextEnemyId++;
-  readonly radius = BALANCE.enemy.radius;
+  readonly radius: number;
   readonly sprite: Phaser.GameObjects.Sprite;
   health: number = BALANCE.enemy.health;
   isDead = false;
   slowMultiplier = 1;
   lastContactDamageAt = -Infinity;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, difficultyMinutes: number) {
-    this.sprite = scene.add.sprite(x, y, ENEMY_SPRITE_KEY, 0);
+  constructor(scene: Phaser.Scene, x: number, y: number, difficultyMinutes: number, protected readonly navigation?: SceneryNavigation,
+    appearance?: { texture: string; radius: number; scale: number; animation: string; shadow?: ActorShadow }) {
+    this.radius = appearance?.radius ?? BALANCE.enemy.radius;
+    const spawn = navigation?.nearest({ x, y }, this.radius) ?? { x, y };
+    this.sprite = scene.add.sprite(spawn.x, spawn.y, appearance?.texture ?? ENEMY_SPRITE_KEY, 0);
     this.sprite.setDepth(10);
-    this.sprite.setScale(ENEMY_SPRITE_SCALE);
-    this.sprite.play('enemy-walk-down');
-    scene.events.emit('presentation:actor', this.sprite);
+    this.sprite.setScale(appearance?.scale ?? ENEMY_SPRITE_SCALE);
+    this.sprite.play(appearance?.animation ?? 'enemy-walk-down');
+    scene.events.emit('presentation:actor', this.sprite, appearance?.shadow);
     this.health = Math.round(BALANCE.enemy.health + difficultyMinutes * 8);
   }
 
@@ -41,8 +47,10 @@ export class EnemyController {
       this.radius
     );
 
-    this.sprite.setPosition(next.x, next.y);
-    this.updateAnimation(direction);
+    const safe = this.navigation?.toward(this.position, target, speed * dt, this.radius, this.route) ?? next;
+    const actual = normalize(safe.x - this.sprite.x, safe.y - this.sprite.y);
+    this.sprite.setPosition(safe.x, safe.y);
+    this.updateAnimation(actual);
   }
 
   private updateAnimation(direction: Vector2Like): void {
@@ -64,6 +72,12 @@ export class EnemyController {
     this.sprite.scene.events.emit('presentation:hit', this.sprite);
     this.isDead = this.health <= 0;
     return this.isDead;
+  }
+
+  displace(x: number, y: number): void {
+    const target = { x: this.sprite.x + x, y: this.sprite.y + y };
+    const safe = this.navigation?.move(this.position, target, this.radius) ?? clampToArena(target, this.radius);
+    this.sprite.setPosition(safe.x, safe.y);
   }
 
   destroy(): void {

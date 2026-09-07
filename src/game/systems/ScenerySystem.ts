@@ -1,17 +1,17 @@
+import { SceneryNavigation, riverX, pathY, PONDS } from '../core/SceneryNavigation';
+export { riverX, pathY } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { LOOK, reducedMotion } from '../config/presentation';
 import type { Vector2Like } from '../core/types';
 
 const SIZE = GAME_CONFIG.arena.width;
-export const riverX = (y: number): number => 2410 + Math.sin(y / 380) * 110 + Math.sin(y / 820) * 60;
-export const pathY = (x: number): number => 1410 + Math.sin(x / 540) * 125;
-const PONDS = [{ x: 720, y: 2460, rx: 160, ry: 108 }, { x: 980, y: 550, rx: 115, ry: 76 }];
 
 export class ScenerySystem {
   private readonly random = new Phaser.Math.RandomDataGenerator(['storybook-golden-woodland-1']);
   private readonly trees: Phaser.GameObjects.Image[] = [];
   private readonly ripples: Phaser.GameObjects.Ellipse[] = [];
+  readonly navigation = new SceneryNavigation();
   private elapsed = 0;
   private fadeClock = 0;
   constructor(private readonly scene: Phaser.Scene) {}
@@ -19,6 +19,7 @@ export class ScenerySystem {
   create(): void {
     this.scene.add.tileSprite(SIZE / 2, SIZE / 2, SIZE + LOOK.worldPadding * 2, SIZE + LOOK.worldPadding * 2, LOOK.texture.ground).setDepth(LOOK.depth.ground).setTint(0xc5d09e);
     this.createTerrain(); this.createPlanting(); this.createLight();
+    for (const radius of [12, 15, 22]) this.navigation.prepare(radius);
   }
 
   update(deltaMs: number, subjects: Vector2Like[]): void {
@@ -95,7 +96,10 @@ export class ScenerySystem {
 
   private prop(frame: string, x: number, y: number, height: number, depth: number): Phaser.GameObjects.Image {
     const sprite = this.scene.add.image(x, y, LOOK.texture.props, frame).setOrigin(.5, 1).setDepth(depth);
-    sprite.setScale(height / sprite.height).setFlipX(this.random.frac() > .5); return sprite;
+    sprite.setScale(height / sprite.height).setFlipX(this.random.frac() > .5);
+    if (['oak', 'birch', 'fir'].includes(frame)) this.navigation.addCircle(x, y - 9, height * .095);
+    if (frame === 'rock') this.navigation.addCircle(x, y - height * .28, Math.min(sprite.displayWidth * .4, height * .5));
+    return sprite;
   }
 
   private createPlanting(): void {

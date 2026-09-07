@@ -1,3 +1,4 @@
+import { createNavigationRoute, type SceneryNavigation } from './SceneryNavigation';
 import { BALANCE } from '../config/balance';
 import type { CombatTarget, DealDamage } from './CombatResolver';
 import type { Vector2Like } from './types';
@@ -10,6 +11,7 @@ export function catFacing(direction: Vector2Like): CatFacing {
 
 /** A grounded walk-and-swat companion; no lunge or teleport is used to reach a target. */
 export class MidnightBehavior {
+  protected readonly route = createNavigationRoute();
   position: Vector2Like;
   facing: CatFacing = 'down';
   state: 'following' | 'approaching' | 'swatting' | 'returning' = 'following';
@@ -21,8 +23,8 @@ export class MidnightBehavior {
   private hitApplied = false;
   private aim: Vector2Like = { x: 0, y: 1 };
 
-  constructor(playerPosition: Vector2Like) {
-    this.position = this.followPoint(playerPosition);
+  constructor(playerPosition: Vector2Like, private readonly navigation?: SceneryNavigation) {
+    this.position = navigation?.nearest(this.followPoint(playerPosition), 12) ?? this.followPoint(playerPosition);
   }
 
   update(deltaMs: number, player: Vector2Like, enemies: CombatTarget[], damage: DealDamage): void {
@@ -35,7 +37,7 @@ export class MidnightBehavior {
         this.hitApplied = true;
         this.impactSerial++;
         for (const enemy of enemies) {
-          if (enemy.isDead || distanceSq(this.position, enemy.position) > (b.midnightSwatRange + enemy.radius) ** 2) continue;
+          if (enemy.isDead || (this.navigation && !this.navigation.clear(this.position, enemy.position, 2)) || distanceSq(this.position, enemy.position) > (b.midnightSwatRange + enemy.radius) ** 2) continue;
           const direction = normalize(enemy.position.x - this.position.x, enemy.position.y - this.position.y);
           if (direction.x * this.aim.x + direction.y * this.aim.y >= .5 || distanceSq(this.position, enemy.position) < 1) damage(enemy, b.midnightDamage);
         }
@@ -43,7 +45,7 @@ export class MidnightBehavior {
       if (this.swatAgeMs >= b.midnightSwatDurationMs) this.state = 'returning';
       return;
     }
-    const follow = this.followPoint(player);
+    const follow = this.navigation?.nearest(this.followPoint(player), 12) ?? this.followPoint(player);
     if (distanceSq(this.position, player) > b.midnightLeashRange ** 2) this.state = 'returning';
     if (this.state === 'returning') {
       this.move(follow, deltaMs);
@@ -53,7 +55,7 @@ export class MidnightBehavior {
     let target: CombatTarget | undefined;
     let nearest = Infinity;
     if (this.cooldownMs <= 0) for (const enemy of enemies) {
-      if (enemy.isDead || distanceSq(enemy.position, player) > b.midnightSeekRange ** 2) continue;
+      if (enemy.isDead || (this.navigation && !this.navigation.clear(this.position, enemy.position, 2)) || distanceSq(enemy.position, player) > b.midnightSeekRange ** 2) continue;
       const d = distanceSq(enemy.position, this.position);
       if (d < nearest) { target = enemy; nearest = d; }
     }
@@ -61,7 +63,7 @@ export class MidnightBehavior {
     this.state = 'approaching';
     const direction = normalize(target.position.x - this.position.x, target.position.y - this.position.y);
     this.facing = catFacing(direction);
-    if (nearest <= b.midnightApproachRange ** 2) {
+    if (nearest <= b.midnightApproachRange ** 2 && (!this.navigation || this.navigation.clear(this.position, target.position, 2))) {
       this.state = 'swatting'; this.swatAgeMs = 0; this.hitApplied = false; this.swatSerial++;
       // Match the visible cardinal paw strike to its 120-degree hit cone.
       this.aim = this.facing === 'left' ? { x: -1, y: 0 } : this.facing === 'right' ? { x: 1, y: 0 } : this.facing === 'up' ? { x: 0, y: -1 } : { x: 0, y: 1 };
@@ -80,7 +82,9 @@ export class MidnightBehavior {
     if (distance <= stop) return;
     const direction = normalize(target.x - this.position.x, target.y - this.position.y);
     const step = Math.min(distance - stop, BALANCE.companion.midnightWalkSpeed * deltaMs / 1000);
-    this.position = clampToArena({ x: this.position.x + direction.x * step, y: this.position.y + direction.y * step }, 12);
-    this.facing = catFacing(direction); this.moving = step > 0;
+    const before = this.position;
+    this.position = this.navigation?.toward(before, target, step, 12, this.route) ?? clampToArena({ x: before.x + direction.x * step, y: before.y + direction.y * step }, 12);
+    this.moving = distanceSq(before, this.position) > .001;
+    if (this.moving) this.facing = catFacing({ x: this.position.x - before.x, y: this.position.y - before.y });
   }
 }

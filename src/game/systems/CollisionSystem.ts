@@ -30,15 +30,12 @@ export class CollisionSystem {
     gameManager: GameManager,
     enemies: EnemyController[]
   ): void {
-    const minDistance = player.radius + BALANCE.enemy.radius;
-    const minDistanceSq = minDistance * minDistance;
-
     for (const enemy of enemies) {
       if (enemy.isDead) {
         continue;
       }
 
-      if (distanceSq(player.position, enemy.position) > minDistanceSq) {
+      if (distanceSq(player.position, enemy.position) > (player.radius + enemy.radius) ** 2) {
         continue;
       }
 
@@ -122,10 +119,8 @@ export class CollisionSystem {
 
         const push = normalize(a.position.x - b.position.x, a.position.y - b.position.y);
         const amount = 0.45;
-        a.sprite.x += push.x * amount;
-        a.sprite.y += push.y * amount;
-        b.sprite.x -= push.x * amount;
-        b.sprite.y -= push.y * amount;
+        a.displace(push.x * amount, push.y * amount);
+        b.displace(-push.x * amount, -push.y * amount);
       }
     }
   }

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { OVEN_TEXTURE, ovenSourceUrl, createOvenFrames } from '../../config/ovenSprite';
 import { ART } from '../../config/presentation';
 import { createStorybookTextures } from '../storybookTextures';
 import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } from '../../config/midnightSprite';
@@ -52,6 +53,7 @@ export class BootScene extends Phaser.Scene {
     this.load.on('loaderror', () => { root.querySelector('p')!.textContent = 'A woodland asset could not load. Please refresh to try again.'; });
     this.load.image('storybook-title', ART.title);
     this.load.image(MIDNIGHT_SOURCE_KEY, MIDNIGHT_SOURCE_URL);
+    this.load.image(OVEN_TEXTURE, ovenSourceUrl);
     this.load.image('storybook-ground-source', ART.ground);
     this.load.image('storybook-props-source', ART.props);
     this.load.image('storybook-water-source', ART.water);
@@ -92,6 +94,7 @@ export class BootScene extends Phaser.Scene {
     this.createEnemyAnimations();
     this.createMysteryAnimations();
     createMidnightAnimations(this);
+    createOvenFrames(this);
     this.scene.start('StartScene');
   }
 

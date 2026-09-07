@@ -1,3 +1,4 @@
+import type { SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
@@ -7,7 +8,7 @@ import { EnemyController } from '../entities/EnemyController';
 export class EnemySpawner {
   private spawnTimerMs = 0;
 
-  constructor(private readonly scene: Phaser.Scene) {}
+  constructor(private readonly scene: Phaser.Scene, private readonly navigation?: SceneryNavigation) {}
 
   update(
     deltaMs: number,
@@ -66,6 +67,6 @@ export class EnemySpawner {
     x = Phaser.Math.Clamp(x, BALANCE.enemy.radius, GAME_CONFIG.arena.width - BALANCE.enemy.radius);
     y = Phaser.Math.Clamp(y, BALANCE.enemy.radius, GAME_CONFIG.arena.height - BALANCE.enemy.radius);
 
-    return new EnemyController(this.scene, x, y, difficultyMinutes);
+    return new EnemyController(this.scene, x, y, difficultyMinutes, this.navigation);
   }
 }
