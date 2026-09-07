@@ -24,7 +24,7 @@ export class MarketScene extends Phaser.Scene {
   private shop?: MarketVendorId;
   private nearestVendor?: MarketVendorId;
   private preview = false;
-  private zoomed = false;
+  private zoomed = true;
   private leaving = false;
   private status = '';
   private destination!: Phaser.GameObjects.Graphics;
@@ -52,7 +52,7 @@ export class MarketScene extends Phaser.Scene {
 
   create(data: {characterId?: string; weaponId?: WeaponId; review?: boolean} = {}): void {
     this.path = []; this.visiting = undefined; this.shop = undefined; this.nearestVendor = undefined;
-    this.status = ''; this.zoomed = this.scale.width < 650 && this.scale.height > this.scale.width; this.leaving = false;
+    this.status = ''; this.zoomed = true; this.leaving = false;
     this.preview = import.meta.env.DEV && Boolean(data.review);
     this.progress = this.preview ? new MarketProgress(null) : marketProgress;
     if (this.preview) this.progress.settleRun('market-preview-purse', 50);

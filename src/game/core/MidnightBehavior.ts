@@ -15,6 +15,7 @@ export class MidnightBehavior {
   protected readonly route = createNavigationRoute();
   position: Vector2Like;
   facing: CatFacing = 'down';
+  swatFacing: CatFacing = 'down';
   state: 'following' | 'approaching' | 'swatting' | 'returning' = 'following';
   moving = false;
   swatAgeMs = 0;
@@ -32,7 +33,10 @@ export class MidnightBehavior {
     const b = BALANCE.companion, power = this.swatPower;
     this.moving = false;
     this.cooldownMs = Math.max(0, this.cooldownMs - deltaMs);
+    const follow = this.navigation?.nearest(this.followPoint(player), 12) ?? this.followPoint(player);
     if (this.state === 'swatting') {
+      // Following continues independently of the swing; its aim stays locked.
+      this.move(follow, deltaMs);
       this.swatAgeMs += deltaMs;
       if (!this.hitApplied && this.swatAgeMs >= b.midnightSwatHitMs) {
         this.hitApplied = true;
@@ -46,11 +50,9 @@ export class MidnightBehavior {
       if (this.swatAgeMs >= b.midnightSwatDurationMs) this.state = 'returning';
       return;
     }
-    const follow = this.navigation?.nearest(this.followPoint(player), 12) ?? this.followPoint(player);
-    if (distanceSq(this.position, player) > b.midnightLeashRange ** 2) this.state = 'returning';
-    if (this.state === 'returning') {
+    if (distanceSq(this.position, player) > b.midnightLeashRange ** 2) {
+      this.state = 'returning';
       this.move(follow, deltaMs);
-      if (distanceSq(this.position, follow) <= 8 ** 2) this.state = 'following';
       return;
     }
     let target: CombatTarget | undefined;
@@ -66,6 +68,7 @@ export class MidnightBehavior {
     this.facing = catFacing(direction);
     if (nearest <= b.midnightApproachRange ** 2 && (!this.navigation || this.navigation.clear(this.position, target.position, 2))) {
       this.state = 'swatting'; this.swatAgeMs = 0; this.hitApplied = false; this.swatSerial++;
+      this.swatFacing = this.facing;
       // Keep the strike aimed with the visible paw; higher ranks widen its arc.
       this.aim = this.facing === 'left' ? { x: -1, y: 0 } : this.facing === 'right' ? { x: 1, y: 0 } : this.facing === 'up' ? { x: 0, y: -1 } : { x: 0, y: 1 };
       this.cooldownMs = power.cooldownMs;

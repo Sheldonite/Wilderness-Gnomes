@@ -25,18 +25,20 @@ export class MidnightCompanion {
   update(deltaMs: number, player: Vector2Like, enemies: CombatTarget[], damage: DealDamage): void {
     this.behavior.update(deltaMs, player, enemies, damage);
     this.sprite.setPosition(this.position.x, this.position.y);
-    if (this.behavior.state === 'swatting') {
-      if (this.seenSwat !== this.behavior.swatSerial) {
+    if (this.behavior.moving) {
+      this.sprite.play(`midnight-walk-${this.behavior.facing}`, true);
+    } else if (this.behavior.state === 'swatting') {
+      const key = `midnight-swat-${this.behavior.swatFacing}`;
+      if (this.seenSwat !== this.behavior.swatSerial || this.sprite.anims.currentAnim?.key !== key) {
         this.seenSwat = this.behavior.swatSerial;
-        this.sprite.play(`midnight-swat-${this.behavior.facing}`);
+        this.sprite.play(key);
       }
-    } else if (this.behavior.moving) this.sprite.play(`midnight-walk-${this.behavior.facing}`, true);
-    else { this.sprite.anims.stop(); this.sprite.setFrame('swat-down-0'); }
+    } else { this.sprite.anims.stop(); this.sprite.setFrame('swat-down-0'); }
     this.flashMs = Math.max(0, this.flashMs - deltaMs);
     if (this.seenImpact !== this.behavior.impactSerial) { this.seenImpact = this.behavior.impactSerial; this.flashMs = 140; }
     this.swatArc.clear();
     if (this.flashMs > 0) {
-      const angle = this.behavior.facing === 'right' ? 0 : this.behavior.facing === 'left' ? Math.PI : this.behavior.facing === 'up' ? -Math.PI / 2 : Math.PI / 2;
+      const angle = this.behavior.swatFacing === 'right' ? 0 : this.behavior.swatFacing === 'left' ? Math.PI : this.behavior.swatFacing === 'up' ? -Math.PI / 2 : Math.PI / 2;
       const alpha = reducedMotion() ? .3 : this.flashMs / 140 * .65;
       this.swatArc.lineStyle(2, LOOK.color.cream, alpha);
       const arc = this.behavior.swatPower.arcDegrees * Math.PI / 360;

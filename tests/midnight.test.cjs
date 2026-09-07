@@ -84,7 +84,7 @@ test('Midnight walks to enemies at a bounded speed rather than lunging or telepo
   assert.ok(Math.hypot(cat.position.x - start.x, cat.position.y - start.y) <= 26.0001);
 });
 
-test('swat plants the feet and applies damage once at the extended-paw frame', () => {
+test('stationary swat applies damage once at the extended-paw frame', () => {
   const cat = new MidnightBehavior(player), enemy = foe(cat.position.x + 34, cat.position.y);
   cat.update(600, player, [enemy], damage); assert.equal(cat.state, 'swatting');
   const planted = { ...cat.position }; assert.equal(enemy.health, 100);
@@ -92,6 +92,34 @@ test('swat plants the feet and applies damage once at the extended-paw frame', (
   cat.update(1, player, [enemy], damage); assert.equal(enemy.health, 12);
   cat.update(239, player, [enemy], damage); assert.equal(enemy.health, 12); assert.deepEqual(cat.position, planted);
   cat.update(1, player, [enemy], damage); assert.equal(cat.state, 'returning');
+});
+
+test('Midnight keeps walking during a swat and strikes from her updated position', () => {
+  const cat = new MidnightBehavior(player), start = { ...cat.position };
+  const enemy = foe(start.x + 34, start.y, 1000);
+  cat.update(600, player, [enemy], damage);
+  const walkingPlayer = { x: player.x + 30, y: player.y };
+  cat.update(240, walkingPlayer, [enemy], damage);
+  assert.equal(cat.state, 'swatting'); assert.equal(cat.moving, true);
+  assert.ok(cat.position.x > start.x && cat.position.x <= start.x + 30);
+  assert.equal(enemy.health, 912);
+  cat.update(240, walkingPlayer, [enemy], damage);
+  assert.equal(enemy.health, 912, 'moving does not apply the same swat twice');
+});
+
+test('walking does not rotate the locked swat cone or ignore scenery', () => {
+  const cat = new MidnightBehavior(player), start = { ...cat.position };
+  const enemy = foe(start.x + 34, start.y, 1000);
+  cat.update(600, player, [enemy], damage);
+  cat.update(240, { x: player.x, y: player.y - 30 }, [enemy], damage);
+  assert.equal(cat.facing, 'up'); assert.equal(cat.swatFacing, 'right');
+  assert.equal(enemy.health, 912);
+  const wall = { nearest: p => p, toward: from => from, clear: () => true };
+  const blocked = new MidnightBehavior(player, wall), position = { ...blocked.position };
+  const target = foe(position.x + 34, position.y, 1000);
+  blocked.update(600, player, [target], damage);
+  blocked.update(240, { x: player.x + 100, y: player.y }, [target], damage);
+  assert.deepEqual(blocked.position, position);
 });
 
 test('swat hits the front arc and misses enemies behind or beyond its reach', () => {

@@ -54,6 +54,7 @@ export class MysteryCompanion {
     enemies: EnemyController[],
     damage: DealDamage
   ): void {
+    this.cooldownRemainingMs = Math.max(0, this.cooldownRemainingMs - deltaMs);
     if (this.state === 'pouncing') {
       this.updatePounce(deltaMs, playerPosition, enemies, damage);
       return;
@@ -64,14 +65,11 @@ export class MysteryCompanion {
     this.moveToward(followTarget, this.stats.mysteryReturnSpeed, deltaMs);
 
     if (this.state === 'returning') {
-      this.updateWalkAnimation({ x: this.sprite.x - before.x, y: this.sprite.y - before.y });
       if (distanceSq(this.position, followTarget) <= ARRIVAL_DISTANCE * ARRIVAL_DISTANCE) {
         this.state = 'following';
       }
-      return;
     }
 
-    this.cooldownRemainingMs -= deltaMs;
     this.updateWalkAnimation({ x: this.sprite.x - before.x, y: this.sprite.y - before.y });
 
     if (this.cooldownRemainingMs > 0) {
