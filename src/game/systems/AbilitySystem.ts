@@ -21,13 +21,13 @@ export class AbilitySystem {
     this.simulation = new AbilitySimulation(stats);
     this.ground = scene.add.graphics().setDepth(2);
     this.foreground = scene.add.graphics().setDepth(22);
-    for (let i = 0; i < 4; i++) this.fireflies.push(scene.add.image(0, 0, LOOK.texture.spark)
+    for (let i = 0; i < ABILITIES.firefly.count[5]; i++) this.fireflies.push(scene.add.image(0, 0, LOOK.texture.spark)
       .setDepth(LOOK.depth.spell).setTint(LOOK.color.gold).setDisplaySize(24, 24).setVisible(false));
   }
 
-  sync(position: Vector2Like, ward: GameManager['wardStatus']): void {
+  sync(position: Vector2Like, ward: GameManager['wardStatus'], leaves = 0): void {
     this.simulation.sync(position);
-    this.draw(position, ward);
+    this.draw(position, ward, leaves);
   }
 
   update(deltaMs: number, position: Vector2Like, enemies: EnemyController[], orbs: XPOrb[], damage: DealDamage): void {
@@ -43,11 +43,20 @@ export class AbilitySystem {
     }
   }
 
-  private draw(position: Vector2Like, ward: GameManager['wardStatus']): void {
+  private draw(position: Vector2Like, ward: GameManager['wardStatus'], leaves: number): void {
     const g = this.ground.clear(), f = this.foreground.clear();
     const calm = reducedMotion();
     for (const patch of this.simulation.brambles) {
       const fade = Math.min(1, (patch.expiresAt - this.simulation.elapsedMs) / 350);
+      if (this.simulation.insideThornwall(patch)) {
+        // Thornwall: a heavy ring of thorns rather than a soft root patch
+        g.lineStyle(6, LOOK.ability.roots, .85 * fade).strokeCircle(patch.x, patch.y, patch.radius);
+        for (let i = 0; i < 16; i++) {
+          const a = i * Math.PI / 8, r = patch.radius;
+          g.lineStyle(2, LOOK.ability.roots, .9 * fade).lineBetween(patch.x + Math.cos(a) * (r - 6), patch.y + Math.sin(a) * (r - 6),
+            patch.x + Math.cos(a + .18) * (r + 10), patch.y + Math.sin(a + .18) * (r + 10));
+        }
+      }
       g.fillStyle(LOOK.ability.roots, .12 * fade).fillCircle(patch.x, patch.y, patch.radius);
       g.lineStyle(2, LOOK.ability.roots, .65 * fade).strokeCircle(patch.x, patch.y, patch.radius);
       for (let i = 0; i < 8; i++) {
@@ -73,6 +82,13 @@ export class AbilitySystem {
         g.fillStyle(LOOK.color.cream, .8 * fade).fillCircle(x - 3 * growth, y - 5 * growth, 1.5 * growth).fillCircle(x + 4 * growth, y - 3 * growth, 1.5 * growth);
       }
     }
+    for (const roller of this.simulation.rollers) {
+      // Oak Fall: the great acorn rolling along the ground
+      const spin = this.simulation.elapsedMs / 90;
+      g.fillStyle(LOOK.ability.acorn, .12).fillCircle(roller.x, roller.y, roller.radius);
+      f.fillStyle(LOOK.ability.acorn, 1).fillCircle(roller.x, roller.y, roller.radius * .8);
+      f.fillStyle(0x795a3e, 1).fillEllipse(roller.x + Math.cos(spin) * roller.radius * .35, roller.y + Math.sin(spin) * roller.radius * .35, roller.radius * .9, roller.radius * .45);
+    }
     for (const acorn of this.simulation.acorns) {
       const t = 1 - (acorn.landsAt - this.simulation.elapsedMs) / ABILITIES.acorn.warningMs;
       g.fillStyle(LOOK.ability.acorn, .1).fillCircle(acorn.x, acorn.y, acorn.radius);
@@ -92,9 +108,10 @@ export class AbilitySystem {
     if (ward === 'ready' || ward === 'protecting') {
       f.lineStyle(ward === 'protecting' ? 4 : 2, LOOK.ability.ward, ward === 'protecting' ? .9 : .5)
         .strokeEllipse(position.x, position.y, 60, 76);
-      for (let i = 0; i < 4; i++) {
-        const a = Math.PI / 4 + i * Math.PI / 2;
-        f.fillStyle(LOOK.ability.ward, .85).fillEllipse(position.x + Math.cos(a) * 30, position.y + Math.sin(a) * 38, 10, 5);
+      const count = leaves > 0 ? leaves : 4;
+      for (let i = 0; i < count; i++) {
+        const a = Math.PI / 4 + i * Math.PI * 2 / count;
+        f.fillStyle(LOOK.ability.ward, .85).fillEllipse(position.x + Math.cos(a) * 30, position.y + Math.sin(a) * 38, leaves > 0 ? 14 : 10, leaves > 0 ? 7 : 5);
       }
     }
     for (const burst of this.bursts) {

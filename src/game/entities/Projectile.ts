@@ -10,6 +10,8 @@ let nextProjectileId = 1;
 
 export interface ProjectileOptions {
   extraTargets?: number;
+  /** Chain Lightning: full retention and a seeking split after the last bounce. */
+  chain?: boolean;
   mode?: ExtraTargetMode;
   retention?: number;
   radius?: number;
@@ -24,6 +26,8 @@ export class Projectile {
   readonly sprite: Phaser.GameObjects.Sprite;
   private readonly flight: ProjectileFlight;
   private readonly trailColor: number;
+  private readonly options: ProjectileOptions;
+  private readonly lifetime: number;
   ageMs = 0;
   isDead = false;
   private trailMs = 0;
@@ -40,11 +44,14 @@ export class Projectile {
   ) {
     this.radius = options.radius ?? BALANCE.weapon.projectileRadius;
     this.trailColor = options.trailColor ?? LOOK.color.spell;
+    this.options = options;
+    this.lifetime = lifetimeMs;
     this.flight = new ProjectileFlight(
       damage,
       extraTargets,
       options.mode ?? 'bounce',
-      options.retention
+      options.retention,
+      options.chain ?? false
     );
     const size = options.displaySize ?? 30;
     this.sprite = scene.add.sprite(x, y, options.texture ?? LOOK.texture.bolt).setDisplaySize(size, size);
@@ -74,6 +81,21 @@ export class Projectile {
     const speed = Math.hypot(this.velocity.x, this.velocity.y);
     this.velocity.x = direction.x * speed; this.velocity.y = direction.y * speed;
     this.sprite.setRotation(Math.atan2(this.velocity.y, this.velocity.x));
+  }
+
+  /** Chain Lightning: spawn the seeking bolts this projectile owes, if any. */
+  spawnSplits(projectiles: Projectile[]): void {
+    const split = this.flight.pendingSplit;
+    if (!split) return;
+    this.flight.pendingSplit = undefined;
+    const speed = Math.hypot(this.velocity.x, this.velocity.y);
+    for (const direction of split.directions) {
+      const child = new Projectile(this.sprite.scene, this.sprite.x, this.sprite.y,
+        { x: direction.x * speed, y: direction.y * speed }, this.lifetime, split.damage, 0, { ...this.options, chain: false });
+      for (const id of this.flight.hitEnemyIds) child.hitEnemyIds.add(id);
+      child.sprite.setDisplaySize(this.sprite.displayWidth * .7, this.sprite.displayHeight * .7);
+      projectiles.push(child);
+    }
   }
 
   get hitEnemyIds(): Set<number> { return this.flight.hitEnemyIds; }

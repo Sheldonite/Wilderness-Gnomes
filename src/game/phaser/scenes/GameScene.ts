@@ -24,7 +24,7 @@ import { UIManager } from '../../ui/UIManager';
 import { PresentationSystem } from '../../systems/PresentationSystem';
 import { AbilitySystem } from '../../systems/AbilitySystem';
 import { CombatResolver, type CombatTarget } from '../../core/CombatResolver';
-import { ABILITY_IDS } from '../../config/abilities';
+import { ABILITIES, ABILITY_IDS } from '../../config/abilities';
 import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
 import { MIDNIGHT_SPRITE_KEY } from '../../config/midnightSprite';
 import type { AbilityId, AbilityRank, UpgradeDefinition } from '../../core/types';
@@ -127,7 +127,7 @@ export class GameScene extends Phaser.Scene {
     if (import.meta.env.DEV && !data.skipReview) this.setupReview();
     this.cameras.main.centerOn(this.player.position.x, this.player.position.y);
     this.presentation.update(0);
-    this.abilities.sync(this.player.position, this.gameManager.wardStatus);
+    this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
     this.scenerySystem.update(100, [this.player.position]);
   }
 
@@ -207,7 +207,7 @@ export class GameScene extends Phaser.Scene {
       const params = new URLSearchParams(location.search);
       const id = params.get('ability') as AbilityId | null;
       const requestedRank = Number(params.get('rank') ?? 3);
-      const rank = Math.min(3, Math.max(1, Number.isFinite(requestedRank) ? Math.floor(requestedRank) : 3)) as AbilityRank;
+      const rank = Math.min(5, Math.max(1, Number.isFinite(requestedRank) ? Math.floor(requestedRank) : 3)) as AbilityRank;
       const chosen = id && ABILITY_IDS.includes(id) ? [id] : ABILITY_IDS;
       if (review !== 'ability-baseline') {
         for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = rank;
@@ -357,7 +357,9 @@ export class GameScene extends Phaser.Scene {
     }
     for (const acorn of this.acorns) {
       acorn.update(deltaMs);
+      if (this.abilities.simulation.insideThornwall(acorn.position)) acorn.isDead = true;   // Thornwall stops thrown acorns
     }
+    this.gameManager.playerStats.harvestBonus = this.abilities.simulation.harvestBonus;
 
     this.companionSystem.update(
       deltaMs,
@@ -387,7 +389,9 @@ export class GameScene extends Phaser.Scene {
       this.acorns
     );
     if (this.gameManager.playerStats.health < healthBefore) this.events.emit('presentation:hit', this.player.sprite);
-    this.abilities.sync(this.player.position, this.gameManager.wardStatus);
+    this.abilities.simulation.noteCollected(this.xpOrbs.filter(orb => orb.isCollected).length);
+    if (this.gameManager.consumeBarkBurst()) this.livingBarkBurst();
+    this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
     this.presentation.update(deltaMs);
     const subjects = [this.player.position, ...this.enemies.map(e => e.position), ...this.xpOrbs.map(o => o.position)];
     subjects.push(...this.companionSystem.positions);
@@ -402,8 +406,25 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Living Bark: the last leaf falling throws every nearby foe back and roots them. */
+  private livingBarkBurst(): void {
+    const { burstRange, knockback, rootMs } = ABILITIES.ward.bark;
+    const origin = this.player.position;
+    for (const enemy of this.enemies) {
+      if (enemy.isDead) continue;
+      const dx = enemy.position.x - origin.x, dy = enemy.position.y - origin.y;
+      const d = Math.hypot(dx, dy);
+      if (d > burstRange) continue;
+      const push = d > 0 ? { x: dx / d, y: dy / d } : { x: 1, y: 0 };
+      enemy.displace(push.x * knockback, push.y * knockback);
+      enemy.root(rootMs);
+    }
+    this.events.emit('presentation:level', origin);
+  }
+
   private killEnemy(enemy: CombatTarget): void {
     this.events.emit('presentation:defeat', enemy.position);
+    this.abilities.simulation.noteKill(enemy.position);
     this.gameManager.addKill();
     const isBoss = enemy === this.oven.boss;
     if (isBoss) this.oven.defeated();
@@ -423,7 +444,7 @@ export class GameScene extends Phaser.Scene {
     this.reviewChoices = undefined;
     this.uiManager.showLevelUp(choices, (choice) => {
       this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
-      this.abilities.sync(this.player.position, this.gameManager.wardStatus);
+      this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
       this.levelUpDisplayed = false;
       this.gameManager.resumeAfterUpgrade();
       this.events.emit('presentation:level', this.player.position);

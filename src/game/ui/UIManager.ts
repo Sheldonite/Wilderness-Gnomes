@@ -4,7 +4,7 @@ import type { HudSnapshot, UpgradeDefinition } from '../core/types';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
 import { formatTime } from '../utils/math';
 import { icon, UPGRADE_ICONS } from './icons';
-import { ABILITY_IDS, ABILITY_NAMES, describeAbility } from '../config/abilities';
+import { ABILITY_IDS, ABILITY_NAMES, describeAbility, MAX_ABILITY_RANK } from '../config/abilities';
 import { CROSSBOW_STAT_UPGRADES, WEAPONS } from '../config/weapons';
 
 export class UIManager {
@@ -102,7 +102,7 @@ export class UIManager {
     const stats = this.gameManager.playerStats;
     const owned = ownedUpgrades(stats).filter(id => !id.startsWith('gain-companion'));
     if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your upgrades">${owned.map(id =>
-      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${upgradeName(id, stats)}</strong><small>${isAbility(id) ? `Rank ${upgradeRank(id, stats)} of 3${upgradeRank(id, stats) === 3 ? ' · MAX' : ''}` : `Upgraded ${upgradeRank(id, stats)} times`}</small><span class="journal-description">${upgradeBenefit(id, stats)}</span></span></div>`).join('')}</div>`);
+      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${upgradeName(id, stats)}</strong><small>${isAbility(id) ? `Rank ${upgradeRank(id, stats)} of ${MAX_ABILITY_RANK}${upgradeRank(id, stats) === MAX_ABILITY_RANK ? ' · AWAKENED' : ''}` : `Upgraded ${upgradeRank(id, stats)} times`}</small><span class="journal-description">${upgradeBenefit(id, stats)}</span></span></div>`).join('')}</div>`);
     this.addButton(list, 'Back to the woods', onResume, true);
     list.insertAdjacentHTML('beforeend', '<p class="overlay-hint">PRESS <kbd>ESC</kbd> TO RESUME</p>');
     this.focusFirst();
@@ -125,12 +125,12 @@ export class UIManager {
       const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
         ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
         : UPGRADE_ICONS[choice.id];
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(artIcon)}</span><span class="upgrade-category">${progress.current ? 'STRENGTHEN OWNED UPGRADE' : isCompanion ? 'NEW COMPANION' : 'NEW UPGRADE'}</span><strong>${choice.title}</strong><span class="upgrade-rank">${progress.current ? `Rank ${progress.current} &rarr; ${progress.next}` : `Unlock rank 1`}${progress.capped ? ' / 3' : ''}${progress.capped && progress.next === 3 ? ' · MAX' : ''}</span>${progress.capped ? `<span class="rank-pips" aria-hidden="true">${[1,2,3].map(rank => `<i class="${rank <= progress.current ? 'filled' : rank === progress.next ? 'next' : ''}"></i>`).join('')}</span>` : ''}<span class="upgrade-comparison"><span><small>NOW</small>${progress.before}</span><span><small>AFTER THIS PICK</small><b>${progress.after}</b></span></span><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">${progress.current ? 'Make it stronger' : 'Add to your build'} ${icon('arrow')}</span>`;
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(artIcon)}</span><span class="upgrade-category">${progress.current ? 'STRENGTHEN OWNED UPGRADE' : isCompanion ? 'NEW COMPANION' : 'NEW UPGRADE'}</span><strong>${choice.title}</strong><span class="upgrade-rank">${progress.current ? `Rank ${progress.current} &rarr; ${progress.next}` : `Unlock rank 1`}${progress.capped ? ` / ${MAX_ABILITY_RANK}` : ''}${progress.capped && progress.next === MAX_ABILITY_RANK ? ' · AWAKENING' : ''}</span>${progress.capped ? `<span class="rank-pips" aria-hidden="true">${[1,2,3,4,5].map(rank => `<i class="${rank <= progress.current ? 'filled' : rank === progress.next ? 'next' : ''}"></i>`).join('')}</span>` : ''}<span class="upgrade-comparison"><span><small>NOW</small>${progress.before}</span><span><small>AFTER THIS PICK</small><b>${progress.after}</b></span></span><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">${progress.current ? 'Make it stronger' : 'Add to your build'} ${icon('arrow')}</span>`;
       const select = () => {
         if (selected) return; selected = true;
         this.clearOverlay(); onChoose(choice); this.refreshBuild();
         const receipt = this.query('.upgrade-receipt');
-        receipt.innerHTML = `<strong>${choice.title} · Rank ${progress.next}${progress.capped ? '/3' : ''}</strong><span>${progress.before} &rarr; ${progress.after}</span>`;
+        receipt.innerHTML = `<strong>${choice.title} · Rank ${progress.next}${progress.capped ? `/${MAX_ABILITY_RANK}` : ''}</strong><span>${progress.before} &rarr; ${progress.after}</span>`;
         receipt.hidden = false; this.receiptUntil = this.gameManager.elapsedMs + 4000;
       };
       button.addEventListener('click', select); this.choices.push(select); list.append(button);
@@ -157,7 +157,7 @@ export class UIManager {
     this.buildFingerprint = key;
     const owned = ownedUpgrades(stats), strip = this.query('.build-strip');
     strip.hidden = !owned.length;
-    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isAbility(id) ? ' of 3' : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isAbility(id) ? '/3' : '×'}</b></span>`).join('');
+    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isAbility(id) ? ` of ${MAX_ABILITY_RANK}` : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isAbility(id) ? `/${MAX_ABILITY_RANK}` : '×'}</b></span>`).join('');
   }
 
   private createOverlay(title: string, body: string, eyebrow: string, emblem: string, className: string): HTMLElement {

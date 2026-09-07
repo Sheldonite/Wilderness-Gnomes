@@ -12,7 +12,7 @@ export type UpgradeId =
 
 export type AbilityId = 'ricochet-charm' | 'firefly-orbit' | 'bramble-snare' | 'spore-trail'
   | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce';
-export type AbilityRank = 0 | 1 | 2 | 3;
+export type AbilityRank = 0 | 1 | 2 | 3 | 4 | 5;
 export type AbilityRanks = Record<AbilityId, AbilityRank>;
 export type WeaponId = 'spell' | 'crossbow';
 
@@ -31,6 +31,8 @@ export interface PlayerStats {
   projectileDamage: number;
   weaponCooldownMs: number;
   projectileCount: number;
+  /** Harvest Wind: temporary projectile damage bonus, refreshed by the ability simulation each frame. */
+  harvestBonus: number;
   hasMysteryCompanion: boolean;
   hasMidnightCompanion: boolean;
   mysteryDamage: number;

@@ -90,6 +90,7 @@ export class CollisionSystem {
 
         damage(enemy, projectile.damage);
         projectile.markHit(enemy.id, enemies);
+        projectile.spawnSplits(projectiles);
         if (projectile.isDead) break;
       }
     }

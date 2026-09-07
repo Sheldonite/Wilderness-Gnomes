@@ -1,4 +1,4 @@
-import { ABILITIES, ABILITY_IDS, ABILITY_NAMES } from '../config/abilities';
+import { ABILITIES, ABILITY_IDS, ABILITY_NAMES, AWAKENING_NAMES, isAwakened } from '../config/abilities';
 import { CROSSBOW_STAT_UPGRADES, WEAPONS } from '../config/weapons';
 import type { AbilityId, PlayerStats, UpgradeDefinition, UpgradeId } from './types';
 
@@ -20,6 +20,7 @@ export function upgradeName(id: UpgradeId, stats: PlayerStats): string {
 export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
   const rank = upgradeRank(id, stats);
   if (isAbility(id) && !rank) return 'Not learned yet';
+  if (isAbility(id) && isAwakened(rank)) return `Awakened: ${AWAKENING_NAMES[id]}`;
   switch (id) {
     case 'ricochet-charm': return stats.weaponId === 'crossbow' ? `${WEAPONS.crossbow.baseExtraTargets + rank} extra pierces` : `${rank} extra bounces`;
     case 'firefly-orbit': return `${ABILITIES.firefly.count[rank]} orbiting fireflies`;

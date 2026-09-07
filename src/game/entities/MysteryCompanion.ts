@@ -2,9 +2,8 @@ import { createNavigationRoute, type SceneryNavigation } from '../core/SceneryNa
 import Phaser from 'phaser';
 import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
-import { ABILITIES } from '../config/abilities';
 import type { DealDamage } from '../core/CombatResolver';
-import { secondPounceTarget } from '../core/PounceChain';
+import { chainDamageScale, nextPounceTarget, pounceCooldownScale } from '../core/PounceChain';
 import {
   MYSTERY_POUNCE_ANIMATION_BY_DIRECTION,
   MYSTERY_SPRITE_KEY,
@@ -29,6 +28,8 @@ export class MysteryCompanion {
   private target?: EnemyController;
   private hasHitThisPounce = false;
   private isSecondPounce = false;
+  private chainHits = new Set<number>();
+  private chained = 0;
   private trailMs = 0;
   private lastMoveDirection: Vector2Like = { x: 0, y: 1 };
 
@@ -107,13 +108,11 @@ export class MysteryCompanion {
       distanceSq(this.position, this.target.position) <= hitDistance * hitDistance
     ) {
       this.hasHitThisPounce = true;
-      const firstId = this.target.id;
+      this.chainHits.add(this.target.id);
       const rank = this.stats.abilityRanks['mystery-double-pounce'];
-      damage(this.target, this.stats.mysteryDamage * (this.isSecondPounce ? ABILITIES.pounce.damageScale[rank] : 1));
-      if (!this.isSecondPounce) {
-        const next = secondPounceTarget(rank, firstId, this.position, playerPosition, this.stats.mysteryPounceRange, enemies);
-        if (next) { this.beginPounce(next, true); return; }
-      }
+      damage(this.target, this.stats.mysteryDamage * (this.isSecondPounce ? chainDamageScale(rank) : 1));
+      const next = nextPounceTarget(rank, this.chainHits, this.chained, this.position, playerPosition, this.stats.mysteryPounceRange, enemies);
+      if (next) { this.chained++; this.beginPounce(next, true); return; }
       this.beginReturn();
     }
   }
@@ -124,7 +123,11 @@ export class MysteryCompanion {
     this.hasHitThisPounce = false;
     this.pounceAgeMs = 0;
     this.isSecondPounce = second;
-    if (!second) this.cooldownRemainingMs = this.stats.mysteryCooldownMs;
+    if (!second) {
+      this.chainHits.clear(); this.chained = 0;
+      const rank = this.stats.abilityRanks['mystery-double-pounce'];
+      this.cooldownRemainingMs = this.stats.mysteryCooldownMs * pounceCooldownScale(rank, this.stats.health, this.stats.maxHealth);
+    }
 
     const direction = normalize(target.position.x - this.sprite.x, target.position.y - this.sprite.y);
     this.lastMoveDirection = direction;

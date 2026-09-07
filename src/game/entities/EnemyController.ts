@@ -65,6 +65,7 @@ export class EnemyController {
   isDead = false;
   slowMultiplier = 1;
   lastContactDamageAt = -Infinity;
+  private rootMs = 0;
   private readonly ranged?: RangedSquirrelBehavior;
   private readonly profile: VariantProfile;
   private readonly walkAnimations: Record<string, string>;
@@ -94,8 +95,12 @@ export class EnemyController {
     return this.profile.ranged;
   }
 
+  /** Hold this enemy in place for a while (Living Bark). */
+  root(ms: number): void { this.rootMs = Math.max(this.rootMs, ms); }
+
   update(deltaMs: number, target: Vector2Like, difficultyMinutes: number): void {
     if (this.isDead) return;
+    if (this.rootMs > 0) { this.rootMs -= deltaMs; this.sprite.anims.pause(); return; }
     const speed = (this.profile.speed + difficultyMinutes * 8) * this.slowMultiplier;
     const direction = this.ranged
       ? this.ranged.steer(this.position, target)
