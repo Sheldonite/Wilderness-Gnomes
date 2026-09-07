@@ -12,16 +12,21 @@ import {
   FAWN_SPRITE_KEY,
   FAWN_WALK_ANIMATION_BY_DIRECTION,
   GREY_ENEMY_SPRITE_KEY,
-  GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION
+  GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION,
+  ARMADILLO_SPRITE_KEY,
+  ARMADILLO_ROLL_KEY,
+  ARMADILLO_WALK_ANIMATION_BY_DIRECTION,
+  ARMADILLO_ROLL_ANIMATION
 } from '../config/enemySprite';
 import type { Vector2Like } from '../core/types';
 import { RangedSquirrelBehavior } from '../core/SquirrelBehavior';
+import { ArmadilloBehavior } from '../core/ArmadilloBehavior';
 import { clampToArena, normalize } from '../utils/math';
 
 let nextEnemyId = 1;
 
-/** Brown squirrels charge, grey squirrels throw acorns, and from level 10 the woods send does, fawns and bucks. */
-export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck';
+/** Brown squirrels charge, grey squirrels throw acorns, deer from level 10, and armadillos roll in from level 20. */
+export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck' | 'armadillo';
 
 export interface EnemyAppearance {
   texture: string;
@@ -52,14 +57,16 @@ const VARIANTS: Record<EnemyVariant, VariantProfile> = {
   fawn: { textureKey: FAWN_SPRITE_KEY, walkAnimations: FAWN_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.fawn.scale,
     health: BALANCE.deer.fawn.health, speed: BALANCE.deer.fawn.speed, contactDamage: BALANCE.deer.fawn.contactDamage, radius: BALANCE.deer.fawn.radius, ranged: false },
   buck: { textureKey: BUCK_SPRITE_KEY, walkAnimations: BUCK_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.buck.scale,
-    health: BALANCE.deer.buck.health, speed: BALANCE.deer.buck.speed, contactDamage: BALANCE.deer.buck.contactDamage, radius: BALANCE.deer.buck.radius, ranged: false }
+    health: BALANCE.deer.buck.health, speed: BALANCE.deer.buck.speed, contactDamage: BALANCE.deer.buck.contactDamage, radius: BALANCE.deer.buck.radius, ranged: false },
+  armadillo: { textureKey: ARMADILLO_SPRITE_KEY, walkAnimations: ARMADILLO_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.armadillo.scale,
+    health: BALANCE.armadillo.health, speed: BALANCE.armadillo.walkSpeed, contactDamage: BALANCE.armadillo.walkDamage, radius: BALANCE.armadillo.radius, ranged: false }
 };
 
 export class EnemyController {
   protected readonly route = createNavigationRoute();
   readonly id = nextEnemyId++;
   readonly radius: number;
-  readonly contactDamage: number;
+  private readonly baseContact: number;
   readonly sprite: Phaser.GameObjects.Sprite;
   health: number;
   isDead = false;
@@ -67,6 +74,7 @@ export class EnemyController {
   lastContactDamageAt = -Infinity;
   private rootMs = 0;
   private readonly ranged?: RangedSquirrelBehavior;
+  private readonly armadillo?: ArmadilloBehavior;
   private readonly profile: VariantProfile;
   private readonly walkAnimations: Record<string, string>;
 
@@ -79,7 +87,7 @@ export class EnemyController {
     const profile = VARIANTS[variant];
     this.profile = profile;
     this.radius = appearance?.radius ?? profile.radius;
-    this.contactDamage = profile.contactDamage;
+    this.baseContact = profile.contactDamage;
     const spawn = navigation?.nearest({ x, y }, this.radius) ?? { x, y };
     this.sprite = scene.add.sprite(spawn.x, spawn.y, appearance?.texture ?? profile.textureKey, 0);
     this.walkAnimations = profile.walkAnimations;
@@ -89,6 +97,11 @@ export class EnemyController {
     scene.events.emit('presentation:actor', this.sprite, appearance?.shadow);
     this.health = Math.round(profile.health + difficultyMinutes * 8);
     if (profile.ranged) this.ranged = new RangedSquirrelBehavior();
+    if (variant === 'armadillo') this.armadillo = new ArmadilloBehavior();
+  }
+
+  get contactDamage(): number {
+    return this.armadillo?.rolling ? BALANCE.armadillo.rollDamage : this.baseContact;
   }
 
   get isRanged(): boolean {
@@ -101,6 +114,7 @@ export class EnemyController {
   update(deltaMs: number, target: Vector2Like, difficultyMinutes: number): void {
     if (this.isDead) return;
     if (this.rootMs > 0) { this.rootMs -= deltaMs; this.sprite.anims.pause(); return; }
+    if (this.armadillo) { this.updateArmadillo(deltaMs, target); return; }
     const speed = (this.profile.speed + difficultyMinutes * 8) * this.slowMultiplier;
     const direction = this.ranged
       ? this.ranged.steer(this.position, target)
@@ -134,6 +148,37 @@ export class EnemyController {
   tryThrow(target: Vector2Like): Vector2Like | undefined {
     if (!this.ranged || this.isDead) return undefined;
     return this.ranged.tryThrow(this.position, target);
+  }
+
+  private updateArmadillo(deltaMs: number, target: Vector2Like): void {
+    const before = this.position;
+    const step = this.armadillo!.update(deltaMs, before, target);
+    const next = { x: before.x + step.x, y: before.y + step.y };
+    const rolling = this.armadillo!.rolling;
+    const moving = step.x !== 0 || step.y !== 0;
+    const safe = !moving ? before : rolling
+      ? (this.navigation?.move(before, next, this.radius) ?? clampToArena(next, this.radius))
+      : (this.navigation?.toward(before, target, Math.hypot(step.x, step.y), this.radius, this.route) ?? clampToArena(next, this.radius));
+    if (rolling && (step.x !== 0 || step.y !== 0) && (safe.x - before.x) ** 2 + (safe.y - before.y) ** 2 < 0.2) {
+      this.armadillo!.blocked();
+    }
+    this.sprite.setPosition(safe.x, safe.y);
+    if (!moving && !rolling && !this.armadillo!.curling) {
+      if (this.sprite.texture.key !== ARMADILLO_SPRITE_KEY) this.sprite.setTexture(ARMADILLO_SPRITE_KEY, 0);
+      this.updateAnimation(this.armadillo!.facing);
+      this.sprite.anims.pause();
+      return;
+    }
+    if (rolling || this.armadillo!.curling) {
+      if (this.sprite.texture.key !== ARMADILLO_ROLL_KEY) this.sprite.setTexture(ARMADILLO_ROLL_KEY);
+      this.sprite.setScale(this.profile.scale);
+      this.sprite.play(ARMADILLO_ROLL_ANIMATION, true);
+      return;
+    }
+    if (this.sprite.texture.key !== ARMADILLO_SPRITE_KEY) this.sprite.setTexture(ARMADILLO_SPRITE_KEY, 0);
+    this.sprite.setScale(this.profile.scale);
+    const moved = normalize(safe.x - before.x, safe.y - before.y);
+    this.updateAnimation(moved.x === 0 && moved.y === 0 ? this.armadillo!.facing : moved);
   }
 
   private updateAnimation(direction: Vector2Like): void {

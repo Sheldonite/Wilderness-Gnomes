@@ -10,6 +10,9 @@ export const FAWN_SPRITE_KEY = 'enemy-fawn';
 export const FAWN_ANIMATION_PREFIX = 'enemy-fawn';
 export const BUCK_SPRITE_KEY = 'enemy-buck';
 export const BUCK_ANIMATION_PREFIX = 'enemy-buck';
+export const ARMADILLO_SPRITE_KEY = 'enemy-armadillo';
+export const ARMADILLO_ROLL_KEY = 'enemy-armadillo-roll';
+export const ARMADILLO_ANIMATION_PREFIX = 'enemy-armadillo';
 export const ENEMY_FRAME_SIZE = 64;
 export const ENEMY_FRAMES_PER_ROW = 4;
 
@@ -44,3 +47,5 @@ export const GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION = withPrefix(GREY_ENEMY_ANIM
 export const DOE_WALK_ANIMATION_BY_DIRECTION = withPrefix(DOE_ANIMATION_PREFIX);
 export const FAWN_WALK_ANIMATION_BY_DIRECTION = withPrefix(FAWN_ANIMATION_PREFIX);
 export const BUCK_WALK_ANIMATION_BY_DIRECTION = withPrefix(BUCK_ANIMATION_PREFIX);
+export const ARMADILLO_WALK_ANIMATION_BY_DIRECTION = withPrefix(ARMADILLO_ANIMATION_PREFIX);
+export const ARMADILLO_ROLL_ANIMATION = 'armadillo-roll';

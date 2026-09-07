@@ -1,12 +1,12 @@
 {
   "name": "wilderness-gnomes",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node tests/run.cjs",
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/write-bundle-manifest.cjs",
     "preview": "vite preview --host 127.0.0.1",
     "desktop": "electron .",
     "dist": "npm run build && electron-builder --win",

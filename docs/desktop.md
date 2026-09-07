@@ -9,29 +9,43 @@ desktop app. The desktop app is an Electron shell (`electron/main.cjs`) around `
 npm run dist
 ```
 
-Builds the web bundle and then `release/Wilderness Gnomes-Setup-<version>.exe`, a one-click
+Builds the web bundle and then `release/Wilderness-Gnomes-Setup-<version>.exe`, a one-click
 installer that adds a desktop shortcut. `release/win-unpacked/Wilderness Gnomes.exe` runs
 without installing.
 
 `npm run desktop` opens the Electron shell on the current `dist/` without packaging.
 `npm run desktop:dev` opens it against the Vite dev server (`npm run dev` first).
 
-## Publishing a release
+## Getting game updates (no release needed)
 
-1. Bump `version` in `package.json` (for example `0.2.0`). The updater compares this number.
-2. Commit, then tag and push the tag:
+Every push to `main` already builds the game and publishes it to GitHub Pages, together with
+`bundle-manifest.json` (written by `scripts/write-bundle-manifest.cjs` at the end of
+`npm run build`): the commit, and every file with its size and SHA-256.
 
-   ```bash
-   git tag v0.2.0 && git push origin main v0.2.0
-   ```
+The title screen's **Check for updates** button compares the commit of the build currently
+loaded with that manifest. If main is newer it offers **Download update**, fetches the
+changed files from Pages into `%APPDATA%\wilderness-gnomes\bundles\<commit>\`, verifies
+each checksum, then **Reload with update** switches to it. Unchanged files are copied from the
+previous bundle instead of re-downloaded, and only the newest bundle is kept. The exe ships
+with the `dist/` it was built from and falls back to it if no bundle has been pulled.
 
-3. The `Desktop release` workflow (`.github/workflows/release.yml`) builds on a Windows runner,
-   runs the tests, and publishes a GitHub Release with the installer plus `latest.yml`, the
-   manifest the updater reads.
+The badge reads `build <commit> · app v<version>`: the first is the game bundle, the second
+the shell.
 
-Installed copies show a version badge in the bottom-right of the title screen with a
-**Check for updates** button. Finding a newer release offers **Download update**, then
-**Restart to update**. Updates only work in the installed app; the dev shell reports that.
+## Publishing the app itself
+
+The installer only needs a new release when `electron/` or the packaging changes. Bump
+`version` in `package.json`, commit, then tag and push:
+
+```bash
+git tag v0.2.0 && git push origin main v0.2.0
+```
+
+The `Desktop release` workflow (`.github/workflows/release.yml`) builds on a Windows runner,
+runs the tests, and publishes a GitHub Release with the installer plus `latest.yml`. The
+small **Check app update** link under the main button reads that release feed and offers
+**Download app update** then **Restart to update**. In the dev shell it reports that shell
+updates need the installed app.
 
 Windows SmartScreen warns on the unsigned installer the first time. Choose "More info" then
 "Run anyway". Code signing would remove the warning but costs a yearly certificate.

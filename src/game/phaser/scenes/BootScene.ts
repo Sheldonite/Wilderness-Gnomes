@@ -13,6 +13,8 @@ import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-
 import doeSpriteSheetUrl from '../../../assets/sprites/deer-doe-spritesheet.png';
 import fawnSpriteSheetUrl from '../../../assets/sprites/deer-fawn-spritesheet.png';
 import buckSpriteSheetUrl from '../../../assets/sprites/deer-buck-spritesheet.png';
+import armadilloWalkUrl from '../../../assets/sprites/armadillo-walk.png';
+import armadilloRollUrl from '../../../assets/sprites/armadillo-roll.png';
 import familiarCatSpriteSheetUrl from '../../../assets/sprites/familiar-cat-spritesheet.png';
 import familiarCatPounceSpriteSheetUrl from '../../../assets/sprites/familiar-cat-pounce-spritesheet.png';
 import {
@@ -44,7 +46,11 @@ import {
   FAWN_ANIMATION_PREFIX,
   FAWN_SPRITE_KEY,
   BUCK_ANIMATION_PREFIX,
-  BUCK_SPRITE_KEY
+  BUCK_SPRITE_KEY,
+  ARMADILLO_SPRITE_KEY,
+  ARMADILLO_ROLL_KEY,
+  ARMADILLO_ANIMATION_PREFIX,
+  ARMADILLO_ROLL_ANIMATION
 } from '../../config/enemySprite';
 import {
   applyPlayerSpriteAdjustments,
@@ -101,6 +107,8 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet(DOE_SPRITE_KEY, doeSpriteSheetUrl, { frameWidth: ENEMY_FRAME_SIZE, frameHeight: ENEMY_FRAME_SIZE });
     this.load.spritesheet(FAWN_SPRITE_KEY, fawnSpriteSheetUrl, { frameWidth: ENEMY_FRAME_SIZE, frameHeight: ENEMY_FRAME_SIZE });
     this.load.spritesheet(BUCK_SPRITE_KEY, buckSpriteSheetUrl, { frameWidth: ENEMY_FRAME_SIZE, frameHeight: ENEMY_FRAME_SIZE });
+    this.load.spritesheet(ARMADILLO_SPRITE_KEY, armadilloWalkUrl, { frameWidth: ENEMY_FRAME_SIZE, frameHeight: ENEMY_FRAME_SIZE });
+    this.load.spritesheet(ARMADILLO_ROLL_KEY, armadilloRollUrl, { frameWidth: ENEMY_FRAME_SIZE, frameHeight: ENEMY_FRAME_SIZE });
     this.load.spritesheet(MYSTERY_SPRITE_KEY, familiarCatSpriteSheetUrl, {
       frameWidth: MYSTERY_FRAME_SIZE,
       frameHeight: MYSTERY_FRAME_SIZE
@@ -115,7 +123,7 @@ export class BootScene extends Phaser.Scene {
     createSheldonAnimations(this);
     createStorybookTextures(this);
     this.createGreySquirrelTexture();
-    [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, DOE_SPRITE_KEY, FAWN_SPRITE_KEY, BUCK_SPRITE_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
+    [HAILEY_SPRITE_KEY, ENEMY_SPRITE_KEY, GREY_ENEMY_SPRITE_KEY, DOE_SPRITE_KEY, FAWN_SPRITE_KEY, BUCK_SPRITE_KEY, ARMADILLO_SPRITE_KEY, ARMADILLO_ROLL_KEY, MYSTERY_SPRITE_KEY, MYSTERY_POUNCE_SPRITE_KEY].forEach(key => this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST));
     // The wizard sheet is authored at 192px and drawn at ~40%; linear filtering keeps the downscale smooth.
     this.textures.get(PLAYER_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get('heartwood-crossbow').setFilter(Phaser.Textures.FilterMode.LINEAR);
@@ -188,7 +196,8 @@ export class BootScene extends Phaser.Scene {
       [GREY_ENEMY_ANIMATION_PREFIX, GREY_ENEMY_SPRITE_KEY],
       [DOE_ANIMATION_PREFIX, DOE_SPRITE_KEY],
       [FAWN_ANIMATION_PREFIX, FAWN_SPRITE_KEY],
-      [BUCK_ANIMATION_PREFIX, BUCK_SPRITE_KEY]
+      [BUCK_ANIMATION_PREFIX, BUCK_SPRITE_KEY],
+      [ARMADILLO_ANIMATION_PREFIX, ARMADILLO_SPRITE_KEY]
     ] as const;
     for (const [prefix, textureKey] of sheets) {
       for (const [name, row, frameRate] of ENEMY_ANIMATION_ROWS) {
@@ -208,6 +217,14 @@ export class BootScene extends Phaser.Scene {
           repeat: -1
         });
       }
+    }
+    if (!this.anims.exists(ARMADILLO_ROLL_ANIMATION)) {
+      this.anims.create({
+        key: ARMADILLO_ROLL_ANIMATION,
+        frames: this.anims.generateFrameNumbers(ARMADILLO_ROLL_KEY, { start: 0, end: 3 }),
+        frameRate: 14,
+        repeat: -1
+      });
     }
   }
 
