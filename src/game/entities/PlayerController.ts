@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
+import { reducedMotion } from '../config/presentation';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { clampToArena, normalize } from '../utils/math';
 import { PlayerAura } from './PlayerAura';
@@ -11,6 +12,7 @@ export class PlayerController {
   readonly radius = BALANCE.player.radius;
   private movementDirection: Vector2Like = { x: 0, y: 0 };
   private aura?: PlayerAura;
+  private idleTime = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -47,7 +49,36 @@ export class PlayerController {
 
     this.sprite.setPosition(next.x, next.y);
     this.updateAnimation(direction);
+    this.updateSecondaryMotion(deltaMs, direction);
     this.aura?.update(deltaMs, this.position);
+  }
+
+  /**
+   * A small lean into horizontal movement while walking and a gentle breath
+   * while idle. Purely visual: it uses rotation and scale, never the sprite's
+   * world position that gameplay reads. The walk bounce itself is baked into
+   * the sprite frames.
+   */
+  private updateSecondaryMotion(deltaMs: number, direction: Vector2Like): void {
+    const moving = direction.x !== 0 || direction.y !== 0;
+    const baseScale = this.character.scale;
+
+    if (reducedMotion()) {
+      this.sprite.setRotation(0).setScale(baseScale);
+      return;
+    }
+
+    if (moving) {
+      this.idleTime = 0;
+      this.sprite.setRotation(direction.x * 0.04).setScale(baseScale);
+      return;
+    }
+
+    this.idleTime += deltaMs;
+    const breath = Math.sin((this.idleTime / 1000) * Math.PI * 2 * 0.6);
+    this.sprite
+      .setRotation(0)
+      .setScale(baseScale * (1 - 0.006 * breath), baseScale * (1 + 0.012 * breath));
   }
 
   destroy(): void {
