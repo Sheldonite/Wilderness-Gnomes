@@ -199,6 +199,29 @@ test('Mystery chains only to another living foe in both required ranges', () => 
   assert.equal(secondPounceTarget(1, first.id, origin, origin, 420, [next]), undefined);
 });
 
+test('crossbow starts with heartwood stats and flavored primary upgrades', () => {
+  const spell = new GameManager().playerStats;
+  const bow = new GameManager('crossbow').playerStats;
+  const upgrades = new UpgradeSystem();
+  assert.equal(spell.weaponId, 'spell'); assert.equal(spell.projectileDamage, 18); assert.equal(spell.weaponCooldownMs, 850);
+  assert.equal(bow.weaponId, 'crossbow'); assert.equal(bow.projectileDamage, 28); assert.equal(bow.weaponCooldownMs, 1150);
+  const sharper = upgrades.getAvailable(bow).find(c => c.id === 'projectile-damage');
+  assert.equal(sharper.title, 'Honed Quarrels');
+  const ricochet = upgrades.getAvailable(bow).find(c => c.id === 'ricochet-charm');
+  assert.match(ricochet.description, /Quarrels punch through 2 additional enemies/);
+  assert.ok(!upgrades.getAvailable(spell).some(c => c.title === 'Honed Quarrels'));
+});
+
+test('piercing quarrels continue forward, retain damage, then stop', () => {
+  const a = enemy(0), b = enemy(80), c = enemy(160);
+  const flight = new ProjectileFlight(30, 1, 'pierce', 0.8);
+  const ahead = { x: 1, y: 0 };
+  assert.deepEqual(flight.hit(a.id, a.position, [a, b, c], ahead), ahead);
+  assert.ok(Math.abs(flight.damage - 24) < .001);
+  assert.equal(flight.hit(b.id, b.position, [a, b, c], ahead), undefined);
+  assert.deepEqual([...flight.hitEnemyIds], [a.id, b.id]);
+});
+
 test('a new run has no ranks, ward charge, patches, timers or hit history from the last run', () => {
   const previous = simulation('spore-trail', 3); previous.sim.update(800, { x: 30, y: 0 }, [], [], damage);
   const manager = new GameManager(), sim = new AbilitySimulation(manager.playerStats);

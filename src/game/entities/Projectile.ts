@@ -1,17 +1,29 @@
 import Phaser from 'phaser';
 import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
+import type { ExtraTargetMode } from '../config/weapons';
 import type { Vector2Like } from '../core/types';
 import { ProjectileFlight } from '../core/ProjectileFlight';
 import type { CombatTarget } from '../core/CombatResolver';
 
 let nextProjectileId = 1;
 
+export interface ProjectileOptions {
+  extraTargets?: number;
+  mode?: ExtraTargetMode;
+  retention?: number;
+  radius?: number;
+  texture?: string;
+  displaySize?: number;
+  trailColor?: number;
+}
+
 export class Projectile {
   readonly id = nextProjectileId++;
-  readonly radius = BALANCE.weapon.projectileRadius;
+  readonly radius: number;
   readonly sprite: Phaser.GameObjects.Sprite;
   private readonly flight: ProjectileFlight;
+  private readonly trailColor: number;
   ageMs = 0;
   isDead = false;
   private trailMs = 0;
@@ -23,10 +35,19 @@ export class Projectile {
     private readonly velocity: Vector2Like,
     private readonly lifetimeMs: number,
     damage: number,
-    bounces = 0
+    extraTargets = 0,
+    options: ProjectileOptions = {}
   ) {
-    this.flight = new ProjectileFlight(damage, bounces);
-    this.sprite = scene.add.sprite(x, y, LOOK.texture.bolt).setDisplaySize(30, 30);
+    this.radius = options.radius ?? BALANCE.weapon.projectileRadius;
+    this.trailColor = options.trailColor ?? LOOK.color.spell;
+    this.flight = new ProjectileFlight(
+      damage,
+      extraTargets,
+      options.mode ?? 'bounce',
+      options.retention
+    );
+    const size = options.displaySize ?? 30;
+    this.sprite = scene.add.sprite(x, y, options.texture ?? LOOK.texture.bolt).setDisplaySize(size, size);
     this.sprite.setDepth(15);
     this.sprite.setRotation(Math.atan2(velocity.y, velocity.x));
   }
@@ -40,7 +61,7 @@ export class Projectile {
     this.sprite.setPosition(this.sprite.x + this.velocity.x * dt, this.sprite.y + this.velocity.y * dt);
     this.ageMs += deltaMs;
     this.trailMs += deltaMs;
-    if (this.trailMs >= 45) { this.trailMs = 0; this.sprite.scene.events.emit('presentation:trail', this.position); }
+    if (this.trailMs >= 45) { this.trailMs = 0; this.sprite.scene.events.emit('presentation:trail', this.position, this.trailColor); }
 
     if (this.ageMs >= this.lifetimeMs) {
       this.isDead = true;
@@ -48,7 +69,7 @@ export class Projectile {
   }
 
   markHit(enemyId: number, enemies: CombatTarget[]): void {
-    const direction = this.flight.hit(enemyId, this.position, enemies);
+    const direction = this.flight.hit(enemyId, this.position, enemies, this.velocity);
     if (!direction) { this.isDead = true; return; }
     const speed = Math.hypot(this.velocity.x, this.velocity.y);
     this.velocity.x = direction.x * speed; this.velocity.y = direction.y * speed;

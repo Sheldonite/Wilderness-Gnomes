@@ -1,6 +1,17 @@
 # Eight woodland abilities
 
-Both wanderers share the same eight automatic abilities. Each run starts with all ranks at zero. A first selection unlocks an ability, and two more selections improve it to rank three. No equipment slots or additional controls are needed.
+Both wanderers choose a primary arm on the title screen: Spell Charm or Heartwood Crossbow. The eight woodland abilities still unlock the same way. Each run starts with all ranks at zero. A first selection unlocks an ability, and two more selections improve it to rank three. No extra in-run controls are needed.
+
+## Primary arms
+
+Either wanderer can take either arm. Both fire automatically at the nearest foe.
+
+| Arm | Cadence | Damage | Unique shot |
+| --- | --- | --- | --- |
+| Spell Charm | 850 ms | 18 | Bouncing bolts once Ricochet Charm is taken |
+| Heartwood Crossbow | 1150 ms | 28 | Quarrels already punch through one extra foe, keeping 80% damage |
+
+Crossbow quarrels are faster and travel farther. Split Charm, Sharper Spell and Quicker Hex still apply; their cards read Honed Quarrels, Swift String and Twin Quarrels during a crossbow run. Ricochet Charm adds further pierce-throughs instead of bounces.
 
 | Ability | Rank 1 | Rank 2 | Rank 3 |
 | --- | --- | --- | --- |
@@ -18,6 +29,7 @@ The complete values, names and card descriptions live in `src/game/config/abilit
 ## Combat integration
 
 - Spell bolts retain their original lifetime and damage scaling from Sharper Spell. Every bounce finds the nearest unhit living target within 220 pixels and retains 70% of the previous hit’s damage. Split Charm bolts have independent hit histories.
+- Crossbow quarrels keep their original lifetime and Honed Quarrels damage. They continue in a straight line after each hit, retain 80% damage, and stop when extra pierce-throughs are spent. Native pierce is one extra foe; Ricochet Charm ranks add more. Twin Quarrels have independent hit histories.
 - Fireflies complete their radius-72 orbit every three seconds, dealing 8 damage at most once per enemy every half second across the entire orbit.
 - Roots cast every five seconds at a target within 420 pixels, cover radius 90, and slow only enemies currently inside. They do not create collision obstacles.
 - Moving at least 24 pixels permits a mushroom patch every 0.75 seconds. Up to four radius-44 patches last three seconds each. Overlap uses the strongest patch, without multiplying damage. Half-second ticks include the final fraction of a patch’s lifetime.
@@ -37,7 +49,7 @@ These routes and controls are development-only:
 - `?review=abilities` starts with all eight abilities at rank three. Use `&rank=1` or `&rank=2` for other ranks.
 - Add `&ability=ricochet-charm` (or any of the eight IDs in the configuration) to isolate an ability. Each supports all three ranks.
 - `?review=ability-cards&rank=1` shows real unlock cards; ranks two and three show their corresponding offers. An `ability` parameter includes that requested ability among three real offers.
-- Add `&character=hailey` for Hailey; Code Wizard is the default.
+- Add `&character=hailey` for Hailey; Code Wizard is the default. Add `&weapon=crossbow` to start with the Heartwood Crossbow.
 - Review buttons exercise movement trails, level-up selection, and death. Restart clears the review state and begins an ordinary run.
 - `?review=ability-crowd` maintains 180 enemies with test-only high health and 220 pickups with every ability at rank three. Pickups replenish after magnet collection so the stress load does not disappear.
 - `?review=ability-baseline` uses the same initial crowd with no abilities. F9 shows frame timing. The previous committed build can also be compared independently; the local archived fixture is ignored under `artifacts/`.

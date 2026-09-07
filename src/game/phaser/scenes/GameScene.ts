@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { BALANCE } from '../../config/balance';
 import { GAME_CONFIG } from '../../config/gameConfig';
 import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config/playerCharacters';
+import { getWeapon } from '../../config/weapons';
+import type { WeaponId } from '../../core/types';
 import { GameManager } from '../../core/GameManager';
 import { EnemyController } from '../../entities/EnemyController';
 import { PlayerController } from '../../entities/PlayerController';
@@ -51,6 +53,7 @@ export class GameScene extends Phaser.Scene {
   private readonly handleEscape = () => this.handleEscapePressed();
   private readonly finishReviewRun = () => this.gameManager.damagePlayer(this.gameManager.playerStats.health);
   private selectedCharacter!: PlayerCharacterDefinition;
+  private selectedWeaponId: WeaponId = 'spell';
   private reviewControls?: HTMLElement;
   private reviewWalking = false;
   private reviewPathMs = 0;
@@ -60,7 +63,7 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  create(data: { characterId?: string; skipReview?: boolean }): void {
+  create(data: { characterId?: string; weaponId?: string; skipReview?: boolean }): void {
     this.levelUpDisplayed = false;
     this.pausedDisplayed = false;
     this.gameOverDisplayed = false;
@@ -72,7 +75,11 @@ export class GameScene extends Phaser.Scene {
     this.anims.resumeAll();
     document.getElementById('game-root')?.classList.add('in-run');
     this.selectedCharacter = getPlayerCharacter(data.characterId);
-    this.gameManager = new GameManager();
+    const reviewWeapon = import.meta.env.DEV && !data.skipReview
+      ? new URLSearchParams(location.search).get('weapon')
+      : null;
+    this.selectedWeaponId = getWeapon(reviewWeapon ?? data.weaponId).id;
+    this.gameManager = new GameManager(this.selectedWeaponId);
     this.enemySpawner = new EnemySpawner(this);
     this.scenerySystem = new ScenerySystem(this);
     this.companionSystem = new CompanionSystem(this, this.gameManager.playerStats);
@@ -265,6 +272,7 @@ export class GameScene extends Phaser.Scene {
       this.enemies,
       this.projectiles
     );
+    this.player.setAim(this.weaponSystem.aimAngle);
 
     this.abilities.update(deltaMs, this.player.position, this.enemies, this.xpOrbs, this.combat.damage);
     for (const enemy of this.enemies) {
@@ -386,7 +394,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameOverDisplayed = true;
-    this.uiManager.showGameOver(() => this.scene.restart({ characterId: this.selectedCharacter.id, skipReview: true }), () => this.scene.start('StartScene', { skipReview: true }));
+    this.uiManager.showGameOver(() => this.scene.restart({ characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId, skipReview: true }), () => this.scene.start('StartScene', { skipReview: true }));
   }
 
   private setPresentationPaused(paused: boolean): void {
