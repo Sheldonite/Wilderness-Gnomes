@@ -107,8 +107,6 @@ export class BootScene extends Phaser.Scene {
           end: start + PLAYER_FRAMES_PER_ROW - 1
         }),
         frameRate,
-        // Walk rows are half a stride, so bouncing back through them completes the cycle.
-        yoyo: name.startsWith('walk'),
         repeat: -1
       });
     }

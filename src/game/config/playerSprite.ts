@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
 
 /**
- * The Code Wizard sheet is generated from `code-wizard-main-alpha-large.png`
- * with every frame cropped to its alpha bounds, then anchored on its feet and
- * the centre of its lower body inside a square cell. Frames therefore need no
- * per-frame cut or offset corrections at runtime; the adjustment API below is
- * kept only for the development sprite-sheet tuning menu.
+ * The Code Wizard sheet is generated from `code-wizard-main-alpha-large.png`.
+ * The source art repeats one stride pose per direction, so the generator keeps
+ * the painted body and staff, isolates the legs, and builds a real four-pose
+ * walk cycle (stride, legs together, mirrored stride, legs together) with each
+ * frame anchored on its feet inside a square cell. Frames need no per-frame
+ * corrections at runtime; the adjustment API below is kept only for the
+ * development sprite-sheet tuning menu.
  */
 export const PLAYER_SPRITE_KEY = 'player-code-wizard';
 export const PLAYER_ANIMATION_PREFIX = 'player';
@@ -15,16 +17,16 @@ export const PLAYER_SPRITE_SHEET_WIDTH = 768;
 export const PLAYER_SPRITE_SHEET_HEIGHT = 1536;
 export const PLAYER_SPRITE_ADJUSTMENTS_STORAGE_KEY = 'wilderness-gnomes-player-sprite-adjustments-v2';
 
-/** [animation name, sheet row, frame rate]. Walk cycles play forward then back (yoyo). */
+/** [animation name, sheet row, frame rate]. Walk rows are contact, pass, contact, pass poses. */
 export const PLAYER_ANIMATION_ROWS = [
   ['idle-down', 0, 3],
-  ['walk-down', 1, 9],
-  ['walk-down-right', 2, 9],
-  ['walk-right', 3, 9],
-  ['walk-up-left', 4, 9],
-  ['walk-up', 5, 9],
-  ['walk-left', 6, 9],
-  ['walk-down-left', 7, 9]
+  ['walk-down', 1, 8],
+  ['walk-down-right', 2, 8],
+  ['walk-right', 3, 8],
+  ['walk-up-left', 4, 8],
+  ['walk-up', 5, 8],
+  ['walk-left', 6, 8],
+  ['walk-down-left', 7, 8]
 ] as const;
 
 export interface PlayerSpriteFrameDefinition {
