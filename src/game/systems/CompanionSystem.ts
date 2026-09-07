@@ -5,12 +5,14 @@ import { EnemyController } from '../entities/EnemyController';
 import { MysteryCompanion } from '../entities/MysteryCompanion';
 import { MidnightCompanion } from '../entities/MidnightCompanion';
 import { FrankieCompanion } from '../entities/FrankieCompanion';
+import { TobiasCompanion } from '../entities/TobiasCompanion';
 import type { DealDamage } from '../core/CombatResolver';
 
 export class CompanionSystem {
   private mystery?: MysteryCompanion;
   private midnight?: MidnightCompanion;
   private frankie?: FrankieCompanion;
+  private tobias?: TobiasCompanion;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -34,6 +36,8 @@ export class CompanionSystem {
     this.midnight?.update(deltaMs, playerPosition, enemies, damage);
     if (this.stats.hasFrankieCompanion && !this.frankie) this.frankie = new FrankieCompanion(this.scene, this.stats, playerPosition);
     this.frankie?.update(deltaMs, playerPosition, enemies, damage);
+    if (this.stats.hasTobiasCompanion && !this.tobias) this.tobias = new TobiasCompanion(this.scene, this.stats, playerPosition);
+    this.tobias?.update(deltaMs, playerPosition, enemies, damage);
   }
 
   destroy(): void {
@@ -41,9 +45,10 @@ export class CompanionSystem {
     this.mystery = undefined;
     this.midnight?.destroy(); this.midnight = undefined;
     this.frankie?.destroy(); this.frankie = undefined;
+    this.tobias?.destroy(); this.tobias = undefined;
   }
 
   get positions(): Vector2Like[] {
-    return [this.mystery?.position, this.midnight?.position, ...(this.frankie?.positions ?? [])].filter((p): p is Vector2Like => Boolean(p));
+    return [this.mystery?.position, this.midnight?.position, this.tobias?.position, ...(this.frankie?.positions ?? [])].filter((p): p is Vector2Like => Boolean(p));
   }
 }

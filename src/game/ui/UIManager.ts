@@ -8,6 +8,7 @@ import { formatTime } from '../utils/math';
 import { icon, UPGRADE_ICONS } from './icons';
 import { ABILITY_IDS, ABILITY_NAMES, describeAbility, MAX_ABILITY_RANK } from '../config/abilities';
 import { CROSSBOW_STAT_UPGRADES, WEAPONS } from '../config/weapons';
+import { COMPANION_NAMES, MAX_COMPANION_RANK, describeCompanionRank, levelForCompanionRank } from '../config/companions';
 
 export class UIManager {
   private readonly root: HTMLElement;
@@ -42,9 +43,7 @@ export class UIManager {
     onTogglePause: () => void,
     character: PlayerCharacterDefinition,
     portrait: string,
-    private readonly mysteryPortrait: string,
-    private readonly midnightPortrait: string,
-    private readonly frankiePortrait: string
+    private readonly companionPortrait: string
   ) {
     this.root = document.getElementById('ui-root')!;
     this.root.innerHTML = `
@@ -55,7 +54,7 @@ export class UIManager {
             <div class="health-track" role="progressbar" aria-label="Health" aria-valuemin="0"><div class="health-fill"></div></div>
           </div>
         </section>
-        <section class="frankie-hud" aria-label="Frankie damage" hidden><img src="${frankiePortrait}" alt=""><div><strong>FRANKIE</strong><b class="frankie-bonus"></b><small class="frankie-total"></small></div></section>
+        <section class="frankie-hud companion-hud" aria-label="Companion"><img src="${this.companionPortrait}" alt=""><div><strong class="companion-name"></strong><b class="frankie-bonus companion-rank"></b><small class="frankie-total companion-detail"></small></div></section>
         <div class="run-stats"><span class="time-stat">${icon('clock')}<b>0:00</b></span><i></i><span class="kill-stat">${icon('leaf')}<b>0</b><small>FOES</small></span></div>
         <button class="pause-button" type="button" aria-label="Pause game">${icon('pause')}<span>Pause</span><kbd>ESC</kbd></button>
         <div class="xp-hud"><span class="level-seal">1</span><div class="xp-meta"><span>WOODLAND WISDOM</span><span class="xp-value"></span></div>
@@ -100,12 +99,9 @@ export class UIManager {
     list.innerHTML = '<p class="pause-instruction">Take a breath. Your journey continues when you’re ready.</p>';
     const arm = WEAPONS[this.gameManager.playerStats.weaponId];
     list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon(arm.icon)} ${arm.name} · ${arm.shortTrait}</p>`);
-    const friends = [this.gameManager.playerStats.hasMysteryCompanion ? 'Mystery · pounce' : '',
-      this.gameManager.playerStats.hasMidnightCompanion ? 'Midnight · swat' : '',
-      this.gameManager.playerStats.hasFrankieCompanion ? `Frankie · ${upgradeBenefit('gain-companion-frankie', this.gameManager.playerStats)}` : ''].filter(Boolean);
-    if (friends.length) list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${friends.join(' &nbsp; / &nbsp; ')}</p>`);
     const stats = this.gameManager.playerStats;
-    const owned = ownedUpgrades(stats).filter(id => !id.startsWith('gain-companion'));
+    list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${COMPANION_NAMES[stats.companionId]} · rank ${stats.companionRank} of ${MAX_COMPANION_RANK} · ${describeCompanionRank(stats.companionId, stats.companionRank, stats)}</p>`);
+    const owned = ownedUpgrades(stats);
     if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your upgrades">${owned.map(id =>
       `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${upgradeName(id, stats)}</strong><small>${isRanked(id) ? `Rank ${upgradeRank(id, stats)} of ${upgradeMaxRank(id)}${isBossAbility(id) ? ' · BOSS RELIC' : upgradeRank(id, stats) === MAX_ABILITY_RANK ? ' · ASCENDED' : upgradeRank(id, stats) >= 5 ? ' · AWAKENED' : ''}` : `Upgraded ${upgradeRank(id, stats)} times`}</small><span class="journal-description">${upgradeBenefit(id, stats)}</span></span></div>`).join('')}</div>`);
     this.addButton(list, 'Back to the woods', onResume, true);
@@ -127,21 +123,18 @@ export class UIManager {
     choices.forEach((choice, index) => {
       const progress = upgradePreview(choice, this.gameManager.playerStats);
       const button = document.createElement('button'); button.type = 'button'; button.className = `upgrade-card ${progress.current ? 'owned-upgrade' : 'new-upgrade'}`;
-      const isMystery = choice.id === 'gain-companion-mystery';
-      const isMidnight = choice.id === 'gain-companion-midnight';
-      const isFrankie = choice.id === 'gain-companion-frankie' || choice.id === 'frankie-flock';
-      const isCompanion = isMystery || isMidnight || isFrankie;
+      const isCompanion = choice.id === 'mystery-double-pounce' || choice.id === 'midnight-mighty-swat';
       if (isCompanion) button.classList.add('epic-companion');
       if (isBossAbility(choice.id)) button.classList.add('boss-relic');
-      const portrait = isMidnight ? this.midnightPortrait : isFrankie ? this.frankiePortrait : this.mysteryPortrait;
-      const name = isMidnight ? 'Midnight' : isFrankie ? 'Frankie' : 'Mystery';
+      const portrait = this.companionPortrait;
+      const name = COMPANION_NAMES[this.gameManager.playerStats.companionId];
       const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
         ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
         : UPGRADE_ICONS[choice.id];
       const summary = upgradeSummary(choice, this.gameManager.playerStats);
-      const changes = progress.current || choice.id === 'midnight-mighty-swat' || isFrankie ? upgradeChanges(choice, this.gameManager.playerStats) : '';
+      const changes = progress.current || choice.id === 'midnight-mighty-swat' ? upgradeChanges(choice, this.gameManager.playerStats) : '';
       button.title = choice.description;
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}">` : icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC' : isCompanion ? 'COMPANION' : progress.current ? 'UPGRADE' : 'NEW'}</span><strong>${upgradeName(choice.id, this.gameManager.playerStats)}</strong>${progress.capped ? `<span class="upgrade-rank">Rank ${progress.current} &rarr; ${progress.next} / ${progress.maxRank}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>` : isCompanion && choice.id !== 'frankie-flock' ? '<span class="upgrade-rank">One-time unlock</span>' : `<span class="upgrade-rank">Picks ${progress.current} &rarr; ${progress.next}</span>`}<span class="upgrade-description">${summary}</span>${changes ? `<span class="upgrade-changes">${changes}</span>` : ''}<span class="upgrade-select">Choose ${icon('arrow')}</span>`;
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}">` : icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC' : isCompanion ? 'COMPANION' : progress.current ? 'UPGRADE' : 'NEW'}</span><strong>${upgradeName(choice.id, this.gameManager.playerStats)}</strong>${progress.capped ? `<span class="upgrade-rank">Rank ${progress.current} &rarr; ${progress.next} / ${progress.maxRank}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>` : `<span class="upgrade-rank">Picks ${progress.current} &rarr; ${progress.next}</span>`}<span class="upgrade-description">${summary}</span>${changes ? `<span class="upgrade-changes">${changes}</span>` : ''}<span class="upgrade-select">Choose ${icon('arrow')}</span>`;
       const select = () => {
         if (selected) return; selected = true;
         this.clearOverlay(); onChoose(choice); this.refreshBuild();
@@ -172,16 +165,15 @@ export class UIManager {
 
   private refreshBuild(): void {
     const stats = this.gameManager.playerStats;
-    const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.hasMysteryCompanion, stats.hasMidnightCompanion, stats.hasFrankieCompanion, stats.frankieCount, stats.frankieFeatherBonus]);
+    const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.companionId, stats.companionRank, stats.frankieCount, stats.frankieFeatherBonus]);
     if (key === this.buildFingerprint) return;
     this.buildFingerprint = key;
-    const frankie = this.query('.frankie-hud');
-    frankie.hidden = !stats.hasFrankieCompanion;
-    if (stats.hasFrankieCompanion) {
-      const bonus = Math.min(BALANCE.companion.frankieFeatherCap, stats.frankieFeatherBonus);
-      this.query('.frankie-bonus').textContent = `+${bonus} feather damage`;
-      this.query('.frankie-total').textContent = `${BALANCE.companion.frankieDamage + bonus} damage / hit per bird`;
-    }
+    this.query('.companion-name').textContent = COMPANION_NAMES[stats.companionId].toUpperCase();
+    const nextAt = levelForCompanionRank(stats.companionRank + 1);
+    this.query('.companion-rank').textContent = stats.companionRank >= MAX_COMPANION_RANK
+      ? `Rank ${MAX_COMPANION_RANK} · fully grown` : `Rank ${stats.companionRank} · grows at level ${nextAt}`;
+    const feather = stats.hasFrankieCompanion ? ` · +${Math.min(BALANCE.companion.frankieFeatherCap, stats.frankieFeatherBonus)} feather damage` : '';
+    this.query('.companion-detail').textContent = `${describeCompanionRank(stats.companionId, stats.companionRank, stats)}${feather}`;
     const owned = ownedUpgrades(stats), strip = this.query('.build-strip');
     strip.hidden = !owned.length;
     strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isRanked(id) ? ` of ${upgradeMaxRank(id)}` : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b></span>`).join('');

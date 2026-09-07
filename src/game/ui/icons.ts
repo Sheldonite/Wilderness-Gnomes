@@ -27,6 +27,10 @@ const paths: Record<string, string> = {
   paw: '<ellipse cx="16" cy="23" rx="8" ry="6"/><ellipse cx="5" cy="14" rx="3" ry="4"/><ellipse cx="12" cy="7" rx="3" ry="4"/><ellipse cx="21" cy="7" rx="3" ry="4"/><ellipse cx="28" cy="14" rx="3" ry="4"/>',
   buzzard: '<path d="M4 18c6-8 10-6 12-2 2-4 6-6 12-2"/><path d="M16 16c2 4 1 8-2 12m2-12c2 5 6 8 10 8"/><path d="M14 14 8 10m8 4 4-6"/>',
   pause: '<path d="M11 6v20M21 6v20"/>',
+  ribbon: '<path d="M3 24c6-2 8-8 14-10s10 2 12-4"/><path d="M4 17c5 0 8-4 13-5s10 3 11-3"/><path d="m26 6 3 3-3 3-3-3Z"/>',
+  shout: '<path d="M6 13h5l7-6v18l-7-6H6Z"/><path d="M22 10c3 3 3 9 0 12m4-16c5 5 5 15 0 20"/>',
+  spin: '<path d="M16 5a11 11 0 1 1-9 4.6"/><path d="M6 3v7h7"/><path d="M16 11v10m-5-5h10"/>',
+  fish: '<path d="M3 16c5-7 12-9 18-6 3 1.5 5 4 8 6-3 2-5 4.5-8 6-6 3-13 1-18-6Z"/><path d="m29 16 3-6v12Z"/><circle cx="9" cy="14" r="1.4"/>',
   arrow: '<path d="M5 16h22m-8-8 8 8-8 8"/>',
   star: '<path d="m16 2 4 10 10 4-10 4-4 10-4-10-10-4 10-4Z"/>',
   cross: '<path d="m7 7 18 18M25 7 7 25"/>',
@@ -39,10 +43,10 @@ export function icon(name: string): string {
 
 export const UPGRADE_ICONS: Record<UpgradeId, string> = {
   crownfire: 'crownfire', stormcall: 'stormcall', 'phoenix-heart': 'phoenix',
-  'gain-companion-midnight': 'paw', 'midnight-mighty-swat': 'paw',
+  'midnight-mighty-swat': 'paw',
   'ricochet-charm': 'ricochet', 'firefly-orbit': 'firefly', 'bramble-snare': 'roots', 'spore-trail': 'mushroom',
   'acorn-shower': 'acorn', 'barkskin-ward': 'shield', 'woodland-magnet': 'magnet', 'mystery-double-pounce': 'pounce',
   'projectile-damage': 'spell', 'fire-rate': 'clock', 'move-speed': 'boot',
-  'max-health': 'heart', 'projectile-count': 'split', 'gain-companion-mystery': 'paw',
-  'gain-companion-frankie': 'buzzard', 'frankie-flock': 'buzzard'
+  'max-health': 'heart', 'projectile-count': 'split',
+  'ribbon-sweep': 'ribbon', 'inspiring-shout': 'shout', 'dizzying-flurry': 'spin'
 };

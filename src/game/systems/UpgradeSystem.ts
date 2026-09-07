@@ -1,5 +1,5 @@
 import { BALANCE } from '../config/balance';
-import { ABILITY_IDS, ABILITY_NAMES, ASCENSION_RANK, AWAKENING_RANK, MAX_ABILITY_RANK, describeAbility, rankUnlocked, tierName } from '../config/abilities';
+import { ABILITY_IDS, ABILITY_NAMES, ASCENSION_RANK, AWAKENING_RANK, MAX_ABILITY_RANK, abilityAllowed, describeAbility, rankUnlocked, tierName } from '../config/abilities';
 import { CROSSBOW_STAT_UPGRADES } from '../config/weapons';
 import { BOSS_ABILITY_IDS, BOSS_ABILITY_NAMES, MAX_BOSS_RANK, describeBossAbility, isBossAbility } from '../config/bossAbilities';
 import type { GameManager } from '../core/GameManager';
@@ -8,14 +8,6 @@ import type { AbilityId, AbilityRank, PlayerStats, UpgradeDefinition } from '../
 export class UpgradeSystem {
   constructor(private readonly random: () => number = Math.random) {}
   private readonly upgrades: UpgradeDefinition[] = [
-    {
-      id: 'gain-companion-midnight',
-      title: 'Gain a Companion: Midnight',
-      description: `Midnight joins you with devastating paw swats: ${BALANCE.companion.midnightDamage} damage to every foe in her forward arc, with a ${BALANCE.companion.midnightCooldownMs / 1000}s attack cooldown.`,
-      category: 'A FAMILIAR FRIEND',
-      isAvailable: (stats) => !stats.hasMidnightCompanion,
-      apply: (stats) => { stats.hasMidnightCompanion = true; }
-    },
     {
       id: 'projectile-damage',
       title: 'Sharper Spell',
@@ -59,31 +51,6 @@ export class UpgradeSystem {
         stats.projectileCount += 1;
       }
     },
-    {
-      id: 'gain-companion-mystery',
-      title: 'Gain a Companion: Mystery',
-      description: `Mystery joins you with powerful pounces: ${BALANCE.companion.mysteryDamage} damage per hit, with a ${BALANCE.companion.mysteryCooldownMs / 1000}s recovery between hunts.`,
-      isAvailable: (stats) => !stats.hasMysteryCompanion,
-      apply: (stats) => {
-        stats.hasMysteryCompanion = true;
-      }
-    },
-    {
-      id: 'gain-companion-frankie',
-      title: 'Gain a Companion: Frankie',
-      description: 'Frankie, a black buzzard, circles you and stoops on nearby foes. He moults feathers that sharpen every talon.',
-      category: 'A FAMILIAR FRIEND',
-      isAvailable: (stats) => !stats.hasFrankieCompanion,
-      apply: (stats) => { stats.hasFrankieCompanion = true; stats.frankieCount = 1; }
-    },
-    {
-      id: 'frankie-flock',
-      title: 'Frankie’s Flock',
-      description: '+1 buzzard in the circle, up to 5. They still drop feathers that raise the whole flock’s damage.',
-      category: 'A FAMILIAR FRIEND',
-      isAvailable: (stats) => stats.hasFrankieCompanion && stats.frankieCount < 5,
-      apply: (stats) => { stats.frankieCount = Math.min(5, stats.frankieCount + 1); }
-    }
   ];
 
   getChoices(stats: PlayerStats): UpgradeDefinition[] {
@@ -92,7 +59,7 @@ export class UpgradeSystem {
     const choose = (candidates: UpgradeDefinition[]) => {
       if (candidates.length) choices.push(candidates[Math.floor(this.random() * candidates.length)]);
     };
-    choose(pool.filter(u => u.rank === 1 || u.id === 'gain-companion-mystery' || u.id === 'gain-companion-midnight' || u.id === 'gain-companion-frankie'));
+    choose(pool.filter(u => u.rank === 1));
     choose(pool.filter(u => u.rank !== undefined && u.rank > 1));
     while (choices.length < BALANCE.leveling.choices) {
       const remaining = pool.filter(u => !choices.some(choice => choice.id === u.id));
@@ -116,15 +83,14 @@ export class UpgradeSystem {
 
   getAvailable(stats: PlayerStats): UpgradeDefinition[] {
     const abilities = ABILITY_IDS.filter(id => stats.abilityRanks[id] < MAX_ABILITY_RANK &&
-      rankUnlocked(stats.abilityRanks[id] + 1, stats.level) &&
-      (id !== 'mystery-double-pounce' || stats.hasMysteryCompanion) && (id !== 'midnight-mighty-swat' || stats.hasMidnightCompanion)).map(id => {
+      rankUnlocked(stats.abilityRanks[id] + 1, stats.level) && abilityAllowed(id, stats.characterId)).map(id => {
       const rank = (stats.abilityRanks[id] + 1) as AbilityRank;
       const tier = rank === AWAKENING_RANK || rank === ASCENSION_RANK ? tierName(id, rank) : undefined;
       return {
         id, rank, title: tier ? `${ABILITY_NAMES[id]}: ${tier}` : ABILITY_NAMES[id],
         description: describeAbility(id, rank, stats.weaponId),
         category: rank === 1 ? 'NEW ABILITY' : rank === AWAKENING_RANK ? 'AWAKENING' : rank === ASCENSION_RANK ? 'ASCENSION' : `RANK ${rank} OF ${MAX_ABILITY_RANK}`,
-        isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && rankUnlocked(rank, s.level) && (id !== 'mystery-double-pounce' || s.hasMysteryCompanion) && (id !== 'midnight-mighty-swat' || s.hasMidnightCompanion),
+        isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && rankUnlocked(rank, s.level) && abilityAllowed(id, s.characterId),
         apply: (s: PlayerStats) => { s.abilityRanks[id] = rank; }
       };
     });
@@ -152,14 +118,12 @@ export class UpgradeSystem {
   }
 
   private flavor(upgrade: UpgradeDefinition, stats: PlayerStats): UpgradeDefinition {
-    if (upgrade.id === 'gain-companion-mystery') return { ...upgrade,
-      description: `Mystery joins you with powerful pounces: ${Number(stats.mysteryDamage.toFixed(2))} damage per hit, with a ${stats.mysteryCooldownMs / 1000}s recovery between hunts.` };
     if (stats.weaponId !== 'crossbow') return upgrade;
     const copy = CROSSBOW_STAT_UPGRADES[upgrade.id];
     return copy ? { ...upgrade, title: copy.title, description: copy.description } : upgrade;
   }
 
   getReviewChoices(): UpgradeDefinition[] {
-    return this.upgrades.filter(upgrade => ['projectile-damage', 'move-speed', 'gain-companion-mystery'].includes(upgrade.id));
+    return this.upgrades.filter(upgrade => ['projectile-damage', 'move-speed', 'max-health'].includes(upgrade.id));
   }
 }

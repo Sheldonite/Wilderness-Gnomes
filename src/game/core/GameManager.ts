@@ -1,7 +1,8 @@
 import { BALANCE } from '../config/balance';
 import { ABILITIES, awakeningTier, emptyAbilityRanks } from '../config/abilities';
 import { getWeapon } from '../config/weapons';
-import type { GameRunState, HudSnapshot, PlayerStats, WeaponId, UpgradeSource } from './types';
+import { COMPANION_BY_CHARACTER, companionRankForLevel, companionPower, frankieBirdsForRank } from '../config/companions';
+import type { GameRunState, HudSnapshot, PlayerCharacterId, PlayerStats, WeaponId, UpgradeSource } from './types';
 import { BossGate } from './BossGate';
 import { createRunId, marketBonuses, type MarketProfile } from './MarketProgress';
 
@@ -35,10 +36,11 @@ export class GameManager {
   private barkBurstPending = false;
   private heartRegenMs = 0;
 
-  constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile) {
+  constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile, characterId: PlayerCharacterId = 'wizard') {
     const arm = getWeapon(weaponId);
     this.marketBonuses = marketBonuses(marketProfile);
     const bonuses = this.marketBonuses;
+    const companionId = COMPANION_BY_CHARACTER[characterId] ?? COMPANION_BY_CHARACTER.wizard;
     this.playerStats = {
       level: 1,
       upgradeCounts: {},
@@ -53,16 +55,53 @@ export class GameManager {
       weaponCooldownMs: arm.cooldownMs * bonuses.cooldownMultiplier,
       projectileCount: arm.projectileCount + bonuses.extraProjectiles,
       harvestBonus: 0,
-      hasMysteryCompanion: false,
-      hasMidnightCompanion: false,
-      hasFrankieCompanion: false,
-      frankieCount: 0,
+      characterId,
+      companionId,
+      companionRank: 0,
+      // The bound companion is there from the first step; only its rank changes during a run.
+      hasMysteryCompanion: companionId === 'mystery',
+      hasMidnightCompanion: companionId === 'midnight',
+      hasFrankieCompanion: companionId === 'frankie',
+      hasTobiasCompanion: companionId === 'tobias',
+      frankieCount: companionId === 'frankie' ? frankieBirdsForRank(0) : 0,
       frankieFeatherBonus: 0,
       mysteryDamage: BALANCE.companion.mysteryDamage * bonuses.mysteryDamageMultiplier,
       mysteryCooldownMs: BALANCE.companion.mysteryCooldownMs,
       mysteryPounceRange: BALANCE.companion.mysteryPounceRange,
-      mysteryReturnSpeed: BALANCE.companion.mysteryReturnSpeed
+      mysteryReturnSpeed: BALANCE.companion.mysteryReturnSpeed,
+      shoutAttackSpeedBonus: 0,
+      shoutMoveSpeedBonus: 0
     };
+    this.applyCompanionRank();
+  }
+
+  /**
+   * Companions grow by themselves. Recomputing from the level (rather than incrementing) keeps
+   * skipped levels, boss level jumps and review shortcuts all consistent.
+   */
+  private applyCompanionRank(): void {
+    const stats = this.playerStats;
+    const rank = companionRankForLevel(this.level);
+    if (rank === stats.companionRank && this.companionPrimed) return;
+    this.companionPrimed = true;
+    const grew = rank > stats.companionRank;
+    stats.companionRank = rank;
+    const power = companionPower(rank);
+    const bonuses = this.marketBonuses;
+    stats.mysteryDamage = BALANCE.companion.mysteryDamage * bonuses.mysteryDamageMultiplier * power;
+    stats.mysteryCooldownMs = Math.round(BALANCE.companion.mysteryCooldownMs / (1 + .03 * rank));
+    stats.mysteryPounceRange = Math.round(BALANCE.companion.mysteryPounceRange * (1 + .02 * rank));
+    if (stats.hasFrankieCompanion) stats.frankieCount = frankieBirdsForRank(rank);
+    if (grew) this.companionGrewTo = rank;
+  }
+
+  private companionPrimed = false;
+  /** Set when the companion just gained a rank, drained by the scene to announce it once. */
+  private companionGrewTo = 0;
+  consumeCompanionGrowth(): number {
+    const rank = this.companionGrewTo;
+    this.companionGrewTo = 0;
+    return rank;
   }
 
   update(deltaMs: number): void {
@@ -131,7 +170,14 @@ export class GameManager {
     this.level += 1;
     this.playerStats.level = this.level;
     this.xpToNextLevel = xpThreshold(this.level);
+    this.applyCompanionRank();
     this.state = 'LevelUpPaused';
+  }
+
+  /** Review pages and boss gates set the level directly; keep the companion in step with it. */
+  syncCompanionToLevel(): void {
+    this.playerStats.level = this.level;
+    this.applyCompanionRank();
   }
 
   openChestUpgrade(source: 'chest' | 'boss' = 'chest'): boolean {

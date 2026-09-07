@@ -7,9 +7,7 @@ import type { AbilityId, PlayerStats, UpgradeDefinition, UpgradeId } from './typ
 
 const STAT_NAMES: Partial<Record<UpgradeId, string>> = {
   'projectile-damage': 'Sharper Spell', 'fire-rate': 'Quicker Hex', 'move-speed': 'Restless Boots',
-  'max-health': 'Hardier Heart', 'projectile-count': 'Split Charm',
-  'gain-companion-mystery': 'Mystery', 'gain-companion-midnight': 'Midnight',
-  'gain-companion-frankie': 'Frankie', 'frankie-flock': 'Frankie’s Flock'
+  'max-health': 'Hardier Heart', 'projectile-count': 'Split Charm'
 };
 export const isAbility = (id: UpgradeId): id is AbilityId => ABILITY_IDS.includes(id as AbilityId);
 export const isRanked = (id: UpgradeId): boolean => isAbility(id) || isBossAbility(id);
@@ -17,10 +15,6 @@ export const upgradeMaxRank = (id: UpgradeId): number => isBossAbility(id) ? MAX
 export function upgradeRank(id: UpgradeId, stats: PlayerStats): number {
   if (isBossAbility(id)) return stats.bossAbilityRanks[id];
   if (isAbility(id)) return stats.abilityRanks[id];
-  if (id === 'gain-companion-mystery') return Number(stats.hasMysteryCompanion);
-  if (id === 'gain-companion-midnight') return Number(stats.hasMidnightCompanion);
-  if (id === 'gain-companion-frankie') return stats.hasFrankieCompanion ? stats.frankieCount : 0;
-  if (id === 'frankie-flock') return Math.max(0, stats.frankieCount - 1);
   return stats.upgradeCounts[id] ?? 0;
 }
 export function upgradeName(id: UpgradeId, stats: PlayerStats): string {
@@ -53,10 +47,9 @@ export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
     case 'projectile-count': return `${stats.projectileCount} shots per volley`;
     case 'max-health': return `${stats.maxHealth} max health · Regen ${stats.heartRegen} HP/5s`;
     case 'move-speed': return `${Number(stats.speed.toFixed(2))} movement speed`;
-    case 'gain-companion-mystery': return rank ? `${Number(stats.mysteryDamage.toFixed(2))} damage per pounce` : 'Not recruited yet';
-    case 'gain-companion-midnight': return rank ? 'Swatting companion' : 'Not recruited yet';
-    case 'gain-companion-frankie': return rank ? `${stats.frankieCount} of 5 buzzards · +${stats.frankieFeatherBonus} feather damage` : 'Not recruited yet';
-    case 'frankie-flock': return `${stats.frankieCount} of 5 buzzards`;
+    case 'ribbon-sweep': return `${ABILITIES.ribbon.damage[rank]} damage · ${ABILITIES.ribbon.knockback[rank]} knockback`;
+    case 'inspiring-shout': return `+${Math.round(ABILITIES.shout.attackSpeed[rank] * 100)}% attack speed · +${Math.round(ABILITIES.shout.moveSpeed[rank] * 100)}% movement`;
+    case 'dizzying-flurry': return `${ABILITIES.flurry.damage[rank]} damage a hit · ${ABILITIES.flurry.radius[rank]} radius`;
   }
 }
 export function upgradePreview(choice: UpgradeDefinition, stats: PlayerStats) {
@@ -94,8 +87,9 @@ export function upgradeChanges(choice: UpgradeDefinition, stats: PlayerStats): s
       case 'barkskin-ward': return { Shields: isAwakened(r) ? c.ward.bark[t].leaves : 1, 'Recharge (s)': c.ward.rechargeMs[r] / 1000 };
       case 'woodland-magnet': return { Range: c.magnet.range[r], 'Cooldown (s)': c.magnet.cooldownMs[r] / 1000, 'Bonus damage (%)': isAwakened(r) ? Math.round(c.magnet.harvest[t].maxBonus * 100) : 0 };
       case 'mystery-double-pounce': return { 'Pounce damage (%)': Math.round(c.pounce.damageScale[r] * 100), 'Chain targets': isAwakened(r) ? c.pounce.frenzy[t].maxChain : 2 };
-      case 'gain-companion-frankie':
-      case 'frankie-flock': return { Buzzards: s.frankieCount, 'Feather damage': s.frankieFeatherBonus };
+      case 'ribbon-sweep': return { Damage: c.ribbon.damage[r], Knockback: c.ribbon.knockback[r], Arc: isAwakened(r) ? c.ribbon.cyclone[t].arcDegrees : c.ribbon.arcDegrees };
+      case 'inspiring-shout': return { 'Attack speed (%)': Math.round(c.shout.attackSpeed[r] * 100), 'Move speed (%)': Math.round(c.shout.moveSpeed[r] * 100), 'Healing/s': isAwakened(r) ? c.shout.anthem[t].healPerSecond : 0 };
+      case 'dizzying-flurry': return { Damage: c.flurry.damage[r], Radius: c.flurry.radius[r], 'Spin (s)': (isAwakened(r) ? c.flurry.vortex[t].durationMs : c.flurry.durationMs) / 1000 };
       default: return {};
     }
   };
@@ -127,6 +121,9 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
       case 'barkskin-ward': return `${c.ward.bark[tier].leaves} shields. Regrow every ${c.ward.rechargeMs[rank] / 1000}s. Burst when depleted.`;
       case 'woodland-magnet': return `Pull XP from ${c.magnet.range[rank]} range. Gain up to +${pct(c.magnet.harvest[tier].maxBonus)}% damage${isAscended(rank) ? ' + healing' : ''}.`;
       case 'mystery-double-pounce': return `${c.pounce.frenzy[tier].maxChain} chained pounces at ${pct(c.pounce.damageScale[rank])}% damage.${isAscended(rank) ? '' : ' Faster above half health.'}`;
+      case 'ribbon-sweep': return `Ribbons whirl all the way around for ${c.ribbon.damage[rank]} damage, then echo again.`;
+      case 'inspiring-shout': return `+${pct(c.shout.attackSpeed[rank])}% attack speed and ${c.shout.anthem[tier].healPerSecond} healing a second.`;
+      case 'dizzying-flurry': return `${c.flurry.vortex[tier].durationMs / 1000}s spin that drags foes in and slows them ${pct(c.flurry.vortex[tier].slow)}%.`;
     }
   }
   switch (id) {
@@ -135,10 +132,9 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
     case 'move-speed': return '+24 movement speed.';
     case 'max-health': return '+20 max health. Heal 20. +1 HP/5s.';
     case 'projectile-count': return '+1 shot per volley.';
-    case 'gain-companion-mystery': return `Pouncing companion. ${Number(stats.mysteryDamage.toFixed(2))} damage per hit.`;
-    case 'gain-companion-midnight': return `Swatting companion. ${BALANCE.companion.midnightDamage} damage to nearby foes.`;
-    case 'gain-companion-frankie': return 'A black buzzard circles you and stoops on nearby foes. Feathers raise the flock’s damage.';
-    case 'frankie-flock': return `+1 buzzard (${stats.frankieCount} → ${Math.min(5, stats.frankieCount + 1)} of 5). They still moult damaging feathers.`;
+    case 'ribbon-sweep': return `Wide ribbon arc: ${c.ribbon.damage[rank]} damage, knocks foes back ${c.ribbon.knockback[rank]}.`;
+    case 'inspiring-shout': return `Rally for ${c.shout.durationMs / 1000}s: +${pct(c.shout.attackSpeed[rank])}% attack speed, +${pct(c.shout.moveSpeed[rank])}% movement.`;
+    case 'dizzying-flurry': return `Staff spin: ${c.flurry.damage[rank]} damage a hit within ${c.flurry.radius[rank]} pixels.`;
     case 'ricochet-charm': return `Shots bounce to ${rank} extra ${rank === 1 ? 'foe' : 'foes'}.`;
     case 'firefly-orbit': return `${c.firefly.count[rank]} orbiting fireflies. ${c.firefly.damage} damage each.`;
     case 'bramble-snare': return `Roots slow foes ${pct(c.bramble.slow[rank])}% for ${c.bramble.lifeMs[rank] / 1000}s.`;
@@ -150,5 +146,5 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
   }
 }
 export function ownedUpgrades(stats: PlayerStats): UpgradeId[] {
-  return [...ABILITY_IDS, ...BOSS_ABILITY_IDS, ...Object.keys(STAT_NAMES) as UpgradeId[]].filter(id => id !== 'frankie-flock' && upgradeRank(id, stats) > 0);
+  return [...ABILITY_IDS, ...BOSS_ABILITY_IDS, ...Object.keys(STAT_NAMES) as UpgradeId[]].filter(id => upgradeRank(id, stats) > 0);
 }

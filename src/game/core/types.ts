@@ -7,14 +7,15 @@ export type UpgradeId =
   | 'fire-rate'
   | 'move-speed'
   | 'max-health'
-  | 'projectile-count'
-  | 'gain-companion-mystery'
-  | 'gain-companion-midnight'
-  | 'gain-companion-frankie'
-  | 'frankie-flock';
+  | 'projectile-count';
 
 export type AbilityId = 'ricochet-charm' | 'firefly-orbit' | 'bramble-snare' | 'spore-trail'
-  | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce' | 'midnight-mighty-swat';
+  | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce' | 'midnight-mighty-swat'
+  | 'ribbon-sweep' | 'inspiring-shout' | 'dizzying-flurry';
+
+/** Every wanderer, and the one companion bound to each of them. */
+export type PlayerCharacterId = 'wizard' | 'hailey' | 'sheldon' | 'ron';
+export type CompanionId = 'mystery' | 'midnight' | 'frankie' | 'tobias';
 export type AbilityRank = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 export type BossAbilityId = 'crownfire' | 'stormcall' | 'phoenix-heart';
 export type UpgradeSource = 'level' | 'chest' | 'boss';
@@ -43,15 +44,25 @@ export interface PlayerStats {
   projectileCount: number;
   /** Harvest Wind: temporary projectile damage bonus, refreshed by the ability simulation each frame. */
   harvestBonus: number;
+  /** Which wanderer is being played; gates the abilities only they can learn. */
+  characterId: PlayerCharacterId;
+  /** The companion bound to that wanderer. Always present, never chosen. */
+  companionId: CompanionId;
+  /** Companion strength, raised automatically every few levels rather than by an upgrade card. */
+  companionRank: number;
   hasMysteryCompanion: boolean;
   hasMidnightCompanion: boolean;
   hasFrankieCompanion: boolean;
+  hasTobiasCompanion: boolean;
   frankieCount: number;
   frankieFeatherBonus: number;
   mysteryDamage: number;
   mysteryCooldownMs: number;
   mysteryPounceRange: number;
   mysteryReturnSpeed: number;
+  /** Inspiring Shout: multipliers the shout is currently granting, refreshed each frame. */
+  shoutAttackSpeedBonus: number;
+  shoutMoveSpeedBonus: number;
 }
 
 export interface UpgradeDefinition {

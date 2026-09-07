@@ -104,7 +104,19 @@ export const BALANCE = {
     frankieFeatherLifeMs: 18000,
     frankieFeatherBonus: 2,
     frankieFeatherCap: 40,
-    frankieCollectRange: 42
+    frankieCollectRange: 42,
+    /** Tobias the airborne tuna: cruises beside Ron, then torpedoes the nearest foe. */
+    tobiasDamage: 34,
+    tobiasCooldownMs: 1450,
+    tobiasHuntRange: 300,
+    tobiasDartSpeed: 620,
+    tobiasReturnSpeed: 340,
+    tobiasDartTimeoutMs: 800,
+    tobiasHitRadius: 26,
+    tobiasSwimRadius: 84,
+    tobiasSwimMs: 5200,
+    tobiasBobPixels: 16,
+    tobiasWakeMs: 620
   },
   chest: {
     chancePerLevel: 0.4,
