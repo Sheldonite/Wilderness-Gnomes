@@ -67,7 +67,7 @@ export class EnemySpawner {
       y = Phaser.Math.Between(Math.floor(view.top - padding), Math.floor(view.bottom + padding));
     }
 
-    const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius);
+    const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius, BALANCE.armadillo.radius);
     x = Phaser.Math.Clamp(x, margin, GAME_CONFIG.arena.width - margin);
     y = Phaser.Math.Clamp(y, margin, GAME_CONFIG.arena.height - margin);
 

@@ -397,6 +397,13 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.elapsedMs = 187000; this.gameManager.kills = 42; this.gameManager.level = 6;
       this.gameManager.xpToNextLevel = xpThreshold(6);
       this.gameManager.playerStats.health = 0; this.gameManager.state = 'GameOver';
+    } else if (review === 'armadillo') {
+      this.gameManager.level = 20; this.gameManager.xpToNextLevel = 100000;
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      for (let i = 0; i < 6; i++) {
+        const angle = i * 1.05;
+        this.enemies.push(new EnemyController(this, 1600 + Math.cos(angle) * 240, 1600 + Math.sin(angle) * 240, 0, this.scenerySystem.navigation, undefined, 'armadillo'));
+      }
     } else if (review === 'deer') {
       this.gameManager.level = 10; this.gameManager.xpToNextLevel = 100000;
       this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;

@@ -23,6 +23,22 @@ export const BALANCE = {
     fawn: { health: 34, speed: 150, contactDamage: 6, radius: 15, scale: 0.85 },
     buck: { health: 150, speed: 105, contactDamage: 20, radius: 26, scale: 1.55 }
   },
+  armadillo: {
+    unlockLevel: 20,
+    spawnChance: 0.25,
+    health: 96,
+    walkSpeed: 78,
+    rollSpeed: 340,
+    rollDistance: 260,
+    windupRange: 210,
+    curlMs: 380,
+    recoverMs: 520,
+    cooldownMs: 1600,
+    walkDamage: 10,
+    rollDamage: 20,
+    radius: 18,
+    scale: 1.2
+  },
   rangedEnemy: {
     unlockLevel: 5,
     spawnChance: 0.2,
