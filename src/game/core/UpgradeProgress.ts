@@ -1,4 +1,5 @@
-import { ABILITIES, ABILITY_IDS, ABILITY_NAMES, isAscended, isAwakened, tierName } from '../config/abilities';
+import { ABILITIES, ABILITY_IDS, ABILITY_NAMES, MAX_ABILITY_RANK, isAscended, isAwakened, tierName } from '../config/abilities';
+import { BOSS_ABILITY_IDS, BOSS_ABILITY_NAMES, MAX_BOSS_RANK, bossPower, isBossAbility } from '../config/bossAbilities';
 import { CROSSBOW_STAT_UPGRADES, WEAPONS } from '../config/weapons';
 import type { AbilityId, PlayerStats, UpgradeDefinition, UpgradeId } from './types';
 
@@ -8,17 +9,28 @@ const STAT_NAMES: Partial<Record<UpgradeId, string>> = {
   'gain-companion-mystery': 'Mystery', 'gain-companion-midnight': 'Midnight'
 };
 export const isAbility = (id: UpgradeId): id is AbilityId => ABILITY_IDS.includes(id as AbilityId);
+export const isRanked = (id: UpgradeId): boolean => isAbility(id) || isBossAbility(id);
+export const upgradeMaxRank = (id: UpgradeId): number => isBossAbility(id) ? MAX_BOSS_RANK : MAX_ABILITY_RANK;
 export function upgradeRank(id: UpgradeId, stats: PlayerStats): number {
+  if (isBossAbility(id)) return stats.bossAbilityRanks[id];
   if (isAbility(id)) return stats.abilityRanks[id];
   if (id === 'gain-companion-mystery') return Number(stats.hasMysteryCompanion);
   if (id === 'gain-companion-midnight') return Number(stats.hasMidnightCompanion);
   return stats.upgradeCounts[id] ?? 0;
 }
 export function upgradeName(id: UpgradeId, stats: PlayerStats): string {
+  if (isBossAbility(id)) return BOSS_ABILITY_NAMES[id];
   return isAbility(id) ? ABILITY_NAMES[id] : (stats.weaponId === 'crossbow' ? CROSSBOW_STAT_UPGRADES[id]?.title : undefined) ?? STAT_NAMES[id]!;
 }
 export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
   const rank = upgradeRank(id, stats);
+  if (isBossAbility(id)) {
+    if (!rank) return 'Not claimed from a boss yet';
+    const power = bossPower(id, rank);
+    if (id === 'crownfire') return `${power.damage} damage · ${power.radius}px radius · every 4s`;
+    if (id === 'stormcall') return `${power.damage} damage · ${power.targets} targets · every 3.5s`;
+    return `${power.heal} healing + ${power.damage} damage · every 10s`;
+  }
   if (isAbility(id) && !rank) return 'Not learned yet';
   if (isAbility(id) && isAwakened(rank)) return `${isAscended(rank) ? 'Ascended' : 'Awakened'}: ${tierName(id, rank)} (rank ${rank})`;
   switch (id) {
@@ -41,12 +53,12 @@ export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
 }
 export function upgradePreview(choice: UpgradeDefinition, stats: PlayerStats) {
   const current = upgradeRank(choice.id, stats);
-  const nextStats = { ...stats, abilityRanks: { ...stats.abilityRanks }, upgradeCounts: { ...stats.upgradeCounts } };
+  const nextStats = { ...stats, abilityRanks: { ...stats.abilityRanks }, bossAbilityRanks: { ...stats.bossAbilityRanks }, upgradeCounts: { ...stats.upgradeCounts } };
   choice.apply(nextStats);
   nextStats.upgradeCounts[choice.id] = current + 1;
-  return { current, next: current + 1, capped: isAbility(choice.id),
+  return { current, next: current + 1, capped: isRanked(choice.id), maxRank: upgradeMaxRank(choice.id),
     before: upgradeBenefit(choice.id, stats), after: upgradeBenefit(choice.id, nextStats) };
 }
 export function ownedUpgrades(stats: PlayerStats): UpgradeId[] {
-  return [...ABILITY_IDS, ...Object.keys(STAT_NAMES) as UpgradeId[]].filter(id => upgradeRank(id, stats) > 0);
+  return [...ABILITY_IDS, ...BOSS_ABILITY_IDS, ...Object.keys(STAT_NAMES) as UpgradeId[]].filter(id => upgradeRank(id, stats) > 0);
 }

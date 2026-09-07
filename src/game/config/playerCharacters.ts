@@ -54,7 +54,7 @@ const HAILEY_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> 
 export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinition> = {
   wizard: {
     id: 'wizard',
-    name: 'Code Wizard',
+    name: 'Nick',
     textureKey: PLAYER_SPRITE_KEY,
     scale: 0.4,
     idleAnimation: { key: 'player-idle-down' },

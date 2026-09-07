@@ -30,7 +30,7 @@ export class OvenBossSystem {
   }
 
   update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
-    if (this.encounter.shouldSpawn(this.game.level)) {
+    if (this.game.bossGate.required(this.game.level) === 'oven' && this.encounter.shouldSpawn(this.game.level)) {
       // Prefer a clear point on the player's bank, away from contact range.
       let spawn = this.navigation.nearest({ x: player.x + OVEN.spawnDistance, y: player.y }, OVEN.radius);
       for (let i = 0; i < 16; i++) {

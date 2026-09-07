@@ -27,7 +27,7 @@ export class StagBossSystem {
   }
 
   update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
-    if (this.encounter.shouldSpawn(this.game.level)) {
+    if (this.game.bossGate.required(this.game.level) === 'stag' && this.encounter.shouldSpawn(this.game.level)) {
       let spawn = this.navigation.nearest({ x: player.x - STAG.spawnDistance, y: player.y }, STAG.radius);
       for (let i = 0; i < 16; i++) {
         const angle = Math.PI + i * Math.PI / 8;

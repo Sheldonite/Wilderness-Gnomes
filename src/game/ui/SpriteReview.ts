@@ -9,7 +9,7 @@ export function showSpriteReview(scene: Phaser.Scene): void {
   const vectors = [[0, 0], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
   const columns = scene.scale.width / 9;
   scene.add.text(20, 12, 'DEVELOPMENT · Original likeness & animation review', { fontSize: '16px', color: '#efdab1' });
-  ['Code Wizard', 'Hailey', 'Mystery · walking', 'Mystery · pouncing'].forEach((label, row) => {
+  ['Nick', 'Hailey', 'Mystery · walking', 'Mystery · pouncing'].forEach((label, row) => {
     const y = 65 + row * 160;
     scene.add.text(16, y, label, { fontSize: '13px', color: '#efdab1' });
     names.forEach((name, col) => {

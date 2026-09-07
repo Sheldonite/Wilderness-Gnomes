@@ -1,7 +1,8 @@
 import { BALANCE } from '../config/balance';
 import { ABILITIES, awakeningTier, emptyAbilityRanks } from '../config/abilities';
 import { getWeapon } from '../config/weapons';
-import type { GameRunState, HudSnapshot, PlayerStats, WeaponId } from './types';
+import type { GameRunState, HudSnapshot, PlayerStats, WeaponId, UpgradeSource } from './types';
+import { BossGate } from './BossGate';
 
 /** XP needed to finish the given level: exponential early, then a fixed step per level. */
 export function xpThreshold(level: number): number {
@@ -13,6 +14,9 @@ export function xpThreshold(level: number): number {
 
 export class GameManager {
   state: GameRunState = 'Playing';
+  upgradeSource: UpgradeSource = 'level';
+  readonly bossGate = new BossGate();
+  bossUpgradeAvailable = false;
   elapsedMs = 0;
   kills = 0;
   level = 1;
@@ -33,6 +37,7 @@ export class GameManager {
       level: 1,
       upgradeCounts: {},
       abilityRanks: emptyAbilityRanks(),
+      bossAbilityRanks: { crownfire: 0, stormcall: 0, 'phoenix-heart': 0 },
       weaponId: arm.id,
       maxHealth: BALANCE.player.maxHealth,
       health: BALANCE.player.maxHealth,
@@ -91,7 +96,7 @@ export class GameManager {
     }
 
     this.xp += amount;
-    if (this.xp < this.xpToNextLevel) {
+    if (this.xp < this.xpToNextLevel || this.bossGate.required(this.level)) {
       return false;
     }
 
@@ -100,6 +105,7 @@ export class GameManager {
   }
 
   private advanceLevel(): void {
+    this.upgradeSource = 'level';
     this.xp -= this.xpToNextLevel;
     this.level += 1;
     this.playerStats.level = this.level;
@@ -107,10 +113,20 @@ export class GameManager {
     this.state = 'LevelUpPaused';
   }
 
+  openChestUpgrade(source: 'chest' | 'boss' = 'chest'): boolean {
+    if (this.state !== 'Playing') return false;
+    this.upgradeSource = source;
+    this.bossUpgradeAvailable = source === 'boss';
+    this.state = 'LevelUpPaused';
+    return true;
+  }
+
   resumeAfterUpgrade(): void {
     if (this.state === 'LevelUpPaused') {
       this.state = 'Playing';
-      if (this.xp >= this.xpToNextLevel) this.advanceLevel();
+      this.upgradeSource = 'level';
+      this.bossUpgradeAvailable = false;
+      if (this.xp >= this.xpToNextLevel && !this.bossGate.required(this.level)) this.advanceLevel();
     }
   }
 

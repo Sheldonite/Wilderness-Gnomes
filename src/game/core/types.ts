@@ -2,6 +2,7 @@ export type GameRunState = 'Start' | 'Playing' | 'Paused' | 'LevelUpPaused' | 'G
 
 export type UpgradeId =
   | AbilityId
+  | BossAbilityId
   | 'projectile-damage'
   | 'fire-rate'
   | 'move-speed'
@@ -13,6 +14,8 @@ export type UpgradeId =
 export type AbilityId = 'ricochet-charm' | 'firefly-orbit' | 'bramble-snare' | 'spore-trail'
   | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce';
 export type AbilityRank = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type BossAbilityId = 'crownfire' | 'stormcall' | 'phoenix-heart';
+export type UpgradeSource = 'level' | 'chest' | 'boss';
 export type AbilityRanks = Record<AbilityId, AbilityRank>;
 export type WeaponId = 'spell' | 'crossbow';
 
@@ -26,6 +29,7 @@ export interface PlayerStats {
   level: number;
   upgradeCounts: Partial<Record<UpgradeId, number>>;
   abilityRanks: AbilityRanks;
+  bossAbilityRanks: Record<BossAbilityId, AbilityRank>;
   weaponId: WeaponId;
   maxHealth: number;
   health: number;

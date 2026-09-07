@@ -4,7 +4,7 @@ Midnight is a separate, optional level-up recruitment, available to either wande
 
 ## Behavior
 
-Midnight walks at 260 pixels/second toward living enemies within 200 pixels of the player and returns when more than 280 pixels away. She stops within 42 pixels to swat, keeps her feet planted for the 480ms animation, and hits at 240ms. The strike deals 22 damage to enemies intersecting a 120-degree forward arc of radius 62; the cooldown is 1500ms from the start of the swat. The attack uses the shared defeat gate, so overlapping spells and companion attacks cannot duplicate kills or XP. Pause freezes her movement, animation and swat effect. Restart clears her recruitment, sprite and attack state.
+Midnight walks at 260 pixels/second toward living enemies within 200 pixels of the player and returns when more than 280 pixels away. She stops within 42 pixels to swat, keeps her feet planted for the 480ms animation, and hits at 240ms. The strike deals 88 damage to enemies intersecting a 120-degree forward arc of radius 62; the cooldown is 850ms from the start of the swat. The attack uses the shared defeat gate, so overlapping spells and companion attacks cannot duplicate kills or XP. Pause freezes her movement, animation and swat effect. Restart clears her recruitment, sprite and attack state.
 
 Values are centralized in `src/game/config/balance.ts`. No existing character images were replaced. Both cats participate in foreground-foliage fading and ground-shadow rendering. The pause menu identifies recruited companions and their attack styles.
 

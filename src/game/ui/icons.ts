@@ -1,6 +1,10 @@
 import type { UpgradeId } from '../core/types';
 
 const paths: Record<string, string> = {
+  crownfire: '<path d="m3 14 7 5 6-8 6 8 7-5-3 14H6ZM12 9c-3-5 3-6 4-9 1 4 7 5 4 9"/>',
+  stormcall: '<path d="M7 13C0 12 3 4 9 6 10-2 23 1 23 6c9-1 11 9 3 10H9m8-5-7 11h8l-4 9 12-14h-9Z"/>',
+  phoenix: '<path d="M16 28C4 25 1 15 3 6l9 10-2-13 6 8 6-8-2 13L29 6c2 9-1 19-13 22ZM16 16v8m-4-4h8"/>',
+  chest: '<path d="M4 15V9a5 5 0 0 1 5-5h14a5 5 0 0 1 5 5v19H4Zm0 0h24M9 4v24M23 4v24"/><path d="M13 13h6v7h-6Zm3 3v2"/>',
   ricochet: '<path d="m4 26 8-15 10 10 6-17m-7 3 7-3 1 8"/><circle cx="12" cy="11" r="3"/><circle cx="22" cy="21" r="3"/>',
   firefly: '<ellipse cx="16" cy="20" rx="4" ry="8"/><path d="M13 16C-3-1 0 25 12 20m7-4C35-1 32 25 20 20M14 11l-3-5m7 5 3-5"/>',
   roots: '<path d="M16 3v16m0-9L8 5m8 8 8-6M16 19l-9 6-4 4m13-10 8 4 4 6m-12-10-1 10M8 5 6 11m18-4 3 5"/>',
@@ -30,6 +34,7 @@ export function icon(name: string): string {
 }
 
 export const UPGRADE_ICONS: Record<UpgradeId, string> = {
+  crownfire: 'crownfire', stormcall: 'stormcall', 'phoenix-heart': 'phoenix',
   'gain-companion-midnight': 'paw',
   'ricochet-charm': 'ricochet', 'firefly-orbit': 'firefly', 'bramble-snare': 'roots', 'spore-trail': 'mushroom',
   'acorn-shower': 'acorn', 'barkskin-ward': 'shield', 'woodland-magnet': 'magnet', 'mystery-double-pounce': 'pounce',

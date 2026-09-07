@@ -99,6 +99,11 @@ kbd{font:10px "Segoe UI",sans-serif;border:1px solid currentColor;border-radius:
 .upgrade-card{position:relative;display:flex;align-items:center;flex-direction:column;text-align:center;min-height:279px;border:1px solid #b9bc9380;border-radius:6px;padding:25px 15px 17px;color:#2e4633;background:linear-gradient(#fffbee,#e9e6cc);transition:transform .2s,border-color .2s,box-shadow .2s}
 .upgrade-card:hover{transform:translateY(-5px);border-color:#a58d4b;box-shadow:0 7px 15px #73825a26}
 .upgrade-card:focus-visible{outline-color:#8a7438;outline-width:2px;outline-offset:3px}
+.upgrade-card.boss-relic{border:2px solid #b88938;background:radial-gradient(ellipse at top,#fff2c6,#f0dfc3 70%);box-shadow:0 0 19px #dcad5055,inset 0 0 24px #edc86c33;color:#654123}
+.upgrade-card.boss-relic:hover{border-color:#966420;box-shadow:0 0 28px #dda84480}
+.boss-relic .upgrade-art{color:#9b5822;background:radial-gradient(#ebc67599,transparent 72%)}
+.boss-relic .upgrade-category{color:#845223;font-weight:700;letter-spacing:1px}
+.boss-relic .upgrade-comparison>span:last-child{background:#e8cfaa;color:#674528}
 .upgrade-number{position:absolute;top:13px;left:13px;font:italic 13px Georgia,serif;color:#a1a881}
 .upgrade-art{width:70px;height:76px;display:grid;place-items:center;color:#688457;margin:0 0 14px;background:radial-gradient(#d8e1b9,#d8e1b900 70%)}
 .upgrade-art svg{width:42px;height:42px;stroke-width:1.3}
@@ -108,6 +113,19 @@ kbd{font:10px "Segoe UI",sans-serif;border:1px solid currentColor;border-radius:
 .upgrade-description{font-size:11px;color:#6f795d;line-height:1.6;margin-top:12px;flex:1}
 .upgrade-select{display:flex;align-items:center;justify-content:center;gap:12px;font-size:10px;color:#617747;border-top:1px solid #a9b78b40;width:100%;padding-top:13px;margin-top:18px}
 .upgrade-select svg{width:16px;height:16px}
+.upgrade-card.epic-companion{border-color:#ab67e0;background:radial-gradient(ellipse at top,#f2dfff,#eee3f6 60%,#e4d2f0);box-shadow:0 0 15px #a34ee64d,0 0 30px #9439dc26,inset 0 0 18px #c48bef30;color:#482462}
+.upgrade-card.epic-companion:hover{border-color:#843bbd;box-shadow:0 0 20px #a34ee680,0 0 36px #9439dc40,inset 0 0 22px #c48bef40}
+.upgrade-card.epic-companion:focus-visible{outline-color:#843bbd}
+.epic-companion .companion-art{background:radial-gradient(ellipse,#bb75ee80,transparent 72%)}
+.epic-companion .companion-art img{filter:drop-shadow(0 0 5px #d193ff) drop-shadow(0 0 11px #9a3de4);animation:epic-cat-glow 2.4s ease-in-out infinite alternate}
+.upgrade-panel .epic-companion .companion-art{height:58px;min-height:58px;flex-shrink:0;margin-bottom:14px}
+.upgrade-panel .epic-companion .companion-art img{height:58px;max-height:58px;max-width:70px;object-fit:contain}
+.epic-companion .upgrade-category{color:#71339e;font-weight:700;letter-spacing:1.5px}
+.epic-companion .upgrade-rank{color:#71339e}
+.epic-companion .upgrade-comparison>span:last-child{background:#dfc8f0;color:#482462}
+.epic-companion .upgrade-number,.epic-companion .upgrade-description{color:#70517e}
+.epic-companion .upgrade-select{color:#71339e;border-top-color:#a86bd04d}
+@keyframes epic-cat-glow{to{filter:drop-shadow(0 0 8px #e3b6ff) drop-shadow(0 0 17px #a044ed)}}
 .overlay-hint{font-size:8px!important;letter-spacing:1.5px;color:#929671!important;margin:21px 0 0!important}
 .overlay-hint kbd{font-size:8px;height:17px;min-width:17px}
 .pause-panel,.gameover-panel{max-width:590px;padding:36px 38px}

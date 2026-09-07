@@ -38,8 +38,8 @@ test('swat plants the feet and applies damage once at the extended-paw frame', (
   cat.update(600, player, [enemy], damage); assert.equal(cat.state, 'swatting');
   const planted = { ...cat.position }; assert.equal(enemy.health, 100);
   cat.update(239, player, [enemy], damage); assert.equal(enemy.health, 100);
-  cat.update(1, player, [enemy], damage); assert.equal(enemy.health, 78);
-  cat.update(239, player, [enemy], damage); assert.equal(enemy.health, 78); assert.deepEqual(cat.position, planted);
+  cat.update(1, player, [enemy], damage); assert.equal(enemy.health, 12);
+  cat.update(239, player, [enemy], damage); assert.equal(enemy.health, 12); assert.deepEqual(cat.position, planted);
   cat.update(1, player, [enemy], damage); assert.equal(cat.state, 'returning');
 });
 
@@ -48,7 +48,7 @@ test('swat hits the front arc and misses enemies behind or beyond its reach', ()
   const front = foe(x + 34, y), nearby = foe(x + 50, y + 20), behind = foe(x - 60, y), far = foe(x + 100, y);
   const enemies = [front, nearby, behind, far];
   cat.update(600, player, enemies, damage); cat.update(240, player, enemies, damage);
-  assert.equal(front.health, 78); assert.equal(nearby.health, 78);
+  assert.equal(front.health, 12); assert.equal(nearby.health, 12);
   assert.equal(behind.health, 100); assert.equal(far.health, 100);
 });
 
@@ -73,7 +73,7 @@ test('all four swat directions use the corresponding front hit arc', () => {
   for (const [dx, dy, facing] of [[34, 0, 'right'], [-34, 0, 'left'], [0, -34, 'up'], [0, 34, 'down']]) {
     const cat = new MidnightBehavior(player), enemy = foe(cat.position.x + dx, cat.position.y + dy);
     cat.update(600, player, [enemy], damage); assert.equal(cat.facing, facing);
-    cat.update(240, player, [enemy], damage); assert.equal(enemy.health, 78);
+    cat.update(240, player, [enemy], damage); assert.equal(enemy.health, 12);
     assert.equal(catFacing({ x: dx, y: dy }), facing);
   }
 });
@@ -85,11 +85,12 @@ test('overlapping Midnight and spell damage share the single-defeat gate', () =>
   combat.damage(enemy, 18); assert.equal(defeats, 1);
 });
 
-test('cooldown prevents another swat before 1500ms and a new companion has no old state', () => {
+test('cooldown prevents another swat before 850ms and a new companion has no old state', () => {
   const cat = new MidnightBehavior(player), enemy = foe(cat.position.x + 34, cat.position.y, 10000);
   cat.update(600, player, [enemy], damage); assert.equal(cat.swatSerial, 1);
-  for (let i = 0; i < 14; i++) cat.update(100, player, [enemy], damage);
+  for (let i = 0; i < 8; i++) cat.update(100, player, [enemy], damage);
   assert.equal(cat.swatSerial, 1);
-  cat.update(100, player, [enemy], damage); assert.equal(cat.swatSerial, 2);
+  cat.update(49, player, [enemy], damage); assert.equal(cat.swatSerial, 1);
+  cat.update(1, player, [enemy], damage); assert.equal(cat.swatSerial, 2);
   const fresh = new MidnightBehavior(player); assert.equal(fresh.swatSerial, 0); assert.equal(fresh.state, 'following');
 });

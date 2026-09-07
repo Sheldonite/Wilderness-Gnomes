@@ -1,6 +1,8 @@
 import { BALANCE } from '../config/balance';
 import { ABILITY_IDS, ABILITY_NAMES, ASCENSION_RANK, AWAKENING_RANK, MAX_ABILITY_RANK, describeAbility, rankUnlocked, tierName } from '../config/abilities';
 import { CROSSBOW_STAT_UPGRADES } from '../config/weapons';
+import { BOSS_ABILITY_IDS, BOSS_ABILITY_NAMES, MAX_BOSS_RANK, describeBossAbility, isBossAbility } from '../config/bossAbilities';
+import type { GameManager } from '../core/GameManager';
 import type { AbilityId, AbilityRank, PlayerStats, UpgradeDefinition } from '../core/types';
 
 export class UpgradeSystem {
@@ -9,7 +11,7 @@ export class UpgradeSystem {
     {
       id: 'gain-companion-midnight',
       title: 'Gain a Companion: Midnight',
-      description: 'Midnight joins you, walks up to nearby foes and swats them with her paw.',
+      description: `Midnight joins you with devastating paw swats: ${BALANCE.companion.midnightDamage} damage to every foe in her forward arc, with a ${BALANCE.companion.midnightCooldownMs / 1000}s attack cooldown.`,
       category: 'A FAMILIAR FRIEND',
       isAvailable: (stats) => !stats.hasMidnightCompanion,
       apply: (stats) => { stats.hasMidnightCompanion = true; }
@@ -59,7 +61,7 @@ export class UpgradeSystem {
     {
       id: 'gain-companion-mystery',
       title: 'Gain a Companion: Mystery',
-      description: 'Mystery joins you and pounces at nearby enemies.',
+      description: `Mystery joins you with powerful pounces: ${BALANCE.companion.mysteryDamage} damage per hit, with a ${BALANCE.companion.mysteryCooldownMs / 1000}s recovery between hunts.`,
       isAvailable: (stats) => !stats.hasMysteryCompanion,
       apply: (stats) => {
         stats.hasMysteryCompanion = true;
@@ -88,6 +90,7 @@ export class UpgradeSystem {
   }
 
   applyUpgrade(upgrade: UpgradeDefinition, stats: PlayerStats): void {
+    if (isBossAbility(upgrade.id)) return;
     if (upgrade.rank !== undefined && stats.abilityRanks[upgrade.id as AbilityId] !== upgrade.rank - 1) return;
     if (upgrade.isAvailable && !upgrade.isAvailable(stats)) return;
     upgrade.apply(stats);
@@ -109,6 +112,26 @@ export class UpgradeSystem {
       };
     });
     return [...this.upgrades.filter(u => !u.isAvailable || u.isAvailable(stats)).map(u => this.flavor(u, stats)), ...abilities];
+  }
+
+  getBossChoices(stats: PlayerStats): UpgradeDefinition[] {
+    return BOSS_ABILITY_IDS.filter(id => stats.bossAbilityRanks[id] < MAX_BOSS_RANK).map(id => {
+      const rank = (stats.bossAbilityRanks[id] + 1) as AbilityRank;
+      return { id, rank, title: BOSS_ABILITY_NAMES[id], category: 'BOSS RELIC',
+        description: `${describeBossAbility(id, rank)} Only boss chests can upgrade this ability.`,
+        isAvailable: (s: PlayerStats) => s.bossAbilityRanks[id] === rank - 1,
+        apply: (s: PlayerStats) => { s.bossAbilityRanks[id] = rank; } };
+    });
+  }
+
+  applyBossUpgrade(upgrade: UpgradeDefinition, game: GameManager): boolean {
+    if (game.state !== 'LevelUpPaused' || game.upgradeSource !== 'boss' || !game.bossUpgradeAvailable || !isBossAbility(upgrade.id)) return false;
+    const offer = this.getBossChoices(game.playerStats).find(choice => choice.id === upgrade.id && choice.rank === upgrade.rank);
+    if (!offer) return false;
+    offer.apply(game.playerStats);
+    game.playerStats.upgradeCounts[offer.id] = (game.playerStats.upgradeCounts[offer.id] ?? 0) + 1;
+    game.bossUpgradeAvailable = false;
+    return true;
   }
 
   private flavor(upgrade: UpgradeDefinition, stats: PlayerStats): UpgradeDefinition {

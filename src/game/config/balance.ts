@@ -56,16 +56,16 @@ export const BALANCE = {
     spreadRadians: 0.22
   },
   companion: {
-    mysteryDamage: 16,
-    mysteryCooldownMs: 2200,
+    mysteryDamage: 64,
+    mysteryCooldownMs: 1100,
     mysteryPounceRange: 420,
     mysteryPounceSpeed: 620,
     mysteryReturnSpeed: 260,
     mysteryHitRadius: 24,
     mysteryFollowDistance: 46,
     mysteryPounceTimeoutMs: 650,
-    midnightDamage: 22,
-    midnightCooldownMs: 1500,
+    midnightDamage: 88,
+    midnightCooldownMs: 850,
     midnightSwatDurationMs: 480,
     midnightSwatHitMs: 240,
     midnightSwatRange: 62,
@@ -74,6 +74,14 @@ export const BALANCE = {
     midnightLeashRange: 280,
     midnightWalkSpeed: 260,
     midnightFollowDistance: 46
+  },
+  chest: {
+    chancePerLevel: 0.4,
+    minSpawnDistance: 120,
+    maxSpawnDistance: 260,
+    collectRange: 38,
+    spacing: 70,
+    placementAttempts: 32
   },
   xp: {
     radius: 7,
