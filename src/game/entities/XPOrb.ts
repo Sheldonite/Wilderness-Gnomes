@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
+import { ABILITIES } from '../config/abilities';
 import type { Vector2Like } from '../core/types';
 import { distanceSq, normalize } from '../utils/math';
 
@@ -8,6 +9,7 @@ export class XPOrb {
   readonly radius = BALANCE.xp.radius;
   readonly sprite: Phaser.GameObjects.Sprite;
   isCollected = false;
+  private magnetized = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -25,15 +27,17 @@ export class XPOrb {
     }
 
     const magnetRangeSq = BALANCE.xp.magnetRange * BALANCE.xp.magnetRange;
-    if (distanceSq(this.position, playerPosition) > magnetRangeSq) {
+    if (!this.magnetized && distanceSq(this.position, playerPosition) > magnetRangeSq) {
       return;
     }
 
     const direction = normalize(playerPosition.x - this.sprite.x, playerPosition.y - this.sprite.y);
     const dt = deltaMs / 1000;
+    const travel = Math.min(Math.hypot(playerPosition.x - this.sprite.x, playerPosition.y - this.sprite.y),
+      (this.magnetized ? ABILITIES.magnet.speed : BALANCE.xp.magnetSpeed) * dt);
     this.sprite.setPosition(
-      this.sprite.x + direction.x * BALANCE.xp.magnetSpeed * dt,
-      this.sprite.y + direction.y * BALANCE.xp.magnetSpeed * dt
+      this.sprite.x + direction.x * travel,
+      this.sprite.y + direction.y * travel
     );
   }
 
@@ -41,6 +45,8 @@ export class XPOrb {
     this.sprite.scene.events.emit('presentation:collect', this.position);
     this.isCollected = true;
   }
+
+  attract(): void { this.magnetized = true; }
 
   destroy(): void {
     this.sprite.destroy();

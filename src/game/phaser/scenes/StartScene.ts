@@ -3,6 +3,7 @@ import { PLAYER_CHARACTERS, type PlayerCharacterId } from '../../config/playerCh
 import { ART } from '../../config/presentation';
 import { icon } from '../../ui/icons';
 import { showSpriteReview } from '../../ui/SpriteReview';
+import { showMidnightReview } from '../../ui/MidnightReview';
 
 export class StartScene extends Phaser.Scene {
   private selectedCharacterId: PlayerCharacterId = 'wizard';
@@ -21,6 +22,7 @@ export class StartScene extends Phaser.Scene {
   constructor() { super('StartScene'); }
 
   create(data: { skipReview?: boolean } = {}): void {
+    if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'midnight-sprites') { showMidnightReview(this); return; }
     this.reviewActive = import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review');
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'sprites') { showSpriteReview(this); return; }
     this.starting = false;

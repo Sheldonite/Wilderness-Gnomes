@@ -39,6 +39,7 @@ export class WeaponSystem {
     let closestDistance = Number.POSITIVE_INFINITY;
 
     for (const enemy of enemies) {
+      if (enemy.isDead) continue;
       const d = distanceSq(playerPosition, enemy.position);
       if (d < closestDistance) {
         closestDistance = d;
@@ -73,7 +74,8 @@ export class WeaponSystem {
             y: direction.y * BALANCE.weapon.projectileSpeed
           },
           BALANCE.weapon.projectileLifetimeMs,
-          stats.projectileDamage
+          stats.projectileDamage,
+          stats.abilityRanks['ricochet-charm']
         )
       );
     }

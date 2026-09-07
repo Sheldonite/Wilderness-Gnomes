@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
+import { ABILITIES } from '../config/abilities';
+import type { DealDamage } from '../core/CombatResolver';
+import { secondPounceTarget } from '../core/PounceChain';
 import {
   MYSTERY_POUNCE_ANIMATION_BY_DIRECTION,
   MYSTERY_SPRITE_KEY,
@@ -23,6 +26,7 @@ export class MysteryCompanion {
   private pounceAgeMs = 0;
   private target?: EnemyController;
   private hasHitThisPounce = false;
+  private isSecondPounce = false;
   private trailMs = 0;
   private lastMoveDirection: Vector2Like = { x: 0, y: 1 };
 
@@ -43,10 +47,10 @@ export class MysteryCompanion {
     playerPosition: Vector2Like,
     playerMovementDirection: Vector2Like,
     enemies: EnemyController[],
-    onEnemyKilled: (enemy: EnemyController) => void
+    damage: DealDamage
   ): void {
     if (this.state === 'pouncing') {
-      this.updatePounce(deltaMs, onEnemyKilled);
+      this.updatePounce(deltaMs, playerPosition, enemies, damage);
       return;
     }
 
@@ -80,7 +84,7 @@ export class MysteryCompanion {
     this.sprite.destroy();
   }
 
-  private updatePounce(deltaMs: number, onEnemyKilled: (enemy: EnemyController) => void): void {
+  private updatePounce(deltaMs: number, playerPosition: Vector2Like, enemies: EnemyController[], damage: DealDamage): void {
     this.trailMs += deltaMs;
     if (this.trailMs >= 55) { this.trailMs = 0; this.scene.events.emit('presentation:trail', this.position, LOOK.color.gold); }
     this.pounceAgeMs += deltaMs;
@@ -98,20 +102,24 @@ export class MysteryCompanion {
       distanceSq(this.position, this.target.position) <= hitDistance * hitDistance
     ) {
       this.hasHitThisPounce = true;
-      const killed = this.target.takeDamage(this.stats.mysteryDamage);
-      if (killed) {
-        onEnemyKilled(this.target);
+      const firstId = this.target.id;
+      const rank = this.stats.abilityRanks['mystery-double-pounce'];
+      damage(this.target, this.stats.mysteryDamage * (this.isSecondPounce ? ABILITIES.pounce.damageScale[rank] : 1));
+      if (!this.isSecondPounce) {
+        const next = secondPounceTarget(rank, firstId, this.position, playerPosition, this.stats.mysteryPounceRange, enemies);
+        if (next) { this.beginPounce(next, true); return; }
       }
       this.beginReturn();
     }
   }
 
-  private beginPounce(target: EnemyController): void {
+  private beginPounce(target: EnemyController, second = false): void {
     this.state = 'pouncing';
     this.target = target;
     this.hasHitThisPounce = false;
     this.pounceAgeMs = 0;
-    this.cooldownRemainingMs = this.stats.mysteryCooldownMs;
+    this.isSecondPounce = second;
+    if (!second) this.cooldownRemainingMs = this.stats.mysteryCooldownMs;
 
     const direction = normalize(target.position.x - this.sprite.x, target.position.y - this.sprite.y);
     this.lastMoveDirection = direction;
@@ -122,6 +130,7 @@ export class MysteryCompanion {
     this.state = 'returning';
     this.target = undefined;
     this.hasHitThisPounce = false;
+    this.isSecondPounce = false;
   }
 
   private moveToward(target: Vector2Like, speed: number, deltaMs: number): void {

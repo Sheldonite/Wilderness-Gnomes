@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
 import type { Vector2Like } from '../core/types';
+import { ProjectileFlight } from '../core/ProjectileFlight';
+import type { CombatTarget } from '../core/CombatResolver';
 
 let nextProjectileId = 1;
 
@@ -9,7 +11,7 @@ export class Projectile {
   readonly id = nextProjectileId++;
   readonly radius = BALANCE.weapon.projectileRadius;
   readonly sprite: Phaser.GameObjects.Sprite;
-  readonly hitEnemyIds = new Set<number>();
+  private readonly flight: ProjectileFlight;
   ageMs = 0;
   isDead = false;
   private trailMs = 0;
@@ -20,8 +22,10 @@ export class Projectile {
     y: number,
     private readonly velocity: Vector2Like,
     private readonly lifetimeMs: number,
-    readonly damage: number
+    damage: number,
+    bounces = 0
   ) {
+    this.flight = new ProjectileFlight(damage, bounces);
     this.sprite = scene.add.sprite(x, y, LOOK.texture.bolt).setDisplaySize(30, 30);
     this.sprite.setDepth(15);
     this.sprite.setRotation(Math.atan2(velocity.y, velocity.x));
@@ -43,10 +47,16 @@ export class Projectile {
     }
   }
 
-  markHit(enemyId: number): void {
-    this.hitEnemyIds.add(enemyId);
-    this.isDead = true;
+  markHit(enemyId: number, enemies: CombatTarget[]): void {
+    const direction = this.flight.hit(enemyId, this.position, enemies);
+    if (!direction) { this.isDead = true; return; }
+    const speed = Math.hypot(this.velocity.x, this.velocity.y);
+    this.velocity.x = direction.x * speed; this.velocity.y = direction.y * speed;
+    this.sprite.setRotation(Math.atan2(this.velocity.y, this.velocity.x));
   }
+
+  get hitEnemyIds(): Set<number> { return this.flight.hitEnemyIds; }
+  get damage(): number { return this.flight.damage; }
 
   destroy(): void {
     this.sprite.destroy();

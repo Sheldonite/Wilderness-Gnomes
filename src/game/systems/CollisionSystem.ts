@@ -5,6 +5,7 @@ import { PlayerController } from '../entities/PlayerController';
 import { Projectile } from '../entities/Projectile';
 import { XPOrb } from '../entities/XPOrb';
 import { distanceSq, normalize } from '../utils/math';
+import type { DealDamage } from '../core/CombatResolver';
 
 export class CollisionSystem {
   update(
@@ -14,11 +15,12 @@ export class CollisionSystem {
     enemies: EnemyController[],
     projectiles: Projectile[],
     xpOrbs: XPOrb[],
-    onEnemyKilled: (enemy: EnemyController) => void
+    damage: DealDamage
   ): void {
     this.handleEnemySeparation(enemies);
     this.handlePlayerEnemyContact(timeMs, player, gameManager, enemies);
-    this.handleProjectileEnemyHits(enemies, projectiles, onEnemyKilled);
+    if (gameManager.state !== 'Playing') return;
+    this.handleProjectileEnemyHits(enemies, projectiles, damage);
     this.handleXpCollection(player, gameManager, xpOrbs);
   }
 
@@ -42,7 +44,8 @@ export class CollisionSystem {
 
       if (timeMs - enemy.lastContactDamageAt >= BALANCE.enemy.contactDamageCooldownMs) {
         enemy.lastContactDamageAt = timeMs;
-        gameManager.damagePlayer(BALANCE.enemy.contactDamage);
+        gameManager.damagePlayer(BALANCE.enemy.contactDamage, 'contact');
+        if (gameManager.state !== 'Playing') return;
       }
     }
   }
@@ -50,7 +53,7 @@ export class CollisionSystem {
   private handleProjectileEnemyHits(
     enemies: EnemyController[],
     projectiles: Projectile[],
-    onEnemyKilled: (enemy: EnemyController) => void
+    damage: DealDamage
   ): void {
     for (const projectile of projectiles) {
       if (projectile.isDead) {
@@ -71,10 +74,8 @@ export class CollisionSystem {
           continue;
         }
 
-        projectile.markHit(enemy.id);
-        if (enemy.takeDamage(projectile.damage)) {
-          onEnemyKilled(enemy);
-        }
+        damage(enemy, projectile.damage);
+        projectile.markHit(enemy.id, enemies);
         break;
       }
     }
@@ -85,6 +86,7 @@ export class CollisionSystem {
     gameManager: GameManager,
     xpOrbs: XPOrb[]
   ): void {
+    if (gameManager.state !== 'Playing') return;
     const collectRangeSq = BALANCE.xp.collectRange * BALANCE.xp.collectRange;
 
     for (const orb of xpOrbs) {
@@ -93,8 +95,7 @@ export class CollisionSystem {
       }
 
       orb.collect();
-      gameManager.addXp(orb.value);
-      if (gameManager.state === 'LevelUpPaused') {
+      if (gameManager.addXp(orb.value)) {
         break;
       }
     }

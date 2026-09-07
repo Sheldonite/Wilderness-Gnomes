@@ -1,9 +1,18 @@
-import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
-import type { PlayerStats, UpgradeDefinition } from '../core/types';
+import { ABILITY_IDS, ABILITY_NAMES, describeAbility } from '../config/abilities';
+import type { AbilityId, AbilityRank, PlayerStats, UpgradeDefinition } from '../core/types';
 
 export class UpgradeSystem {
+  constructor(private readonly random: () => number = Math.random) {}
   private readonly upgrades: UpgradeDefinition[] = [
+    {
+      id: 'gain-companion-midnight',
+      title: 'Gain a Companion: Midnight',
+      description: 'Midnight joins you, walks up to nearby foes and swats them with her paw.',
+      category: 'A FAMILIAR FRIEND',
+      isAvailable: (stats) => !stats.hasMidnightCompanion,
+      apply: (stats) => { stats.hasMidnightCompanion = true; }
+    },
     {
       id: 'projectile-damage',
       title: 'Sharper Spell',
@@ -16,6 +25,7 @@ export class UpgradeSystem {
       id: 'fire-rate',
       title: 'Quicker Hex',
       description: 'Fire 15% faster',
+      isAvailable: (stats) => stats.weaponCooldownMs > 160,
       apply: (stats) => {
         stats.weaponCooldownMs = Math.max(160, Math.floor(stats.weaponCooldownMs * 0.85));
       }
@@ -57,14 +67,43 @@ export class UpgradeSystem {
   ];
 
   getChoices(stats: PlayerStats): UpgradeDefinition[] {
-    const pool = Phaser.Utils.Array.Shuffle(
-      this.upgrades.filter((upgrade) => !upgrade.isAvailable || upgrade.isAvailable(stats))
-    );
-    return pool.slice(0, BALANCE.leveling.choices);
+    const pool = this.getAvailable(stats);
+    const choices: UpgradeDefinition[] = [];
+    const choose = (candidates: UpgradeDefinition[]) => {
+      if (candidates.length) choices.push(candidates[Math.floor(this.random() * candidates.length)]);
+    };
+    choose(pool.filter(u => u.rank === 1 || u.id === 'gain-companion-mystery' || u.id === 'gain-companion-midnight'));
+    choose(pool.filter(u => u.rank !== undefined && u.rank > 1));
+    while (choices.length < BALANCE.leveling.choices) {
+      const remaining = pool.filter(u => !choices.some(choice => choice.id === u.id));
+      if (!remaining.length) break;
+      choose(remaining);
+    }
+    for (let i = choices.length - 1; i > 0; i--) {
+      const j = Math.floor(this.random() * (i + 1));
+      [choices[i], choices[j]] = [choices[j], choices[i]];
+    }
+    return choices;
   }
 
   applyUpgrade(upgrade: UpgradeDefinition, stats: PlayerStats): void {
+    if (upgrade.rank !== undefined && stats.abilityRanks[upgrade.id as AbilityId] !== upgrade.rank - 1) return;
+    if (upgrade.isAvailable && !upgrade.isAvailable(stats)) return;
     upgrade.apply(stats);
+  }
+
+  getAvailable(stats: PlayerStats): UpgradeDefinition[] {
+    const abilities = ABILITY_IDS.filter(id => stats.abilityRanks[id] < 3 &&
+      (id !== 'mystery-double-pounce' || stats.hasMysteryCompanion)).map(id => {
+      const rank = (stats.abilityRanks[id] + 1) as AbilityRank;
+      return {
+        id, rank, title: ABILITY_NAMES[id], description: describeAbility(id, rank),
+        category: rank === 1 ? 'NEW ABILITY' : `RANK ${rank} OF 3`,
+        isAvailable: (s: PlayerStats) => s.abilityRanks[id] === rank - 1 && (id !== 'mystery-double-pounce' || s.hasMysteryCompanion),
+        apply: (s: PlayerStats) => { s.abilityRanks[id] = rank; }
+      };
+    });
+    return [...this.upgrades.filter(u => !u.isAvailable || u.isAvailable(stats)), ...abilities];
   }
 
   getReviewChoices(): UpgradeDefinition[] {

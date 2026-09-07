@@ -3,6 +3,7 @@ import type { HudSnapshot, UpgradeDefinition } from '../core/types';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
 import { formatTime } from '../utils/math';
 import { icon, UPGRADE_ICONS } from './icons';
+import { ABILITY_IDS, ABILITY_NAMES, describeAbility } from '../config/abilities';
 
 export class UIManager {
   private readonly root: HTMLElement;
@@ -23,7 +24,7 @@ export class UIManager {
     const index = Number(event.key) - 1;
     if (index >= 0 && index < this.choices.length) { event.preventDefault(); this.choices[index](); return; }
     if (event.key !== 'Tab') return;
-    const buttons = Array.from(this.overlay.querySelectorAll<HTMLButtonElement>('button'));
+    const buttons = Array.from(this.overlay.querySelectorAll<HTMLElement>('button,[tabindex="0"]'));
     const first = buttons[0], last = buttons[buttons.length - 1];
     if (!first) return;
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -35,7 +36,8 @@ export class UIManager {
     onTogglePause: () => void,
     character: PlayerCharacterDefinition,
     portrait: string,
-    private readonly mysteryPortrait: string
+    private readonly mysteryPortrait: string,
+    private readonly midnightPortrait: string
   ) {
     this.root = document.getElementById('ui-root')!;
     this.root.innerHTML = `
@@ -86,6 +88,13 @@ export class UIManager {
   showPaused(onResume: () => void): void {
     const list = this.createOverlay('A moment of quiet', 'The woodland will wait for you.', 'ADVENTURE PAUSED', 'leaf', 'pause-panel');
     list.innerHTML = '<p class="pause-instruction">Take a breath. Your journey continues when you’re ready.</p>';
+    const friends = [this.gameManager.playerStats.hasMysteryCompanion ? 'Mystery · pounce' : '',
+      this.gameManager.playerStats.hasMidnightCompanion ? 'Midnight · swat' : ''].filter(Boolean);
+    if (friends.length) list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${friends.join(' &nbsp; / &nbsp; ')}</p>`);
+    const ranks = this.gameManager.playerStats.abilityRanks;
+    const owned = ABILITY_IDS.filter(id => ranks[id] > 0);
+    if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your abilities">${owned.map(id =>
+      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${ABILITY_NAMES[id]}</strong><small>Rank ${ranks[id]} of 3</small><span class="journal-description">${describeAbility(id, ranks[id])}</span></span></div>`).join('')}</div>`);
     this.addButton(list, 'Back to the woods', onResume, true);
     list.insertAdjacentHTML('beforeend', '<p class="overlay-hint">PRESS <kbd>ESC</kbd> TO RESUME</p>');
     this.focusFirst();
@@ -99,7 +108,11 @@ export class UIManager {
     choices.forEach((choice, index) => {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'upgrade-card';
       const isMystery = choice.id === 'gain-companion-mystery';
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isMystery ? 'companion-art' : ''}">${isMystery ? `<img src="${this.mysteryPortrait}" alt="Mystery, your tortoiseshell companion">` : icon(UPGRADE_ICONS[choice.id])}</span><span class="upgrade-category">${isMystery ? 'A FAMILIAR FRIEND' : 'WOODLAND BLESSING'}</span><strong>${choice.title}</strong><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">Choose blessing ${icon('arrow')}</span>`;
+      const isMidnight = choice.id === 'gain-companion-midnight';
+      const isCompanion = isMystery || isMidnight;
+      const portrait = isMidnight ? this.midnightPortrait : this.mysteryPortrait;
+      const name = isMidnight ? 'Midnight' : 'Mystery';
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}, your tortoiseshell companion">` : icon(UPGRADE_ICONS[choice.id])}</span><span class="upgrade-category">${choice.category ?? (isCompanion ? 'A FAMILIAR FRIEND' : 'WOODLAND BLESSING')}</span><strong>${choice.title}</strong><span class="upgrade-description">${choice.description}</span><span class="upgrade-select">Choose blessing ${icon('arrow')}</span>`;
       const select = () => { this.choices = []; onChoose(choice); this.clearOverlay(); };
       button.addEventListener('click', select); this.choices.push(select); list.append(button);
     });

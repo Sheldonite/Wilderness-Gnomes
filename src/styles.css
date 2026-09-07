@@ -102,6 +102,18 @@ kbd{font:10px "Segoe UI",sans-serif;border:1px solid currentColor;border-radius:
 .overlay-hint kbd{font-size:8px;height:17px;min-width:17px}
 .pause-panel,.gameover-panel{max-width:590px;padding:36px 38px}
 .pause-panel h2,.gameover-panel h2{font-size:37px}
+.pause-panel:has(.ability-journal){max-width:760px;padding:24px 30px}
+.pause-panel:has(.ability-journal) :is(.panel-emblem,.panel-intro,.pause-instruction){display:none}
+.ability-journal{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 22px;max-height:40vh;overflow:auto;text-align:left;padding:3px}
+.journal-ability{display:flex;gap:10px;border:1px solid #b9bc9360;border-radius:6px;padding:12px;background:#fff9e950}
+.journal-icon{flex:0 0 27px;color:#8a793e;padding-top:3px}.journal-icon svg{width:27px;height:27px}
+.journal-ability strong{display:block;font:17px/1.2 Georgia,serif}.journal-ability small{display:block;color:#7a7f56;font-size:9px;letter-spacing:1px;margin:5px 0}
+.journal-description{display:block;font-size:11px;line-height:1.4;color:#667252}
+.companion-journal{display:flex;align-items:center;justify-content:center;gap:9px;font:14px Georgia,serif;color:#657548;margin:14px 0}.companion-journal svg{width:23px;height:23px;flex-shrink:0}
+.ability-review-controls{position:fixed;right:14px;bottom:50px;z-index:65;display:flex;gap:5px;padding:7px;border-radius:5px;background:#173528e6;color:#fff4d5;font:11px system-ui}
+.ability-review-controls button{background:#f0e7cb;color:#284332;border:0;border-radius:3px;padding:5px 8px}.ability-review-controls span{align-self:center;padding:0 4px}
+body:has(.storybook-overlay) .ability-review-controls{display:none}
+@media(max-width:600px){.ability-journal{grid-template-columns:1fr}}
 .pause-instruction{font:14px/1.7 Georgia,serif;color:#788365;max-width:310px;margin:0 auto 26px}
 .primary-button{min-width:260px;margin:15px auto 0;padding:12px 24px;font-size:18px;box-shadow:0 3px 8px #64724820}
 .text-button{display:block;margin:15px auto 0;background:none;border:0;color:#72815d;font-size:11px;border-bottom:1px solid #87956e66;padding:4px}

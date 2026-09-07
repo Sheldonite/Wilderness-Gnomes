@@ -17,8 +17,12 @@ import { WeaponSystem } from '../../systems/WeaponSystem';
 import { DebugSpriteSheetMenu } from '../../ui/DebugSpriteSheetMenu';
 import { UIManager } from '../../ui/UIManager';
 import { PresentationSystem } from '../../systems/PresentationSystem';
+import { AbilitySystem } from '../../systems/AbilitySystem';
+import { CombatResolver, type CombatTarget } from '../../core/CombatResolver';
+import { ABILITY_IDS } from '../../config/abilities';
 import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
-import type { UpgradeDefinition } from '../../core/types';
+import { MIDNIGHT_SPRITE_KEY } from '../../config/midnightSprite';
+import type { AbilityId, AbilityRank, UpgradeDefinition } from '../../core/types';
 
 export class GameScene extends Phaser.Scene {
   private gameManager!: GameManager;
@@ -33,6 +37,8 @@ export class GameScene extends Phaser.Scene {
   private uiManager!: UIManager;
   private debugSpriteSheetMenu?: DebugSpriteSheetMenu;
   private presentation!: PresentationSystem;
+  private abilities!: AbilitySystem;
+  private combat!: CombatResolver;
   private visualsPaused = false;
   private reviewChoices?: UpgradeDefinition[];
   private keys!: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
@@ -45,6 +51,10 @@ export class GameScene extends Phaser.Scene {
   private readonly handleEscape = () => this.handleEscapePressed();
   private readonly finishReviewRun = () => this.gameManager.damagePlayer(this.gameManager.playerStats.health);
   private selectedCharacter!: PlayerCharacterDefinition;
+  private reviewControls?: HTMLElement;
+  private reviewWalking = false;
+  private reviewPathMs = 0;
+  private reviewKeepCrowdPickups = false;
 
   constructor() {
     super('GameScene');
@@ -56,6 +66,9 @@ export class GameScene extends Phaser.Scene {
     this.gameOverDisplayed = false;
     this.visualsPaused = false;
     this.reviewChoices = undefined;
+    this.reviewWalking = false;
+    this.reviewPathMs = 0;
+    this.reviewKeepCrowdPickups = false;
     this.anims.resumeAll();
     document.getElementById('game-root')?.classList.add('in-run');
     this.selectedCharacter = getPlayerCharacter(data.characterId);
@@ -68,9 +81,12 @@ export class GameScene extends Phaser.Scene {
     this.collisionSystem = new CollisionSystem();
     this.cameraController = new CameraController(this.cameras.main);
     this.uiManager = new UIManager(this.gameManager, () => this.togglePause(), this.selectedCharacter,
-      this.textures.getBase64(this.selectedCharacter.textureKey, 0), this.textures.getBase64(MYSTERY_SPRITE_KEY, 0));
+      this.textures.getBase64(this.selectedCharacter.textureKey, 0), this.textures.getBase64(MYSTERY_SPRITE_KEY, 0),
+      this.textures.getBase64(MIDNIGHT_SPRITE_KEY, 'walk-down-0'));
     this.debugSpriteSheetMenu = import.meta.env.DEV ? new DebugSpriteSheetMenu(this) : undefined;
     this.presentation = new PresentationSystem(this);
+    this.abilities = new AbilitySystem(this, this.gameManager.playerStats);
+    this.combat = new CombatResolver(enemy => this.killEnemy(enemy));
 
     this.scenerySystem.create();
 
@@ -95,11 +111,77 @@ export class GameScene extends Phaser.Scene {
     if (import.meta.env.DEV && !data.skipReview) this.setupReview();
     this.cameras.main.centerOn(this.player.position.x, this.player.position.y);
     this.presentation.update(0);
+    this.abilities.sync(this.player.position, this.gameManager.wardStatus);
     this.scenerySystem.update(100, [this.player.position]);
   }
 
   private setupReview(): void {
     const review = new URLSearchParams(location.search).get('review');
+    if (review === 'midnight' || review === 'companions' || review === 'midnight-upgrade') {
+      this.gameManager.playerStats.hasMidnightCompanion = review !== 'midnight-upgrade';
+      this.gameManager.playerStats.hasMysteryCompanion = review === 'companions';
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      this.gameManager.xpToNextLevel = 100000;
+      for (let i = 0; i < 10; i++) {
+        const angle = i * 2.39996;
+        const enemy = new EnemyController(this, 1600 + Math.cos(angle) * 130, 1600 + Math.sin(angle) * 130, 0);
+        enemy.health = 500; this.enemies.push(enemy);
+      }
+      if (review === 'midnight-upgrade') {
+        this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u => ['gain-companion-midnight', 'gain-companion-mystery', 'max-health'].includes(u.id));
+        this.gameManager.level = 2; this.gameManager.state = 'LevelUpPaused';
+      }
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span>COMPANION REVIEW</span><button type="button">Walk trail</button><button type="button">End run</button>';
+      const buttons = this.reviewControls.querySelectorAll('button');
+      buttons[0].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[0].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
+      buttons[1].onclick = () => this.gameManager.damagePlayer(this.gameManager.playerStats.health);
+      document.body.append(this.reviewControls);
+      return;
+    }
+    if (review === 'abilities' || review === 'ability-crowd' || review === 'ability-baseline' || review === 'ability-cards') {
+      const params = new URLSearchParams(location.search);
+      const id = params.get('ability') as AbilityId | null;
+      const requestedRank = Number(params.get('rank') ?? 3);
+      const rank = Math.min(3, Math.max(1, Number.isFinite(requestedRank) ? Math.floor(requestedRank) : 3)) as AbilityRank;
+      const chosen = id && ABILITY_IDS.includes(id) ? [id] : ABILITY_IDS;
+      if (review !== 'ability-baseline') {
+        for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = rank;
+        if (chosen.includes('mystery-double-pounce')) this.gameManager.playerStats.hasMysteryCompanion = true;
+      }
+      const crowded = review === 'ability-crowd' || review === 'ability-baseline';
+      this.reviewKeepCrowdPickups = review === 'ability-crowd';
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      this.gameManager.xpToNextLevel = 100000;
+      for (let i = 0; i < (crowded ? 180 : 12); i++) {
+        const angle = i * 2.39996, radius = crowded ? 240 + (i % 10) * 24 : 100 + (i % 4) * 70;
+        const enemy = new EnemyController(this, 1600 + Math.cos(angle) * radius, 1600 + Math.sin(angle) * radius, 0);
+        enemy.health = crowded ? 100000 : 100;
+        this.enemies.push(enemy);
+      }
+      for (let i = 0; i < 220; i++) this.xpOrbs.push(new XPOrb(this, 1600 + Math.cos(i * 2.4) * (220 + i % 20 * 12), 1600 + Math.sin(i * 2.4) * (220 + i % 20 * 12), 8));
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span>ABILITY REVIEW</span><button type="button">Walk trail</button><button type="button">Level up</button><button type="button">End run</button>';
+      const buttons = this.reviewControls.querySelectorAll('button');
+      buttons[0].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[0].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
+      buttons[1].onclick = () => { this.gameManager.addXp(Math.max(0, this.gameManager.xpToNextLevel - this.gameManager.xp)); };
+      buttons[2].onclick = () => { this.gameManager.damagePlayer(this.gameManager.playerStats.health); };
+      document.body.append(this.reviewControls);
+      if (review === 'ability-cards') {
+        const displayRank = rank;
+        for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = (displayRank - 1) as AbilityRank;
+        this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u =>
+          (id && ABILITY_IDS.includes(id)) ? u.id === id : ['ricochet-charm', 'firefly-orbit', 'mystery-double-pounce'].includes(u.id));
+        // Always render three real offers, including a requested ability if supplied.
+        for (const offer of this.upgradeSystem.getAvailable(this.gameManager.playerStats)) {
+          if (this.reviewChoices.length >= 3) break;
+          if (!this.reviewChoices.some(u => u.id === offer.id)) this.reviewChoices.push(offer);
+        }
+        this.gameManager.level = 2;
+        this.gameManager.state = 'LevelUpPaused';
+      }
+      return;
+    }
     if (review === 'crowd') {
       this.gameManager.playerStats.health = 100000;
       this.gameManager.playerStats.maxHealth = 100000;
@@ -132,7 +214,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  update(timeMs: number, deltaMs: number): void {
+  update(_timeMs: number, deltaMs: number): void {
     if (import.meta.env.DEV) {
       const readout = document.getElementById('performance-readout');
       if (readout) { readout.dataset.enemies = String(this.enemies.length); readout.dataset.pickups = String(this.xpOrbs.length); }
@@ -163,6 +245,14 @@ export class GameScene extends Phaser.Scene {
     this.levelUpDisplayed = false;
     this.pausedDisplayed = false;
     this.gameManager.update(deltaMs);
+    if (import.meta.env.DEV && this.reviewWalking) {
+      this.reviewPathMs += deltaMs;
+      const direction = Math.floor(this.reviewPathMs / 850) % 4;
+      for (const [i, key] of [this.keys.d, this.keys.s, this.keys.a, this.keys.w].entries()) key.isDown = i === direction;
+    } else if (import.meta.env.DEV && this.reviewPathMs) {
+      for (const key of Object.values(this.keys)) key.isDown = false;
+      this.reviewPathMs = 0;
+    }
     this.player.update(deltaMs, this.keys);
     this.cameraController.update(this.player.position);
 
@@ -176,6 +266,7 @@ export class GameScene extends Phaser.Scene {
       this.projectiles
     );
 
+    this.abilities.update(deltaMs, this.player.position, this.enemies, this.xpOrbs, this.combat.damage);
     for (const enemy of this.enemies) {
       enemy.update(deltaMs, this.player.position, difficulty);
     }
@@ -185,7 +276,7 @@ export class GameScene extends Phaser.Scene {
       this.player.position,
       this.player.currentMovementDirection,
       this.enemies,
-      (enemy) => this.killEnemy(enemy)
+      this.combat.damage
     );
 
     for (const projectile of this.projectiles) {
@@ -198,38 +289,37 @@ export class GameScene extends Phaser.Scene {
 
     const healthBefore = this.gameManager.playerStats.health;
     this.collisionSystem.update(
-      timeMs,
+      this.gameManager.elapsedMs,
       this.player,
       this.gameManager,
       this.enemies,
       this.projectiles,
       this.xpOrbs,
-      (enemy) => this.killEnemy(enemy)
+      this.combat.damage
     );
     if (this.gameManager.playerStats.health < healthBefore) this.events.emit('presentation:hit', this.player.sprite);
+    this.abilities.sync(this.player.position, this.gameManager.wardStatus);
     this.presentation.update(deltaMs);
     const subjects = [this.player.position, ...this.enemies.map(e => e.position), ...this.xpOrbs.map(o => o.position)];
-    const companion = this.companionSystem.position;
-    if (companion) subjects.push(companion);
+    subjects.push(...this.companionSystem.positions);
     this.scenerySystem.update(deltaMs, subjects);
 
     this.cleanupDeadObjects();
+    if (import.meta.env.DEV && this.reviewKeepCrowdPickups) {
+      while (this.xpOrbs.length < BALANCE.xp.maxOrbs) {
+        const i = this.xpOrbs.length;
+        this.xpOrbs.push(new XPOrb(this, 1600 + Math.cos(i * 2.4) * (220 + i % 20 * 12), 1600 + Math.sin(i * 2.4) * (220 + i % 20 * 12), 8));
+      }
+    }
   }
 
-  private killEnemy(enemy: EnemyController): void {
-    if (!this.enemies.includes(enemy)) {
-      return;
-    }
-
-    enemy.isDead = true;
+  private killEnemy(enemy: CombatTarget): void {
     this.events.emit('presentation:defeat', enemy.position);
     this.gameManager.addKill();
     if (this.xpOrbs.length < BALANCE.xp.maxOrbs) {
-      this.xpOrbs.push(new XPOrb(this, enemy.sprite.x, enemy.sprite.y, BALANCE.enemy.xpValue));
+      this.xpOrbs.push(new XPOrb(this, enemy.position.x, enemy.position.y, BALANCE.enemy.xpValue));
     }
 
-    enemy.destroy();
-    this.enemies = this.enemies.filter((candidate) => candidate !== enemy);
   }
 
   private showLevelUpOnce(): void {
@@ -242,6 +332,8 @@ export class GameScene extends Phaser.Scene {
     this.reviewChoices = undefined;
     this.uiManager.showLevelUp(choices, (choice) => {
       this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
+      this.abilities.sync(this.player.position, this.gameManager.wardStatus);
+      this.levelUpDisplayed = false;
       this.gameManager.resumeAfterUpgrade();
       this.events.emit('presentation:level', this.player.position);
     });
@@ -304,6 +396,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private cleanupDeadObjects(): void {
+    for (const enemy of this.enemies) if (enemy.isDead) { enemy.destroy(); this.combat.release(enemy.id); }
+    this.enemies = this.enemies.filter(enemy => !enemy.isDead);
     for (const projectile of this.projectiles) {
       if (projectile.isDead) {
         projectile.destroy();
@@ -320,12 +414,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private destroyRunObjects(): void {
+    this.reviewControls?.remove(); this.reviewControls = undefined;
     this.anims.resumeAll();
     this.input.keyboard?.off('keydown-ESC', this.handleEscape);
     this.input.keyboard?.off('keydown-F10', this.finishReviewRun);
     this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
     this.companionSystem?.destroy();
+    this.abilities?.destroy();
     this.player?.destroy();
     for (const enemy of this.enemies) {
       enemy.destroy();

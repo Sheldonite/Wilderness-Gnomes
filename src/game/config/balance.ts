@@ -40,7 +40,17 @@ export const BALANCE = {
     mysteryReturnSpeed: 260,
     mysteryHitRadius: 24,
     mysteryFollowDistance: 46,
-    mysteryPounceTimeoutMs: 650
+    mysteryPounceTimeoutMs: 650,
+    midnightDamage: 22,
+    midnightCooldownMs: 1500,
+    midnightSwatDurationMs: 480,
+    midnightSwatHitMs: 240,
+    midnightSwatRange: 62,
+    midnightApproachRange: 42,
+    midnightSeekRange: 200,
+    midnightLeashRange: 280,
+    midnightWalkSpeed: 260,
+    midnightFollowDistance: 46
   },
   xp: {
     radius: 7,

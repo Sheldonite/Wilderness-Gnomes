@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ART } from '../../config/presentation';
 import { createStorybookTextures } from '../storybookTextures';
+import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } from '../../config/midnightSprite';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import haileySpriteSheetUrl from '../../../assets/sprites/Hailey-Walk.png';
 import squirrelEnemySpriteSheetUrl from '../../../assets/sprites/squirrel-enemy-spritesheet.png';
@@ -50,6 +51,7 @@ export class BootScene extends Phaser.Scene {
     this.load.on('progress', (value: number) => { fill.style.transform = `scaleX(${value})`; });
     this.load.on('loaderror', () => { root.querySelector('p')!.textContent = 'A woodland asset could not load. Please refresh to try again.'; });
     this.load.image('storybook-title', ART.title);
+    this.load.image(MIDNIGHT_SOURCE_KEY, MIDNIGHT_SOURCE_URL);
     this.load.image('storybook-ground-source', ART.ground);
     this.load.image('storybook-props-source', ART.props);
     this.load.image('storybook-water-source', ART.water);
@@ -87,6 +89,7 @@ export class BootScene extends Phaser.Scene {
     this.createHaileyAnimations();
     this.createEnemyAnimations();
     this.createMysteryAnimations();
+    createMidnightAnimations(this);
     this.scene.start('StartScene');
   }
 

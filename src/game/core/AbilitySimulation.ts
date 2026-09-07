@@ -1,0 +1,132 @@
+import { ABILITIES } from '../config/abilities';
+import type { AbilityId, PlayerStats, Vector2Like } from './types';
+import type { CombatTarget, DealDamage } from './CombatResolver';
+import { distanceSq } from '../utils/math';
+
+export interface AbilityEnemy extends CombatTarget { slowMultiplier: number; }
+export interface MagnetPickup { position: Vector2Like; isCollected: boolean; attract(): void; }
+export interface Patch extends Vector2Like { bornAt: number; expiresAt: number; radius: number; strength: number; }
+export interface SporePatch extends Patch { trailAngle: number; }
+export interface Acorn extends Vector2Like { landsAt: number; radius: number; damage: number; }
+export interface AbilityEvent { kind: 'magnet' | 'impact'; position: Vector2Like; radius: number; }
+
+/** Pure gameplay simulation. Renderer capacity and reduced motion cannot change its results. */
+export class AbilitySimulation {
+  elapsedMs = 0;
+  readonly fireflies: Vector2Like[] = [];
+  brambles: Patch[] = [];
+  spores: SporePatch[] = [];
+  acorns: Acorn[] = [];
+  readonly events: AbilityEvent[] = [];
+  private readonly due = new Map<AbilityId, number>();
+  private readonly fireflyHits = new Map<number, number>();
+  private readonly sporeExposure = new Map<number, number>();
+  private lastSpore?: Vector2Like;
+
+  constructor(private readonly stats: PlayerStats) {}
+
+  sync(position: Vector2Like): void {
+    const r = this.stats.abilityRanks;
+    for (const [id, cooldown] of [
+      ['bramble-snare', ABILITIES.bramble.cooldownMs], ['spore-trail', ABILITIES.spore.cooldownMs],
+      ['acorn-shower', ABILITIES.acorn.cooldownMs], ['woodland-magnet', ABILITIES.magnet.cooldownMs[r['woodland-magnet']]]
+    ] as const) {
+      if (r[id] && !this.due.has(id)) {
+        this.due.set(id, this.elapsedMs + cooldown);
+        if (id === 'spore-trail') this.lastSpore = { ...position };
+      }
+    }
+    this.updateFireflyPositions(position);
+  }
+
+  update(deltaMs: number, position: Vector2Like, enemies: AbilityEnemy[], pickups: MagnetPickup[], damage: DealDamage): void {
+    this.sync(position);
+    const previousMs = this.elapsedMs;
+    this.elapsedMs += deltaMs;
+    this.events.length = 0;
+    this.brambles = this.brambles.filter(p => p.expiresAt > this.elapsedMs);
+    this.spores = this.spores.filter(p => p.expiresAt > previousMs);
+    const ranks = this.stats.abilityRanks;
+    if (this.ready('bramble-snare')) {
+      const target = this.closest(position, enemies, ABILITIES.bramble.targetRange);
+      if (target) {
+        this.brambles.push({ ...target.position, bornAt: this.elapsedMs, radius: ABILITIES.bramble.radius,
+          expiresAt: this.elapsedMs + ABILITIES.bramble.lifeMs[ranks['bramble-snare']], strength: ABILITIES.bramble.slow[ranks['bramble-snare']] });
+        this.due.set('bramble-snare', this.elapsedMs + ABILITIES.bramble.cooldownMs);
+      }
+    }
+    if (this.ready('spore-trail') && this.lastSpore && distanceSq(position, this.lastSpore) >= ABILITIES.spore.spacing ** 2) {
+      this.spores.push({ ...position, bornAt: this.elapsedMs, radius: ABILITIES.spore.radius, expiresAt: this.elapsedMs + ABILITIES.spore.lifeMs,
+        trailAngle: Math.atan2(position.y - this.lastSpore.y, position.x - this.lastSpore.x),
+        strength: ABILITIES.spore.damagePerSecond[ranks['spore-trail']] });
+      this.lastSpore = { ...position };
+      this.due.set('spore-trail', this.elapsedMs + ABILITIES.spore.cooldownMs);
+    }
+    if (this.ready('acorn-shower')) {
+      const target = this.closest(position, enemies, ABILITIES.acorn.targetRange);
+      if (target) {
+        this.acorns.push({ ...target.position, landsAt: this.elapsedMs + ABILITIES.acorn.warningMs,
+          radius: ABILITIES.acorn.radius[ranks['acorn-shower']], damage: ABILITIES.acorn.damage[ranks['acorn-shower']] });
+        this.due.set('acorn-shower', this.elapsedMs + ABILITIES.acorn.cooldownMs);
+      }
+    }
+    if (this.ready('woodland-magnet')) {
+      const radius = ABILITIES.magnet.range[ranks['woodland-magnet']];
+      for (const pickup of pickups) if (!pickup.isCollected && distanceSq(position, pickup.position) <= radius ** 2) pickup.attract();
+      this.events.push({ kind: 'magnet', position: { ...position }, radius });
+      this.due.set('woodland-magnet', this.elapsedMs + ABILITIES.magnet.cooldownMs[ranks['woodland-magnet']]);
+    }
+    this.updateFireflyPositions(position);
+    const living = new Set<number>();
+    for (const enemy of enemies) {
+      if (enemy.isDead) continue;
+      living.add(enemy.id);
+      enemy.slowMultiplier = 1;
+      for (const patch of this.brambles) if (distanceSq(enemy.position, patch) <= patch.radius ** 2) enemy.slowMultiplier = Math.min(enemy.slowMultiplier, 1 - patch.strength);
+      if (this.elapsedMs >= (this.fireflyHits.get(enemy.id) ?? 0) && this.fireflies.some(f => distanceSq(f, enemy.position) <= (enemy.radius + ABILITIES.firefly.hitRadius) ** 2)) {
+        damage(enemy, ABILITIES.firefly.damage);
+        this.fireflyHits.set(enemy.id, this.elapsedMs + ABILITIES.firefly.hitCooldownMs);
+      }
+      const patches = this.spores.filter(p => distanceSq(enemy.position, p) <= p.radius ** 2);
+      if (patches.length && !enemy.isDead) {
+        // Include the last fraction of an expiring patch so its full lifetime deals the listed DPS.
+        const coveredMs = Math.max(0, Math.min(this.elapsedMs, Math.max(...patches.map(p => p.expiresAt))) -
+          Math.max(previousMs, Math.min(...patches.map(p => p.bornAt))));
+        const exposure = (this.sporeExposure.get(enemy.id) ?? 0) + coveredMs;
+        const ticks = Math.floor((exposure + 1e-6) / ABILITIES.spore.tickMs);
+        if (ticks) damage(enemy, ticks * Math.max(...patches.map(p => p.strength)) * ABILITIES.spore.tickMs / 1000);
+        this.sporeExposure.set(enemy.id, Math.max(0, exposure - ticks * ABILITIES.spore.tickMs));
+      } else this.sporeExposure.delete(enemy.id);
+    }
+    for (const acorn of this.acorns) {
+      if (acorn.landsAt > this.elapsedMs) continue;
+      for (const enemy of enemies) if (!enemy.isDead && distanceSq(enemy.position, acorn) <= (acorn.radius + enemy.radius) ** 2) damage(enemy, acorn.damage);
+      this.events.push({ kind: 'impact', position: acorn, radius: acorn.radius });
+    }
+    this.acorns = this.acorns.filter(a => a.landsAt > this.elapsedMs);
+    this.spores = this.spores.filter(p => p.expiresAt > this.elapsedMs);
+    if (this.spores.length > ABILITIES.spore.maxPatches) this.spores = this.spores.slice(-ABILITIES.spore.maxPatches);
+    for (const map of [this.fireflyHits, this.sporeExposure]) for (const id of map.keys()) if (!living.has(id)) map.delete(id);
+  }
+
+  private ready(id: AbilityId): boolean { return this.due.has(id) && this.elapsedMs >= this.due.get(id)!; }
+
+  private closest(position: Vector2Like, enemies: AbilityEnemy[], range: number): AbilityEnemy | undefined {
+    let closest: AbilityEnemy | undefined;
+    let nearest = range ** 2;
+    for (const enemy of enemies) {
+      const d = distanceSq(position, enemy.position);
+      if (!enemy.isDead && d <= nearest) { closest = enemy; nearest = d; }
+    }
+    return closest;
+  }
+
+  private updateFireflyPositions(position: Vector2Like): void {
+    const count = ABILITIES.firefly.count[this.stats.abilityRanks['firefly-orbit']];
+    this.fireflies.length = count;
+    for (let i = 0; i < count; i++) {
+      const angle = this.elapsedMs / ABILITIES.firefly.orbitMs * Math.PI * 2 + i / count * Math.PI * 2;
+      this.fireflies[i] = { x: position.x + Math.cos(angle) * ABILITIES.firefly.radius, y: position.y + Math.sin(angle) * ABILITIES.firefly.radius };
+    }
+  }
+}

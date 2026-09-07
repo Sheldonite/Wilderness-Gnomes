@@ -16,6 +16,7 @@ export class EnemyController {
   readonly sprite: Phaser.GameObjects.Sprite;
   health: number = BALANCE.enemy.health;
   isDead = false;
+  slowMultiplier = 1;
   lastContactDamageAt = -Infinity;
 
   constructor(scene: Phaser.Scene, x: number, y: number, difficultyMinutes: number) {
@@ -28,7 +29,8 @@ export class EnemyController {
   }
 
   update(deltaMs: number, target: Vector2Like, difficultyMinutes: number): void {
-    const speed = BALANCE.enemy.speed + difficultyMinutes * 8;
+    if (this.isDead) return;
+    const speed = (BALANCE.enemy.speed + difficultyMinutes * 8) * this.slowMultiplier;
     const direction = normalize(target.x - this.sprite.x, target.y - this.sprite.y);
     const dt = deltaMs / 1000;
     const next = clampToArena(
@@ -55,7 +57,7 @@ export class EnemyController {
 
   takeDamage(amount: number): boolean {
     if (this.isDead) {
-      return true;
+      return false;
     }
 
     this.health -= amount;
