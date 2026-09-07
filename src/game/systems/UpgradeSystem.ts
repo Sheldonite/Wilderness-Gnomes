@@ -66,6 +66,22 @@ export class UpgradeSystem {
       apply: (stats) => {
         stats.hasMysteryCompanion = true;
       }
+    },
+    {
+      id: 'gain-companion-frankie',
+      title: 'Gain a Companion: Frankie',
+      description: 'Frankie, a black buzzard, circles you and stoops on nearby foes. He moults feathers that sharpen every talon.',
+      category: 'A FAMILIAR FRIEND',
+      isAvailable: (stats) => !stats.hasFrankieCompanion,
+      apply: (stats) => { stats.hasFrankieCompanion = true; stats.frankieCount = 1; }
+    },
+    {
+      id: 'frankie-flock',
+      title: 'Frankie’s Flock',
+      description: '+1 buzzard in the circle, up to 5. They still drop feathers that raise the whole flock’s damage.',
+      category: 'A FAMILIAR FRIEND',
+      isAvailable: (stats) => stats.hasFrankieCompanion && stats.frankieCount < 5,
+      apply: (stats) => { stats.frankieCount = Math.min(5, stats.frankieCount + 1); }
     }
   ];
 
@@ -75,7 +91,7 @@ export class UpgradeSystem {
     const choose = (candidates: UpgradeDefinition[]) => {
       if (candidates.length) choices.push(candidates[Math.floor(this.random() * candidates.length)]);
     };
-    choose(pool.filter(u => u.rank === 1 || u.id === 'gain-companion-mystery' || u.id === 'gain-companion-midnight'));
+    choose(pool.filter(u => u.rank === 1 || u.id === 'gain-companion-mystery' || u.id === 'gain-companion-midnight' || u.id === 'gain-companion-frankie'));
     choose(pool.filter(u => u.rank !== undefined && u.rank > 1));
     while (choices.length < BALANCE.leveling.choices) {
       const remaining = pool.filter(u => !choices.some(choice => choice.id === u.id));

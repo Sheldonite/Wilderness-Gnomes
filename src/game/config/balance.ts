@@ -73,7 +73,22 @@ export const BALANCE = {
     midnightSeekRange: 200,
     midnightLeashRange: 280,
     midnightWalkSpeed: 260,
-    midnightFollowDistance: 46
+    midnightFollowDistance: 46,
+    frankieMaxBirds: 5,
+    frankieOrbitRadius: 100,
+    frankieOrbitMs: 4500,
+    frankieHuntRange: 280,
+    frankieDiveSpeed: 540,
+    frankieReturnSpeed: 320,
+    frankieDiveTimeoutMs: 900,
+    frankieHitRadius: 22,
+    frankieDamage: 14,
+    frankieCooldownMs: 1700,
+    frankieFeatherMs: 8000,
+    frankieFeatherLifeMs: 14000,
+    frankieFeatherBonus: 2,
+    frankieFeatherCap: 40,
+    frankieCollectRange: 30
   },
   chest: {
     chancePerLevel: 0.4,

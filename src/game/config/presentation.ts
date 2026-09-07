@@ -13,7 +13,7 @@ export const LOOK = {
   depth: { ground: -50, terrain: -40, flowers: -20, shadow: 0, pickup: 5, enemy: 10, spell: 15, companion: 19, player: 20, canopy: 25, atmosphere: 35 },
   limit: { particles: 140, pollen: 24, canopies: 76, abilityBursts: 6 },
   ability: { roots: 0x8baf67, spores: 0xcbabd9, acorn: 0xd5a35c, ward: 0xb2ce84 },
-  texture: { ground: 'storybook-ground', props: 'storybook-props', bolt: 'spell-bolt', acorn: 'acorn', quarrel: 'crossbow-bolt', crossbow: 'heartwood-crossbow', crossbowTop: 'heartwood-crossbow-top', crystal: 'xp-crystal', spark: 'spell-spark', shadow: 'contact-shadow' }
+  texture: { ground: 'storybook-ground', props: 'storybook-props', bolt: 'spell-bolt', acorn: 'acorn', quarrel: 'crossbow-bolt', crossbow: 'heartwood-crossbow', crossbowTop: 'heartwood-crossbow-top', crystal: 'xp-crystal', feather: 'buzzard-feather', spark: 'spell-spark', shadow: 'contact-shadow' }
 } as const;
 
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');

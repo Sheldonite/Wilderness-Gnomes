@@ -79,6 +79,13 @@ export function createStorybookTextures(scene: Phaser.Scene): void {
     glow.addColorStop(0, '#fffce1'); glow.addColorStop(.18, '#fff6bf'); glow.addColorStop(.5, 'rgba(255,222,140,.45)'); glow.addColorStop(1, 'rgba(255,222,140,0)');
     c.fillStyle = glow; c.fillRect(0, 0, 32, 32);
   });
+  texture(LOOK.texture.feather, 32, (c) => {
+    c.fillStyle = '#d8c9a4';
+    c.beginPath(); c.moveTo(16, 3); c.quadraticCurveTo(24, 12, 18, 28); c.quadraticCurveTo(16, 22, 14, 28); c.quadraticCurveTo(8, 12, 16, 3); c.fill();
+    c.strokeStyle = '#8a7350'; c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(16, 5); c.lineTo(16, 26); c.stroke();
+    c.beginPath(); c.moveTo(16, 12); c.lineTo(11, 16); c.moveTo(16, 16); c.lineTo(21, 20); c.stroke();
+  });
   texture(LOOK.texture.bolt, 48, (c) => {
     c.shadowColor = '#7ee8ff'; c.shadowBlur = 8; c.fillStyle = '#8be9fa';
     c.beginPath(); c.moveTo(43, 24); c.quadraticCurveTo(28, 10, 4, 24); c.quadraticCurveTo(28, 38, 43, 24); c.fill();

@@ -9,7 +9,9 @@ export type UpgradeId =
   | 'max-health'
   | 'projectile-count'
   | 'gain-companion-mystery'
-  | 'gain-companion-midnight';
+  | 'gain-companion-midnight'
+  | 'gain-companion-frankie'
+  | 'frankie-flock';
 
 export type AbilityId = 'ricochet-charm' | 'firefly-orbit' | 'bramble-snare' | 'spore-trail'
   | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce' | 'midnight-mighty-swat';
@@ -41,6 +43,9 @@ export interface PlayerStats {
   harvestBonus: number;
   hasMysteryCompanion: boolean;
   hasMidnightCompanion: boolean;
+  hasFrankieCompanion: boolean;
+  frankieCount: number;
+  frankieFeatherBonus: number;
   mysteryDamage: number;
   mysteryCooldownMs: number;
   mysteryPounceRange: number;

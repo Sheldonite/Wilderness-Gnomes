@@ -37,6 +37,7 @@ import { CombatResolver, type CombatTarget } from '../../core/CombatResolver';
 import { ABILITY_IDS } from '../../config/abilities';
 import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
 import { MIDNIGHT_SPRITE_KEY } from '../../config/midnightSprite';
+import { FRANKIE_SPRITE_KEY } from '../../config/frankieSprite';
 import type { AbilityId, AbilityRank, UpgradeDefinition } from '../../core/types';
 
 export class GameScene extends Phaser.Scene {
@@ -116,7 +117,7 @@ export class GameScene extends Phaser.Scene {
     this.cameraController = new CameraController(this.cameras.main);
     this.uiManager = new UIManager(this.gameManager, () => this.togglePause(), this.selectedCharacter,
       this.textures.getBase64(this.selectedCharacter.textureKey, 0), this.textures.getBase64(MYSTERY_SPRITE_KEY, 0),
-      this.textures.getBase64(MIDNIGHT_SPRITE_KEY, 'walk-down-0'));
+      this.textures.getBase64(MIDNIGHT_SPRITE_KEY, 'walk-down-0'), this.textures.getBase64(FRANKIE_SPRITE_KEY));
     this.debugSpriteSheetMenu = import.meta.env.DEV ? new DebugSpriteSheetMenu(this) : undefined;
     this.presentation = new PresentationSystem(this);
     this.abilities = new AbilitySystem(this, this.gameManager.playerStats);
@@ -411,6 +412,15 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.level = 2; this.gameManager.xpToNextLevel = 33;
       this.gameManager.playerStats.hasMysteryCompanion = true;
       this.enemies.push(new EnemyController(this, 1870, 1600, 0, this.scenerySystem.navigation));
+    } else if (review === 'frankie') {
+      this.gameManager.playerStats.hasFrankieCompanion = true;
+      this.gameManager.playerStats.frankieCount = 5;
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 100000;
+      this.gameManager.xpToNextLevel = 100000;
+      for (let i = 0; i < 10; i++) {
+        const angle = i * 0.628;
+        this.enemies.push(new EnemyController(this, 1600 + Math.cos(angle) * 200, 1600 + Math.sin(angle) * 200, 0, this.scenerySystem.navigation));
+      }
     } else if (review === 'river') {
       this.player.sprite.setPosition(2350, 1280);
     } else if (review === 'pond') {
