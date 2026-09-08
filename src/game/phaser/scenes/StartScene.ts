@@ -105,12 +105,12 @@ export class StartScene extends Phaser.Scene {
     return `<button class="wanderer-card" type="button" data-character="${id}" aria-pressed="false">
       <span class="choice-key">${key}</span><span class="selection-tick" aria-hidden="true">✓</span>
       <span class="wanderer-portrait"><img src="${portrait}" alt="" class="portrait-${id}"></span>
-      <span class="wanderer-copy"><strong>${character.name}</strong><small>${marketProgress.characterUnlocked(id)?description:'Unlock at Staffing Company · 50 gold'}</small></span>
+      <span class="wanderer-copy"><strong>${character.name}</strong><small>${description}</small></span>
     </button>`;
   }
 
   private selectCharacter(id: PlayerCharacterId): void {
-    if (!this.reviewActive && !marketProgress.characterUnlocked(id)) { this.scene.start('MarketScene', {characterId:this.selectedCharacterId, weaponId:this.selectedWeaponId, vendorId:'curios'}); return; }
+    // Every wanderer is on the roster from the first run, so there is nothing to unlock here.
     this.selectedCharacterId = id;
     this.root?.querySelectorAll<HTMLButtonElement>('[data-character]').forEach(button => {
       const selected = button.dataset.character === id;

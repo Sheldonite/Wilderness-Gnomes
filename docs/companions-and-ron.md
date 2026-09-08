@@ -35,8 +35,8 @@ thing, because only Nick has Mystery and only Hailey has Midnight.
 
 ## Ron, the Festive Bard
 
-A travelling performer with a ribbon staff. He is unlocked at the Staffing Company for 50 gold
-and plays with either weapon, like the others.
+A travelling performer with a ribbon staff, on the roster from the first run like every other
+wanderer, and playable with either weapon.
 
 Ron is the only wanderer who can learn these three, and he cannot learn anyone else's:
 
@@ -60,6 +60,14 @@ nearest foe within 300 pixels and drifts back. Because he swims through air rath
 he trails curls of stirred air instead of bubbles, and his shadow stays on the ground while his
 body rides above it. The behaviour is in `src/game/core/TobiasSwim.ts` with no Phaser in it, so
 it is testable; `src/game/entities/TobiasCompanion.ts` only draws it.
+
+## Everyone is on the roster
+
+No wanderer is bought any more. `characterUnlocked` is true for every known id, and the three
+Staffing Company listings are granted as owned ranks in `emptyMarketProfile` and in the save
+migration. Keeping the listings in the data (rather than deleting them) means saves that already
+paid for Hailey or Sheldon still validate, and the shop shows the roster as owned instead of
+standing empty. Weapons and cosmetics are still bought.
 
 ## Art
 

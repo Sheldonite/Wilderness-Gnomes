@@ -99,7 +99,7 @@ test('profile copies cannot mutate the wallet, purchase ranks, or settlement rec
   copy.ranks['splitshot-charm'] = 1;
   copy.settledRuns.push('invented-run');
   assert.equal(market.profile.gold, 5);
-  assert.deepEqual(market.profile.ranks, {});
+  assert.deepEqual(market.profile.ranks, { 'unlock-hailey': 1, 'unlock-sheldon': 1, 'unlock-ron': 1 });
   assert.deepEqual(market.profile.settledRuns, []);
 });
 
@@ -225,7 +225,8 @@ test('market has four distinct trades with priced and described inventory', () =
     for (let rank = 0; rank < item.maxRank; rank++) {
       assert.ok(Number.isSafeInteger(item.prices[rank]) && item.prices[rank] >= 5);
       assert.equal(marketItemPrice(item.id, rank), item.prices[rank]);
-      assert.notEqual(marketItemBenefit(item.id, rank), marketItemBenefit(item.id, rank + 1));
+      // Wanderers are always owned, so their listing has no "after this purchase" state to differ.
+      if (item.kind !== 'character') assert.notEqual(marketItemBenefit(item.id, rank), marketItemBenefit(item.id, rank + 1));
     }
     assert.equal(marketItemPrice(item.id, item.maxRank), null);
   }
@@ -292,20 +293,20 @@ test('purchased cloak reduces actual damage and tonic heals only while playing, 
 });
 
 
-test('new players unlock Hailey and crossbow once, and keep them after reload', () => {
+test('every wanderer is free from the start, while the crossbow is still bought once', () => {
   const storage = memoryStorage(fundedProfile(75)), market = new MarketProgress(storage);
-  assert.equal(market.characterUnlocked('wizard'), true);
-  assert.equal(market.characterUnlocked('hailey'), false);
+  for (const id of ['wizard', 'hailey', 'sheldon', 'ron']) assert.equal(market.characterUnlocked(id), true, id);
+  assert.equal(market.characterUnlocked('stranger'), false);
   assert.equal(market.weaponUnlocked('spell'), true);
   assert.equal(market.weaponUnlocked('crossbow'), false);
-  assert.equal(market.purchase('unlock-hailey').status, 'purchased');
+  // Nobody can be sold twice, so the roster costs nothing and the wallet is untouched.
+  for (const id of ['unlock-hailey', 'unlock-sheldon', 'unlock-ron']) assert.equal(market.purchase(id).status, 'max-rank', id);
+  assert.equal(market.profile.gold, 75);
   assert.equal(market.purchase('unlock-crossbow').status, 'purchased');
   const reloaded = new MarketProgress(storage);
-  assert.equal(reloaded.characterUnlocked('hailey'), true);
   assert.equal(reloaded.weaponUnlocked('crossbow'), true);
-  assert.equal(reloaded.profile.gold, 10);
-  assert.equal(reloaded.purchase('unlock-hailey').status, 'max-rank');
-  assert.equal(reloaded.profile.gold, 10);
+  assert.equal(reloaded.characterUnlocked('ron'), true);
+  assert.equal(reloaded.profile.gold, 60);
 });
 
 test('old saves retain their free roster, weapons, rocks, purchases and receipts', () => {
@@ -394,23 +395,24 @@ test('UPS Buddy is a saved cosmetic and grants no combat bonuses or fighting com
 });
 
 
-test('Staffing Company unlocks Sheldon permanently for 50 gold without repeat charges', () => {
+test('the Staffing Company shows the whole roster as already hired and charges nothing', () => {
   const storage=memoryStorage(fundedProfile(55)), market=new MarketProgress(storage);
-  assert.equal(market.characterUnlocked('sheldon'),false);
-  const listing=MARKET_ITEMS.find(item=>item.id==='unlock-sheldon');
-  assert.equal(listing.vendorId,'curios');
-  assert.equal(listing.kind,'character');
-  assert.equal(market.purchase(listing.id).status,'purchased');
+  for (const id of ['hailey','sheldon','ron']) {
+    const listing=MARKET_ITEMS.find(item=>item.id===`unlock-${id}`);
+    assert.equal(listing.vendorId,'curios');
+    assert.equal(listing.kind,'character');
+    assert.equal(market.characterUnlocked(id),true,id);
+    assert.equal(market.purchase(listing.id).status,'max-rank',id);
+  }
+  assert.equal(market.profile.gold,55,'the roster costs nothing');
   const reloaded=new MarketProgress(storage);
   assert.equal(reloaded.characterUnlocked('sheldon'),true);
-  assert.equal(reloaded.profile.gold,5);
-  assert.equal(reloaded.purchase(listing.id).status,'max-rank');
-  assert.equal(reloaded.profile.gold,5);
-  const poor=new MarketProgress(memoryStorage(fundedProfile(49)));
-  assert.equal(poor.purchase(listing.id).status,'insufficient-gold');
-  assert.equal(poor.characterUnlocked('sheldon'),false);
+  assert.equal(reloaded.profile.gold,55);
+  // A save that never paid for anyone still gets the full roster.
   const old={version:1,gold:20,ranks:{},settledRuns:[]};
-  assert.equal(new MarketProgress(memoryStorage(old)).characterUnlocked('sheldon'),false);
+  const migrated=new MarketProgress(memoryStorage(old));
+  for (const id of ['wizard','hailey','sheldon','ron']) assert.equal(migrated.characterUnlocked(id),true,id);
+  assert.equal(migrated.profile.gold,20);
 });
 
 

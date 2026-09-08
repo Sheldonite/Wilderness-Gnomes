@@ -43,8 +43,23 @@ export interface RunSettlementResult extends TransactionResult {
   goldEarned: number;
 }
 
+/**
+ * The Staffing Company no longer sells anybody: every wanderer starts hired. The unlock items
+ * survive as owned ranks so old saves that paid for them still validate, and so the shop shows
+ * the roster as owned rather than standing empty.
+ */
+export const CHARACTER_UNLOCKS: Record<string, MarketItemId | null> = {
+  wizard: null, hailey: 'unlock-hailey', sheldon: 'unlock-sheldon', ron: 'unlock-ron'
+};
+
+export function grantedCharacterRanks(): Partial<Record<MarketItemId, number>> {
+  const ranks: Partial<Record<MarketItemId, number>> = {};
+  for (const item of Object.values(CHARACTER_UNLOCKS)) if (item) ranks[item] = 1;
+  return ranks;
+}
+
 export function emptyMarketProfile(): MarketProfile {
-  return { version: 1, shopVersion: 2, equippedWeapon: 'spell', equippedCosmetic: null, gold: 0, rocks: 0, collectedRocks: [], ranks: {}, settledRuns: [] };
+  return { version: 1, shopVersion: 2, equippedWeapon: 'spell', equippedCosmetic: null, gold: 0, rocks: 0, collectedRocks: [], ranks: grantedCharacterRanks(), settledRuns: [] };
 }
 
 /** Milestone rewards are totals for the run, not payments made at each level. */
@@ -102,8 +117,10 @@ export function parseMarketProfile(serialized: string): MarketProfile | null {
       ranks[item.id] = rank as number;
     }
     // Existing players keep the characters and arms that were freely available before shops.
-    if (value.shopVersion === undefined) { ranks['unlock-hailey'] = 1; ranks['unlock-crossbow'] = 1; }
+    if (value.shopVersion === undefined) { ranks['unlock-crossbow'] = 1; }
     else if (value.shopVersion !== 2) return null;
+    // Everyone is on the roster now, whether or not this save ever paid for them.
+    Object.assign(ranks, grantedCharacterRanks());
     const equippedWeapon = value.equippedWeapon ?? 'spell';
     if (equippedWeapon !== 'spell' && (equippedWeapon !== 'crossbow' || !ranks['unlock-crossbow'])) return null;
     const equippedCosmetic = value.equippedCosmetic ?? null;
@@ -220,9 +237,9 @@ export class MarketProgress {
     return { status: 'awarded', goldEarned, ...this.result() };
   }
 
+  /** Every wanderer is available from the first run; only weapons and cosmetics are bought. */
   characterUnlocked(id: string): boolean {
-    return id === 'wizard' || (id === 'hailey' && !!this.current.ranks['unlock-hailey'])
-      || (id === 'sheldon' && !!this.current.ranks['unlock-sheldon']) || (id === 'ron' && !!this.current.ranks['unlock-ron']);
+    return CHARACTER_UNLOCKS[id] !== undefined;
   }
   weaponUnlocked(id: string): boolean { return id === 'spell' || (id === 'crossbow' && !!this.current.ranks['unlock-crossbow']); }
 
