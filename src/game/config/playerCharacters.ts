@@ -1,8 +1,9 @@
 import type { CompanionId, PlayerCharacterId, Vector2Like } from '../core/types';
 import { PLAYER_SPRITE_KEY } from './playerSprite';
-import { RON_ANIMATION_PREFIX, RON_SPRITE_KEY } from './ronSprite';
+import { RON_SPRITE_KEY } from './ronSprite';
 import { COMPANION_BY_CHARACTER } from './companions';
 import { sheldonAnimation } from '../core/SheldonFrames';
+import { ronAnimation } from '../core/RonFrames';
 
 export type { PlayerCharacterId };
 
@@ -50,17 +51,6 @@ const WIZARD_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> 
   '-1,1': { key: 'player-walk-down-left' }
 };
 
-const RON_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> = {
-  '0,1': { key: `${RON_ANIMATION_PREFIX}-walk-down` },
-  '1,1': { key: `${RON_ANIMATION_PREFIX}-walk-down-right` },
-  '1,0': { key: `${RON_ANIMATION_PREFIX}-walk-right` },
-  '1,-1': { key: `${RON_ANIMATION_PREFIX}-walk-up-left`, flipX: true },
-  '0,-1': { key: `${RON_ANIMATION_PREFIX}-walk-up` },
-  '-1,-1': { key: `${RON_ANIMATION_PREFIX}-walk-up-left` },
-  '-1,0': { key: `${RON_ANIMATION_PREFIX}-walk-left` },
-  '-1,1': { key: `${RON_ANIMATION_PREFIX}-walk-down-left` }
-};
-
 const HAILEY_WALK_ANIMATION_BY_DIRECTION: Record<string, PlayerAnimationChoice> = {
   '0,1': { key: 'hailey-walk-down' },
   '1,1': { key: 'hailey-walk-down', flipX: true },
@@ -84,13 +74,15 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
     id: 'ron',
     name: 'Ron',
     textureKey: RON_SPRITE_KEY,
-    scale: 0.4,
-    idleAnimation: { key: `${RON_ANIMATION_PREFIX}-idle-down` },
+    scale: 0.35,
+    bakedAnimation: true,
+    footOriginY: 238 / 256,
+    idleAnimation: { key: 'ron-idle-south' },
     aura: false,
     companionId: COMPANION_BY_CHARACTER.ron,
     blurb: 'A festive bard. Every heart a willing audience.',
-    animationForDirection: (direction) =>
-      RON_WALK_ANIMATION_BY_DIRECTION[directionToKey(direction)] ?? { key: `${RON_ANIMATION_PREFIX}-idle-down` }
+    animationForDirection: direction => ronAnimation(direction),
+    idleForDirection: direction => ronAnimation(direction, true)
   },
   wizard: {
     id: 'wizard',

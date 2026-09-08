@@ -8,6 +8,7 @@ import { icon } from '../../ui/icons';
 import { showSpriteReview } from '../../ui/SpriteReview';
 import { showMidnightReview } from '../../ui/MidnightReview';
 import { marketProgress } from '../../core/MarketProgress';
+import { showRonReview } from '../../ui/RonReview';
 import { showSheldonReview } from '../../ui/SheldonReview';
 
 export class StartScene extends Phaser.Scene {
@@ -30,6 +31,7 @@ export class StartScene extends Phaser.Scene {
   constructor() { super('StartScene'); }
 
   create(data: { skipReview?: boolean } = {}): void {
+    if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'ron-sprites') { showRonReview(this); return; }
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'sheldon') { showSheldonReview(this); return; }
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'market') {
       this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId, review: true }); return;

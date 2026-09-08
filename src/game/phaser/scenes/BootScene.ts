@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { preloadSheldon, createSheldonAnimations } from '../../config/sheldonSprite';
-import ronSpriteSheetUrl from '../../../assets/sprites/ron-bard-spritesheet.png';
+import ronSpriteSheetUrl from '../../../assets/sprites/ron/ron-atlas.png';
 import tobiasSheetUrl from '../../../assets/sprites/tobias-tuna-sheet.png';
-import { RON_FRAME_SIZE, RON_SPRITE_KEY, createRonAnimations } from '../../config/ronSprite';
+import { RON_FRAME_WIDTH, RON_FRAME_HEIGHT, RON_REFERENCE_TEXTURE, RON_SPRITE_KEY, createRonAnimations } from '../../config/ronSprite';
 import { TOBIAS_FRAME_SIZE, TOBIAS_SPRITE_KEY, createTobiasAnimations } from '../../config/tobiasSprite';
 import { OVEN_TEXTURE, ovenSourceUrl, createOvenFrames } from '../../config/ovenSprite';
 import { STAG_FRAME_SIZE, STAG_TEXTURE, createStagAnimations, stagSheetUrl } from '../../config/stagSprite';
@@ -72,6 +72,7 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     preloadSheldon(this);
+    if (import.meta.env.DEV) this.load.image(RON_REFERENCE_TEXTURE, new URL('../../../assets/sprites/ron/reference.png', import.meta.url).href);
     const root = document.getElementById('ui-root')!;
     root.innerHTML = '<div class="loading-screen"><span class="loading-leaf">❧</span><h1>Wilderness Gnomes</h1><p>Waking the woodland…</p><div class="loading-track"><span></span></div></div>';
     const fill = root.querySelector<HTMLElement>('.loading-track span')!;
@@ -121,7 +122,7 @@ export class BootScene extends Phaser.Scene {
       frameWidth: MYSTERY_FRAME_SIZE,
       frameHeight: MYSTERY_FRAME_SIZE
     });
-    this.load.spritesheet(RON_SPRITE_KEY, ronSpriteSheetUrl, { frameWidth: RON_FRAME_SIZE, frameHeight: RON_FRAME_SIZE });
+    this.load.spritesheet(RON_SPRITE_KEY, ronSpriteSheetUrl, { frameWidth: RON_FRAME_WIDTH, frameHeight: RON_FRAME_HEIGHT });
     this.load.spritesheet(TOBIAS_SPRITE_KEY, tobiasSheetUrl, { frameWidth: TOBIAS_FRAME_SIZE, frameHeight: TOBIAS_FRAME_SIZE });
   }
 
