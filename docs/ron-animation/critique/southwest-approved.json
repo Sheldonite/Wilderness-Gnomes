@@ -1,0 +1,90 @@
+{
+  "source": "docs/ron-animation/walk-revisions/southwest/candidate-v2.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "SW",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 near contact closes seam with acceptable style consistency.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "e2e58e1febad135c8fe0988216725f6c9fcc15179b826fc7de9ee0b595f4c88a"
+    },
+    {
+      "direction": "SW",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 support compresses and rear heel lifts.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "96c028f47031e933d479a519be616cbc6e6b8d0c8b0e45e6134017be2d57ed8e"
+    },
+    {
+      "direction": "SW",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 shallow passing.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "8b9c576a042f3c8ec386e9a11f8905fef6fe7c6e951cc57d2f31f36e5c1e5657"
+    },
+    {
+      "direction": "SW",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 opposite leg approaches.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "85c4ce920a061965d986b855b35397296948c588704016396473dfa6041bec6f"
+    },
+    {
+      "direction": "SW",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 far contact lands with reversed overlap.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "2c7343633f05e4bf1b7421d2e6ec0843b64f9895e07e9765a261e064bb1fa4bf"
+    },
+    {
+      "direction": "SW",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 near rear heel lifts under far support.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "abe6a8eb1283ea80ea3a2a2eb44a1eba56a0194c131c4770f27342e0e17b563a"
+    },
+    {
+      "direction": "SW",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 foreground near passing.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "ccd4cecc5c41a487154a9346282c0168e17b45454a8124592e950ab90051d8db"
+    },
+    {
+      "direction": "SW",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 near approach closes into1.",
+      "correction": "None required at threshold8.",
+      "issue": "Minor head/ribbon variation remains, below blocking threshold.",
+      "rgbaSha256": "c727f4e331e837856793a411a1c8d3c539c53d697209693d3d810b0a0e037e88"
+    }
+  ],
+  "sha256": "3AF99804F271909CAB0D829384F835A9A7F0966DDBDE74544C5C53993CCCA4FA",
+  "evidence": "artifacts/ron-critique/sw-assembled-2.png",
+  "passed": true,
+  "threshold": 8
+}

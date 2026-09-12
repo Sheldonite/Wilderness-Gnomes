@@ -1,0 +1,82 @@
+{
+  "source": "artifacts/ron-west-candidate.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "W",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 near contact coherent.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "6a42df47c3d3d367c029d6a9ab56e6519468ebd78662456c35dbc0074ece1816"
+    },
+    {
+      "direction": "W",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 support compresses.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "752f2157fc081122fc32b66801049f0a37f1cc203ef4b3f34a03776a7d874e74"
+    },
+    {
+      "direction": "W",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 far passing correct; staff cap restored.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "7951232099d61d83078fafdf44ede07fa143d42411d1e5a2a059bc11f4bc542b"
+    },
+    {
+      "direction": "W",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 far approach coherent.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "9de13893e79992b766fb634f86fe5223a46e86169cddb676cfaa3763759663dd"
+    },
+    {
+      "direction": "W",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 opposite contact.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "ca4b5472bdd2aa27aa374cffc1f2b0ae88298384318e24c92674c3c71adf9dfa"
+    },
+    {
+      "direction": "W",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 near rear heel lifts.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "fd24d30bf9eee7e205e30621e8d78aae4b20ce12fe68502969b2d353e0526de1"
+    },
+    {
+      "direction": "W",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 near foreground passing.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "e79d6b0a2ee3c72e43c81bd63aa1f883d8d6312f3af49fb91fe6d66e4b7dec70"
+    },
+    {
+      "direction": "W",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 near approach closes seam.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "d2834189b0fdcad21fa9bcb9fd2164e02c3206c8bc94df62b5df8188bb157e18"
+    }
+  ],
+  "sha256": "D23331C082658400A69BD104EF504C939EA72F795B6A4A4641ABE0FDF3283832",
+  "evidence": "docs/ron-animation/walk-revisions/west/assembled-final.png",
+  "passed": true,
+  "threshold": 8
+}

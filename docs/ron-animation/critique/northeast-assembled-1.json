@@ -1,0 +1,70 @@
+{
+  "source": "artifacts/ron-walk-fix/candidate-seven.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "NE",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "Seam approach into contact coherent.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "NE",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "Support and rear lift coherent.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "NE",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 7,
+      "comparison": "Opposite support correct; jacket/body proportions and bright palette differ.",
+      "correction": "Preserve feet/gait; restore jacket hem/neck proportions, muted hair/plum, vertical staff and boot bulk matching adjacent frames."
+    },
+    {
+      "direction": "NE",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "Approaches opposite contact coherently.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "NE",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "Opposite thigh overlap contact.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "NE",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "Rear boot lifts under opposite support.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "NE",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 7,
+      "comparison": "Opposite passing correct; brighter hair/trousers and boot bulk differ.",
+      "correction": "Preserve feet/gait; restore jacket hem/neck proportions, muted hair/plum, vertical staff and boot bulk matching adjacent frames."
+    },
+    {
+      "direction": "NE",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "Rear extension closes seam.",
+      "correction": "Retain."
+    }
+  ]
+}

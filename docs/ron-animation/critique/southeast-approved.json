@@ -1,0 +1,90 @@
+{
+  "source": "docs/ron-animation/walk-revisions/southeast/candidate-v2.png",
+  "sha256": "C589F899F3F38AFE6598DB77C622A4D576A037487518CE6FA95BA7637281E258",
+  "evidence": "artifacts/ron-critique/se-assembled-2.png",
+  "method": "Native-size still temporal/style audit",
+  "threshold": 8,
+  "passed": true,
+  "frames": [
+    {
+      "direction": "SE",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 far contact closes seam.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "dda6b3b9fd462f8b7a45812896ed8132c72802fa6dd852c2340bc4b4233278d6"
+    },
+    {
+      "direction": "SE",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 support compresses and feet narrow.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "ea2e046e2f19c2c09ace698683facffc9c4eea59b060ea0676f10507938fc41b"
+    },
+    {
+      "direction": "SE",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 passing silhouette narrows and swing clears.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "4ee3412730ed1eda895a46926a98825cec1dd06bbdebfa4da9609f456d502a85"
+    },
+    {
+      "direction": "SE",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 near leg approaches opposite contact.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "660b35e2397602890d8e721708995924082de7463a9ccdb2ade4c0b57f278932"
+    },
+    {
+      "direction": "SE",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 near contact lands, ownership reverses.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "ee0e3d6c46f8451d643e34885ed385f0bc772d0ade4725b3be2d7e4205779503"
+    },
+    {
+      "direction": "SE",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 near sole flat supporting, heel kick removed.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "a2420b275d47e674a59ad07bc8e088f3c82c0214c8c63a9b145eba5fd11d4eed"
+    },
+    {
+      "direction": "SE",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 opposite passing with shallow depth.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "357956e86e64ef4ae885251d52703a54f2735b04684701b9a5d3ca9e2fc84e2f"
+    },
+    {
+      "direction": "SE",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 far approach leads continuously to1.",
+      "issue": "No blocking defect; minor ribbon/staff microvariation.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "5664d505a821a99293b0667e82ceb6437f24715f5e82487197f0f355a481006d"
+    }
+  ]
+}

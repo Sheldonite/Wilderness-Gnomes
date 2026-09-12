@@ -1,0 +1,111 @@
+[
+  {
+    "direction": "southeast",
+    "frame": 1,
+    "x": 18,
+    "y": 22,
+    "width": 144,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/source-v1.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 0
+    }
+  },
+  {
+    "direction": "southeast",
+    "frame": 2,
+    "x": 17,
+    "y": 22,
+    "width": 146,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/source-v1.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 1
+    }
+  },
+  {
+    "direction": "southeast",
+    "frame": 3,
+    "x": 16,
+    "y": 22,
+    "width": 147,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/style367-v4.png",
+      "cell": 0,
+      "columns": 3
+    }
+  },
+  {
+    "direction": "southeast",
+    "frame": 4,
+    "x": 18,
+    "y": 22,
+    "width": 142,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/source-v1.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 3
+    }
+  },
+  {
+    "direction": "southeast",
+    "frame": 5,
+    "x": 19,
+    "y": 22,
+    "width": 140,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/source-v1.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 4
+    }
+  },
+  {
+    "direction": "southeast",
+    "frame": 6,
+    "x": 15,
+    "y": 22,
+    "width": 146,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/style367-v4.png",
+      "cell": 1,
+      "columns": 3
+    }
+  },
+  {
+    "direction": "southeast",
+    "frame": 7,
+    "x": 16,
+    "y": 22,
+    "width": 149,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/style367-v4.png",
+      "cell": 2,
+      "columns": 3
+    }
+  },
+  {
+    "direction": "southeast",
+    "frame": 8,
+    "x": 18,
+    "y": 22,
+    "width": 142,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/southeast/source-v1.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 7
+    }
+  }
+]

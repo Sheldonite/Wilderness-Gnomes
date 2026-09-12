@@ -1,0 +1,70 @@
+{
+  "source": "docs/ron-animation/walk-revisions/west/assembled.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "W",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 near contact coherent.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "W",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 support compresses.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "W",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 7,
+      "comparison": "2→3 far passing correct; staff cap missing and shaft short.",
+      "correction": "Restore same staff bottom cap and shaft length as2/4, preserve gait."
+    },
+    {
+      "direction": "W",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 far approach coherent.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "W",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 opposite contact.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "W",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 near rear heel lifts.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "W",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 near foreground passing.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "W",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 near approach closes seam.",
+      "correction": "Retain."
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "source": "artifacts/ron-walk-fix/candidate-aligned.png",
+  "evidence": "artifacts/ron-walk-fix/east-aligned.png",
+  "method": "Final-size direction strip still-frame temporal/registration/style audit",
+  "frames": [
+    {
+      "direction": "E",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "issue": "Registered torso now stable; correct contact/down/passing progression at target scale.",
+      "correction": "Retain pose and registration."
+    },
+    {
+      "direction": "E",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "issue": "Registered torso now stable; correct contact/down/passing progression at target scale.",
+      "correction": "Retain pose and registration."
+    },
+    {
+      "direction": "E",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "issue": "Registered torso now stable; correct contact/down/passing progression at target scale.",
+      "correction": "Retain pose and registration."
+    },
+    {
+      "direction": "E",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 7,
+      "issue": "Registration corrected; trouser bulk, redder fabric and staff cap/ribbon silhouette differ from adjacent accepted frames.",
+      "correction": "Preserve pose/boot locations and thigh overlap; restore baggy plum trouser volume and texture plus staff cap/ribbon proportions matching frames2/3/6/7."
+    },
+    {
+      "direction": "E",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 7,
+      "issue": "Registration corrected; trouser bulk, redder fabric and staff cap/ribbon silhouette differ from adjacent accepted frames.",
+      "correction": "Preserve pose/boot locations and thigh overlap; restore baggy plum trouser volume and texture plus staff cap/ribbon proportions matching frames2/3/6/7."
+    },
+    {
+      "direction": "E",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "issue": "Registered torso now stable; correct contact/down/passing progression at target scale.",
+      "correction": "Retain pose and registration."
+    },
+    {
+      "direction": "E",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "issue": "Registered torso now stable; correct contact/down/passing progression at target scale.",
+      "correction": "Retain pose and registration."
+    },
+    {
+      "direction": "E",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 7,
+      "issue": "Registration corrected; trouser bulk, redder fabric and staff cap/ribbon silhouette differ from adjacent accepted frames.",
+      "correction": "Preserve pose/boot locations and thigh overlap; restore baggy plum trouser volume and texture plus staff cap/ribbon proportions matching frames2/3/6/7."
+    }
+  ]
+}

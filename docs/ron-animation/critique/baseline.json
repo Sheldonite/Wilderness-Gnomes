@@ -1,0 +1,647 @@
+{
+  "method": "Visual comparison of eight native-resolution direction contact sheets; each frame compared with predecessor including seam. No continuous playback claimed.",
+  "threshold": 8,
+  "source": "src/assets/sprites/ron/ron-atlas.png",
+  "frames": [
+    {
+      "direction": "S",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 4,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Opposite boot becomes forward directly from frame 8, with no recovery approach.",
+      "issue": "Opposite boot becomes forward directly from frame 8, with no recovery approach.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "S",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 4,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "Forward boot swaps sides immediately from frame 1.",
+      "issue": "Forward boot swaps sides immediately from frame 1.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "S",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 4,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Forward boot swaps sides again; no under-hip passing silhouette.",
+      "issue": "Forward boot swaps sides again; no under-hip passing silhouette.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "S",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 4,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Another full leg swap instead of rising over the support foot.",
+      "issue": "Another full leg swap instead of rising over the support foot.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "S",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 4,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Opposite contact exists but arrives after four rapid swaps.",
+      "issue": "Opposite contact exists but arrives after four rapid swaps.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "S",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 4,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Full leg swap repeats instead of controlled knee compression.",
+      "issue": "Full leg swap repeats instead of controlled knee compression.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "S",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 4,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Contact-like spread repeats; no swing foot passing support.",
+      "issue": "Contact-like spread repeats; no swing foot passing support.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "S",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 4,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Full leg swap again; recovery into frame 1 is absent.",
+      "issue": "Full leg swap again; recovery into frame 1 is absent.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 3,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Same screen-right forward boot as frame 8; no new alternating contact.",
+      "issue": "Same screen-right forward boot as frame 8; no new alternating contact.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 3,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "Forward foot remains the same with little change in leg overlap.",
+      "issue": "Forward foot remains the same with little change in leg overlap.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 3,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Same leading boot tilts outward rather than passing beneath pelvis.",
+      "issue": "Same leading boot tilts outward rather than passing beneath pelvis.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 3,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Same leading boot remains extended rather than opposite leg advancing.",
+      "issue": "Same leading boot remains extended rather than opposite leg advancing.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 3,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Boot retracts slightly but support-leg ownership has not changed.",
+      "issue": "Boot retracts slightly but support-leg ownership has not changed.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 3,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Boot returns to extended position; opposing contact is missing.",
+      "issue": "Boot returns to extended position; opposing contact is missing.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 3,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Same boot shifts outward again, without passing phase.",
+      "issue": "Same boot shifts outward again, without passing phase.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SE",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 3,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Same extended-foot silhouette returns, causing a repetitive shuffle at seam.",
+      "issue": "Same extended-foot silhouette returns, causing a repetitive shuffle at seam.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 3,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Extended leading foot remains the same across seam.",
+      "issue": "Extended leading foot remains the same across seam.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 3,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "Same long stride with minor arm shift; no contact compression.",
+      "issue": "Same long stride with minor arm shift; no contact compression.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 3,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Same leading shin and boot; no under-body passing.",
+      "issue": "Same leading shin and boot; no under-body passing.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 3,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Same leading shin and boot; no lifted recovery leg.",
+      "issue": "Same leading shin and boot; no lifted recovery leg.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 3,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Same leading leg extended where opposite contact should be.",
+      "issue": "Same leading leg extended where opposite contact should be.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 3,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Same stride held, no opposite knee load.",
+      "issue": "Same stride held, no opposite knee load.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 3,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Same extended silhouette, no opposite passing.",
+      "issue": "Same extended silhouette, no opposite passing.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "E",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 3,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Same extended silhouette; seam does not complete a stride.",
+      "issue": "Same extended silhouette; seam does not complete a stride.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 3,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Same rearward exposed boot as frame 8; no opposite contact at seam.",
+      "issue": "Same rearward exposed boot as frame 8; no opposite contact at seam.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 3,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "Same rear sole remains exposed; only small position change.",
+      "issue": "Same rear sole remains exposed; only small position change.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 3,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Exposed boot abruptly becomes flatter and central, without coherent knee transition.",
+      "issue": "Exposed boot abruptly becomes flatter and central, without coherent knee transition.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 3,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Rear sole returns abruptly, reversing frame 3 change.",
+      "issue": "Rear sole returns abruptly, reversing frame 3 change.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 3,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Same rear sole held rather than opposite contact.",
+      "issue": "Same rear sole held rather than opposite contact.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 3,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Same rear sole with minor tilt; support does not visibly transfer.",
+      "issue": "Same rear sole with minor tilt; support does not visibly transfer.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 3,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Same rear sole again, no alternate passing.",
+      "issue": "Same rear sole again, no alternate passing.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NE",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 3,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Same rear sole retained; no closing recovery phase.",
+      "issue": "Same rear sole retained; no closing recovery phase.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 3,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Screen-right boot remains low across seam, so contact is not reset clearly.",
+      "issue": "Screen-right boot remains low across seam, so contact is not reset clearly.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 3,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "Screen-right boot remains low; compression not identifiable.",
+      "issue": "Screen-right boot remains low; compression not identifiable.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 3,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Both boots converge slightly but same leg remains low.",
+      "issue": "Both boots converge slightly but same leg remains low.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 3,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Screen-right boot reextends instead of smooth opposite-leg recovery.",
+      "issue": "Screen-right boot reextends instead of smooth opposite-leg recovery.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 3,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Same low boot remains where opposite contact should be.",
+      "issue": "Same low boot remains where opposite contact should be.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 3,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Boots suddenly swap vertical order, without preceding passing phase.",
+      "issue": "Boots suddenly swap vertical order, without preceding passing phase.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 3,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Boots swap back immediately, breaking support transfer.",
+      "issue": "Boots swap back immediately, breaking support transfer.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "N",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 3,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Same low boot retained; no coherent recovery into frame 1.",
+      "issue": "Same low boot retained; no coherent recovery into frame 1.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 3,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Same screen-right rear boot across seam.",
+      "issue": "Same screen-right rear boot across seam.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 3,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "A second boot suddenly projects to screen right; silhouette pops.",
+      "issue": "A second boot suddenly projects to screen right; silhouette pops.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 3,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Second boot disappears and prior silhouette returns abruptly.",
+      "issue": "Second boot disappears and prior silhouette returns abruptly.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 3,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Same rearward boot held; no recovery knee lift.",
+      "issue": "Same rearward boot held; no recovery knee lift.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 3,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Both boots abruptly widen to a planted stance.",
+      "issue": "Both boots abruptly widen to a planted stance.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 3,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Wide stance collapses back to single prominent boot.",
+      "issue": "Wide stance collapses back to single prominent boot.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 3,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Same rear boot persists, no visible opposite passing.",
+      "issue": "Same rear boot persists, no visible opposite passing.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "NW",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 3,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Same rear boot persists; seam repeats static pose.",
+      "issue": "Same rear boot persists; seam repeats static pose.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 5,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Open stride follows narrow frame 8 without visible preceding recovery trajectory.",
+      "issue": "Open stride follows narrow frame 8 without visible preceding recovery trajectory.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 5,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "Leading foot abruptly retracts beneath body.",
+      "issue": "Leading foot abruptly retracts beneath body.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 5,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Feet nearly together, but lifted swing foot is not distinguishable.",
+      "issue": "Feet nearly together, but lifted swing foot is not distinguishable.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 4,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Same leading leg shoots forward again rather than opposite leg.",
+      "issue": "Same leading leg shoots forward again rather than opposite leg.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 4,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Stride abruptly collapses to narrow stance.",
+      "issue": "Stride abruptly collapses to narrow stance.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 4,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Same leading leg extends again, creating another mini-stride.",
+      "issue": "Same leading leg extends again, creating another mini-stride.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 5,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Feet suddenly close again; support identity unclear.",
+      "issue": "Feet suddenly close again; support identity unclear.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "W",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 5,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Near-identical closed feet; no raised recovery before frame 1.",
+      "issue": "Near-identical closed feet; no raised recovery before frame 1.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 3,
+      "expectedPhase": "contact A",
+      "previousFrameComparison": "Same low screen-left foot across seam, opposing contact missing.",
+      "issue": "Same low screen-left foot across seam, opposing contact missing.",
+      "correction": "Establish leg A forward and leg B back with both contact points; make leg A approach continuously from frame 8. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 3,
+      "expectedPhase": "down A",
+      "previousFrameComparison": "Same forward foot rotated, little knee/hip change.",
+      "issue": "Same forward foot rotated, little knee/hip change.",
+      "correction": "Keep leg A supporting, flex its knee and lower pelvis slightly; begin lifting leg B heel, without swapping feet. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 3,
+      "expectedPhase": "passing A",
+      "previousFrameComparison": "Forward foot flattens but no passing silhouette.",
+      "issue": "Forward foot flattens but no passing silhouette.",
+      "correction": "Place leg A under the pelvis; move bent leg B past it with clear toe clearance. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 3,
+      "expectedPhase": "up A",
+      "previousFrameComparison": "Same leg extends again instead of opposite leg advancing.",
+      "issue": "Same leg extends again instead of opposite leg advancing.",
+      "correction": "Raise pelvis slightly over leg A, lift its heel and advance leg B toward the next contact. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 3,
+      "expectedPhase": "contact B",
+      "previousFrameComparison": "Rear boot abruptly appears wide at screen right, unsupported by prior trajectory.",
+      "issue": "Rear boot abruptly appears wide at screen right, unsupported by prior trajectory.",
+      "correction": "Show leg B forward and leg A back, visibly reversing frame 1 contact ownership. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 3,
+      "expectedPhase": "down B",
+      "previousFrameComparison": "Rear boot disappears as prior single-forward-foot pose returns.",
+      "issue": "Rear boot disappears as prior single-forward-foot pose returns.",
+      "correction": "Keep leg B supporting, flex its knee and lower pelvis slightly; begin lifting leg A heel. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 3,
+      "expectedPhase": "passing B",
+      "previousFrameComparison": "Same forward leg held; no opposite passing.",
+      "issue": "Same forward leg held; no opposite passing.",
+      "correction": "Place leg B under the pelvis; pass bent leg A with visible clearance and continuous boot trajectory. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    },
+    {
+      "direction": "SW",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 3,
+      "expectedPhase": "up B",
+      "previousFrameComparison": "Same forward leg held into seam; no opposite recovery.",
+      "issue": "Same forward leg held into seam; no opposite recovery.",
+      "correction": "Raise pelvis over leg B and bring leg A toward frame 1 contact; match the 8-to-1 foot path and body height. Preserve head, torso proportions, staff-hand connection and consistent projected ground plane; redraw thigh, knee and boot together rather than moving the boot alone."
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "source": "docs/ron-animation/walk-revisions/south/source-v2.png",
+  "method": "4x2 contact sheet still-frame temporal audit",
+  "frames": [
+    {
+      "direction": "S",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 6,
+      "issue": "Seam approaches same A contact but8 too extended to distinguish approach.",
+      "correction": "Make preceding8 a recovery pose; keep A contact here."
+    },
+    {
+      "direction": "S",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 6,
+      "issue": "Almost holds1, insufficient support compression or boot retraction.",
+      "correction": "Compress A support knee modestly and lift opposite heel."
+    },
+    {
+      "direction": "S",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 7,
+      "issue": "Depth gap narrows after2, improved passing, modest clearance still unclear.",
+      "correction": "Move support boot under pelvis and lift swing boot; narrow foot depth difference."
+    },
+    {
+      "direction": "S",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 6,
+      "issue": "B approaches after3 but already almost fully extended.",
+      "correction": "Reduce B approach depth gap to roughly half contact depth; leave boot off ground."
+    },
+    {
+      "direction": "S",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 7,
+      "issue": "Slight B extension after4 reads contact, but weak contrast.",
+      "correction": "First full B contact, opposite to1."
+    },
+    {
+      "direction": "S",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 6,
+      "issue": "Almost holds5 instead of compressed down.",
+      "correction": "Compress B support knee, lift A heel."
+    },
+    {
+      "direction": "S",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 5,
+      "issue": "Wrong opposite passing: screen-left boot already lower, repeats3, causing premature swap.",
+      "correction": "Create unique opposite passing: screen-right remains slightly lower under hip as B support; screen-left lifted near level, approaching A."
+    },
+    {
+      "direction": "S",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 6,
+      "issue": "A recovery after7 is already contact-like, leaving weak seam.",
+      "correction": "Reduce A approach depth to roughly half full contact with modest boot clearance."
+    }
+  ]
+}

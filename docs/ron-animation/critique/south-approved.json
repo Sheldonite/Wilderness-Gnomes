@@ -1,0 +1,86 @@
+{
+  "source": "docs/ron-animation/walk-revisions/south/candidate-v2.png",
+  "sha256": "BCAC099CD18CBF0EC2E5F6201CD2F01A72B304C7CEBAA9E2BD97AED1AB0944F4",
+  "evidence": [
+    "artifacts/ron-critique/s-assembled-2.png",
+    "docs/ron-animation/walk-revisions/south/pose7-native.png"
+  ],
+  "method": "Native strip and isolated frame7 still temporal/style audit",
+  "reviewCorrection": "Initial strip reading misassigned frame7 boot sides. Isolated native frame confirms right boot bottom238 vs left227, correct opposite support. Earlier6/10 retracted; final8.",
+  "threshold": 8,
+  "passed": true,
+  "frames": [
+    {
+      "direction": "S",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 contactA closes loop.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "3160c059951c44627fbee10448c7a1af3c547efbeb3e5062c3e532d857429efc"
+    },
+    {
+      "direction": "S",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 subtle down/support phase.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "b1565c19e049ba84bf0f082247e1d35af68db5a0dd79ae2d7e61519a8715772b"
+    },
+    {
+      "direction": "S",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 depth narrows with left support.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "74e4edd7e55626665701d010798c8f67b235bd9172cec06c90ecec849e4596d1"
+    },
+    {
+      "direction": "S",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 opposite leg approaches.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "9f125b67c1647d150de96c0199c9b114b17a6ddf3b108d3568018ae6a6f3d454"
+    },
+    {
+      "direction": "S",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 contactB extends right foot.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "40370e9b39341a08651f337b113bf00042ae6851c79ba998564fa81cf216f7cc"
+    },
+    {
+      "direction": "S",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 subtle opposite down phase.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "a8d0767a3c0fcb45f68cba2ee91416af245bb9c7393c8c6a6ecd83ac68c9b639"
+    },
+    {
+      "direction": "S",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 depth narrows with RIGHT support lower and LEFT swing lifted.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "d6763bebc7ec22e68c3e8a845ff4e7f8a5e82c0761fcfac48d6909c4f92ee844"
+    },
+    {
+      "direction": "S",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 left leg approaches contactA.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "32fd89ba488c9c1aa1b2bff52529a18f6100f1e0ffde84883428554fa3fe84aa"
+    }
+  ]
+}

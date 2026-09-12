@@ -1,0 +1,70 @@
+{
+  "source": "artifacts/ron-northwest-candidate.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "NW",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 7,
+      "comparison": "Incoming8 wrong recovery.",
+      "correction": "Fix preceding8."
+    },
+    {
+      "direction": "NW",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "Down phase plausible.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "NW",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 7,
+      "comparison": "Passing correct; brighter/bigger style.",
+      "correction": "Harmonize palette/body/staff with1/2 and remove stray component on7."
+    },
+    {
+      "direction": "NW",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 7,
+      "comparison": "Approach coherent; style shift.",
+      "correction": "Harmonize palette/body/staff with1/2 and remove stray component on7."
+    },
+    {
+      "direction": "NW",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 7,
+      "comparison": "Opposite contact coherent; style shift.",
+      "correction": "Harmonize palette/body/staff with1/2 and remove stray component on7."
+    },
+    {
+      "direction": "NW",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 7,
+      "comparison": "Down coherent native; style shift.",
+      "correction": "Harmonize palette/body/staff with1/2 and remove stray component on7."
+    },
+    {
+      "direction": "NW",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 7,
+      "comparison": "Crossing/raised passing coherent; style shift and stray red fragment at right cell edge.",
+      "correction": "Harmonize palette/body/staff with1/2 and remove stray component on7."
+    },
+    {
+      "direction": "NW",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 5,
+      "comparison": "Reopens same rear-right sole as5/6 instead of advancing toward1.",
+      "correction": "Foreground thigh sweeps LEFT toward upper-left boot; far leg projects rear/lower-right; match1 ownership."
+    }
+  ]
+}

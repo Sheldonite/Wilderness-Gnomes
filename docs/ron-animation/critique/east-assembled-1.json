@@ -1,0 +1,71 @@
+{
+  "source": "artifacts/ron-walk-fix/candidate.png",
+  "evidence": "artifacts/ron-critique/east-assembled-1.png",
+  "method": "Final-size direction strip still-frame temporal/registration/style audit",
+  "frames": [
+    {
+      "direction": "E",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 6,
+      "issue": "Seam8→1 shifts head/body left; trouser bulk increases abruptly.",
+      "correction": "Register torso consistently with8; match trouser bulk."
+    },
+    {
+      "direction": "E",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 7,
+      "issue": "1→2 support compression and rear lift plausible, minor registration shift.",
+      "correction": "Anchor neck/torso rather than bounding box, preserve deliberate down bob."
+    },
+    {
+      "direction": "E",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 6,
+      "issue": "2→3 torso/staff move right while passing, creating root drift.",
+      "correction": "Move torso registration left to fixed anchor; keep passing."
+    },
+    {
+      "direction": "E",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 6,
+      "issue": "3→4 torso snaps left; trousers abruptly skinnier.",
+      "correction": "Match upper-body anchor and increase trouser bulk via image edit, retain far approach."
+    },
+    {
+      "direction": "E",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 7,
+      "issue": "4→5 contactB progression plausible, but trousers thinner than first half.",
+      "correction": "Match trouser bulk to1 while preserving opposite overlap."
+    },
+    {
+      "direction": "E",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 6,
+      "issue": "5→6 torso shifts right and thighs thicken abruptly.",
+      "correction": "Fix torso anchor and thigh bulk transition from5."
+    },
+    {
+      "direction": "E",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 7,
+      "issue": "6→7 correct near foreground passing; small registration drift.",
+      "correction": "Anchor torso consistently; preserve correct foreground passing."
+    },
+    {
+      "direction": "E",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 6,
+      "issue": "7→8 trousers become thin again; source placement shifts; seam still jumps.",
+      "correction": "Match trouser width to7/1 and anchor torso; retain reduced reach."
+    }
+  ]
+}

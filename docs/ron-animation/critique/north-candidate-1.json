@@ -1,0 +1,70 @@
+{
+  "source": "docs/ron-animation/walk-revisions/north/source-v1.png",
+  "method": "4x2 contact sheet still-frame temporal audit",
+  "frames": [
+    {
+      "direction": "N",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 5,
+      "issue": "Abrupt opposite boot depth from8 because8 retains B contact.",
+      "correction": "Fix8 approach while retaining contactA."
+    },
+    {
+      "direction": "N",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 7,
+      "issue": "Depth gap reduces plausibly; weak down without knee/body compression.",
+      "correction": "Add subtle supporting knee compression and pelvis down."
+    },
+    {
+      "direction": "N",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 7,
+      "issue": "Depth gap narrows plausibly; swing clearance unclear.",
+      "correction": "Use equal/shallow depth with one boot visibly lifted and bent knee."
+    },
+    {
+      "direction": "N",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 4,
+      "issue": "Reopens original contact depth after3, reversing trajectory.",
+      "correction": "Bring screen-left boot lower toward5 contact, screen-right up under body."
+    },
+    {
+      "direction": "N",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 5,
+      "issue": "Abrupt opposite contact from4 because4 has wrong ordering.",
+      "correction": "Retain B opposite contact; fix preceding4."
+    },
+    {
+      "direction": "N",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 7,
+      "issue": "Depth gap narrows plausibly; weak down compression.",
+      "correction": "Add subtle support compression, preserve B support."
+    },
+    {
+      "direction": "N",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 6,
+      "issue": "Screen-left low sole deepens again instead of moving through passing.",
+      "correction": "Put low boot under pelvis and advance screen-right to near equal depth."
+    },
+    {
+      "direction": "N",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 4,
+      "issue": "Reopens B contact after7 rather than approaching A.",
+      "correction": "Screen-right approaches lower next contact while screen-left travels up/under."
+    }
+  ]
+}

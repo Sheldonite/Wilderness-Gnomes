@@ -1,0 +1,70 @@
+{
+  "source": "docs/ron-animation/walk-revisions/southeast/source-v1.png",
+  "method": "4x2 contact sheet still-frame temporal audit",
+  "frames": [
+    {
+      "direction": "SE",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 7,
+      "issue": "Contact silhouette good, but8 already same wide contact weakens seam.",
+      "correction": "Retain contact, shorten preceding8 approach."
+    },
+    {
+      "direction": "SE",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 7,
+      "issue": "Front leg compresses inward plausibly; support motion could be clearer.",
+      "correction": "Keep front support planted and compress knee subtly."
+    },
+    {
+      "direction": "SE",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 6,
+      "issue": "Near leg already forward/low instead of under-pelvis passing.",
+      "correction": "Both boots beneath pelvis, one swing heel lifted; avoid completed opposite contact."
+    },
+    {
+      "direction": "SE",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 6,
+      "issue": "Near boot extends, far support boot disappears; support ambiguous.",
+      "correction": "Keep far support boot visible and near swing boot off ground, shorter extension."
+    },
+    {
+      "direction": "SE",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 7,
+      "issue": "Near-forward contact reverses1, but preceding approach weak.",
+      "correction": "Retain opposite contact, correct4 approach."
+    },
+    {
+      "direction": "SE",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 6,
+      "issue": "Low near boot tilts upward like kick instead of planted down phase.",
+      "correction": "Plant near sole flatter, flex near knee, lift far heel."
+    },
+    {
+      "direction": "SE",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 5,
+      "issue": "Repeats3 near-low leg ordering rather than opposite passing.",
+      "correction": "Create unique opposite passing: near support under pelvis, far leg crossing toward next contact."
+    },
+    {
+      "direction": "SE",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 6,
+      "issue": "Already far extended contact rather than moderate approaching recovery.",
+      "correction": "Shorten forward extension with modest toe clearance, then land in1."
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "source": "artifacts/ron-walk-fix/candidate-east-north.png",
+  "evidence": "artifacts/ron-critique/north-assembled-1.png",
+  "method": "Native strip still-frame temporal/style audit",
+  "frames": [
+    {
+      "direction": "N",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 contact extends right boot smoothly.",
+      "issue": "No blocking defect at target size.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "N",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 depth narrows and support compresses.",
+      "issue": "No blocking defect at target size.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "N",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 shallow depth passing continuous.",
+      "issue": "No blocking defect at target size.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "N",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 depth ordering reverses moderately.",
+      "issue": "No blocking defect at target size.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "N",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 opposite contact extends.",
+      "issue": "No blocking defect at target size.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "N",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 support compression reduces gap.",
+      "issue": "No blocking defect at target size.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "N",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 near-equal depth opposite passing.",
+      "issue": "No blocking defect at target size.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "N",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 7,
+      "comparison": "7→8 right boot approaches contact with moderate extension.",
+      "issue": "Hair and trousers brighter/warmer; orange sole spot absent in adjacent boots.",
+      "correction": "Match muted brown hair/plum trousers and dark original sole tread; preserve pose."
+    }
+  ]
+}

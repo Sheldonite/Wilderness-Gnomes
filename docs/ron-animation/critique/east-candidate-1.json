@@ -1,0 +1,70 @@
+{
+  "source": "C:/Users/sheld/.codex/generated_images/01a07ef7-9e27-76c2-a4fb-fd914a2e402a/exec-c727c79d-b7f7-46f4-a613-11dc5b0e0cea.png",
+  "method": "4x2 contact sheet visual review; gait-only review, packing alignment pending",
+  "frames": [
+    {
+      "direction": "E",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 5,
+      "issue": "Seam brings a high knee directly to contact; identical contact to frame5.",
+      "correction": "Reduce preceding recovery height; retain near forward contact as A."
+    },
+    {
+      "direction": "E",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 6,
+      "issue": "Compression after1 plausible, but support identity duplicates6.",
+      "correction": "Retain contact A leg supporting, lower pelvis slightly."
+    },
+    {
+      "direction": "E",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 6,
+      "issue": "Passing-like foot overlap after2 plausible; boot path belongs to repeated first half.",
+      "correction": "Keep A support under pelvis and B swing behind/through."
+    },
+    {
+      "direction": "E",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 4,
+      "issue": "Swing knee rises excessively after3 and boot remains tucked rather than extending toward5.",
+      "correction": "Lower knee lift by about half; extend swing shin toward contact5."
+    },
+    {
+      "direction": "E",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 4,
+      "issue": "Repeats frame1 near-side forward leg instead of reversing support after4.",
+      "correction": "Redraw near leg BACK, far leg FORWARD, with correct overlap and heel contact."
+    },
+    {
+      "direction": "E",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 5,
+      "issue": "Repeats first-half down pose rather than near leg lifting behind opposite support.",
+      "correction": "Lift near boot behind while far leg bears weight."
+    },
+    {
+      "direction": "E",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 5,
+      "issue": "Repeats first-half passing silhouette; near/far crossing does not reverse.",
+      "correction": "Pass near bent leg visibly in FRONT of far support shin."
+    },
+    {
+      "direction": "E",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 4,
+      "issue": "Repeats high-knee4 and does not approach contact1 smoothly.",
+      "correction": "Extend near swing leg toward contact1, with modest toe clearance, far heel lifted."
+    }
+  ]
+}

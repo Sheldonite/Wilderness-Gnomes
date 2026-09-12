@@ -1,0 +1,82 @@
+{
+  "source": "artifacts/ron-walk-fix/candidate-all-v3.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "NE",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 rear approach settles into contact without root jump.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "89a83b888ec6dde3b0ebfe2ffe8d06fc3b1caf602eb8fbcede1925363103531f"
+    },
+    {
+      "direction": "NE",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 support compresses and rear heel lifts.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "bdb57624c828fbed9c3551f693e1125ae428862e8b2e5eb359fe04231f681dd0"
+    },
+    {
+      "direction": "NE",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 left support/right swing passing, corrected opposite ownership.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "7aa1434215da97664d92b185b416201d94e3400145af5c86fe12abaf90e02c35"
+    },
+    {
+      "direction": "NE",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 opposite leg approaches contact.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "1c7b063061fcf12375385a1ca758c2cd6d394170c03e23c53ef9fab615c689e9"
+    },
+    {
+      "direction": "NE",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 reversed thigh-overlap contact settles.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "f9a75b6eeb9fb88b829cf42c701ffc5b84daaf80f57fcae7bc5e30d99fb7c39e"
+    },
+    {
+      "direction": "NE",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 opposite rear heel lifts under support.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "042ce5dbd42706eed4309001c5d4f96aa927435f9b81f1314ab9f1a9ef81c182"
+    },
+    {
+      "direction": "NE",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 right support/left swing passing, opposite3.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "1c232f2e927cbada5be371ccb79e519aeb65c2bf86df9b90b6c16f0d2a9d16ba"
+    },
+    {
+      "direction": "NE",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 rearward extension approaches1 continuously.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "f10addc44ec5094be284352da5acb1008206697e821d542f516ffc27b075acbc"
+    }
+  ],
+  "sha256": "b44a54d5593037da0467b97ee41599328d06fbf9802279ff3e3676b51bdf852a",
+  "evidence": "artifacts/ron-critique/ne-assembled-3.png",
+  "passed": true,
+  "threshold": 8
+}

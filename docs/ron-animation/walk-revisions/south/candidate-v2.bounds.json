@@ -1,0 +1,111 @@
+[
+  {
+    "direction": "south",
+    "frame": 1,
+    "x": 34,
+    "y": 22,
+    "width": 126,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/source-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 0
+    }
+  },
+  {
+    "direction": "south",
+    "frame": 2,
+    "x": 39,
+    "y": 22,
+    "width": 132,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/source-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 1
+    }
+  },
+  {
+    "direction": "south",
+    "frame": 3,
+    "x": 33,
+    "y": 22,
+    "width": 129,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/source-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 2
+    }
+  },
+  {
+    "direction": "south",
+    "frame": 4,
+    "x": 32,
+    "y": 22,
+    "width": 129,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/source-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 3
+    }
+  },
+  {
+    "direction": "south",
+    "frame": 5,
+    "x": 32,
+    "y": 22,
+    "width": 129,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/source-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 4
+    }
+  },
+  {
+    "direction": "south",
+    "frame": 6,
+    "x": 40,
+    "y": 22,
+    "width": 130,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/source-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 5
+    }
+  },
+  {
+    "direction": "south",
+    "frame": 7,
+    "x": 33,
+    "y": 22,
+    "width": 128,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/phase7-v4.png"
+    }
+  },
+  {
+    "direction": "south",
+    "frame": 8,
+    "x": 33,
+    "y": 22,
+    "width": 128,
+    "height": 216,
+    "source": {
+      "file": "docs/ron-animation/walk-revisions/south/source-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": 7
+    }
+  }
+]

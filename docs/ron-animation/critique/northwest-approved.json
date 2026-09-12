@@ -1,0 +1,82 @@
+{
+  "source": "artifacts/ron-northwest-candidate.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "NW",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 near approach lands coherently.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "287d1e8c868dfdb52916a3c667699e4fea1c850a87d81ea954df9ef2e5dfb3ea"
+    },
+    {
+      "direction": "NW",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 support/down and far lift.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "6c0dff24f050f1dbaea6a74ceb5309f1f3289c3924b2c9836a74c0c36fe71570"
+    },
+    {
+      "direction": "NW",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 far passing tucked near support.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "7974614b6e1b58c0cb7bac7acba97d9e48736814cc75dabcd53d2b6ca781d46f"
+    },
+    {
+      "direction": "NW",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 opposite leg approaches.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "f6ba4bbb588237760657790c8b7245909c4496803f338e3abfb5a4f7a29d6288"
+    },
+    {
+      "direction": "NW",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 opposite rear-right contact.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "f8a46c6fdbaa6fe5f72a566dc7f855d2ff854ab3251e74a17a54bfa77ed82f10"
+    },
+    {
+      "direction": "NW",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 contact compresses/lifts.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "ad218f0a9ee6850799cc6b444f34cd896b12abd6864939e913bf69c0bb0ba62d"
+    },
+    {
+      "direction": "NW",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 near foreground crossing passing.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "311c26d02101b9b67e509211122c4f353cc60baa6ddc482370590bc44ff7aad7"
+    },
+    {
+      "direction": "NW",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 near foot advances toward1, correcting old repeated rear sole.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "d57761609b9cb7c580fe471d7d7c2fedb0472afa400535ae91e61cc0451cea01"
+    }
+  ],
+  "sha256": "28044243D1AA1366D2FC25A18E33A3248EC3D53765859B64AA9EB49E255B028E",
+  "evidence": "docs/ron-animation/walk-revisions/northwest/assembled-v3.png",
+  "passed": true,
+  "threshold": 8
+}

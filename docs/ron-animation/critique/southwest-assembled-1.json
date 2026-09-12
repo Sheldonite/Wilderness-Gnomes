@@ -1,0 +1,70 @@
+{
+  "source": "docs/ron-animation/walk-revisions/southwest/candidate.png",
+  "method": "Native-size still temporal/style audit",
+  "frames": [
+    {
+      "direction": "SW",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 7,
+      "comparison": "8→1 style changes at seam.",
+      "correction": "Harmonize second-half head/torso proportions, muted palette, baggy trousers and staff length with first half; retain gait."
+    },
+    {
+      "direction": "SW",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 compression coherent.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "SW",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 narrow passing.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "SW",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 opposite approach.",
+      "correction": "Retain."
+    },
+    {
+      "direction": "SW",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 7,
+      "comparison": "4→5 contact correct but head/torso narrower, warm palette and short staff.",
+      "correction": "Harmonize second-half head/torso proportions, muted palette, baggy trousers and staff length with first half; retain gait."
+    },
+    {
+      "direction": "SW",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 7,
+      "comparison": "5→6 lift correct; style mismatch first half persists.",
+      "correction": "Harmonize second-half head/torso proportions, muted palette, baggy trousers and staff length with first half; retain gait."
+    },
+    {
+      "direction": "SW",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 7,
+      "comparison": "6→7 passing correct; style mismatch persists.",
+      "correction": "Harmonize second-half head/torso proportions, muted palette, baggy trousers and staff length with first half; retain gait."
+    },
+    {
+      "direction": "SW",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 7,
+      "comparison": "7→8 approach correct; style mismatch into1.",
+      "correction": "Harmonize second-half head/torso proportions, muted palette, baggy trousers and staff length with first half; retain gait."
+    }
+  ]
+}

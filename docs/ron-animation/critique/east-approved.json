@@ -1,0 +1,90 @@
+{
+  "source": "artifacts/ron-walk-fix/candidate-east-v3.png",
+  "sha256": "61BA509C48C266146CAB866EF689B748105AF8335F56DF44579B53ED4C17BBD6",
+  "evidence": "artifacts/ron-critique/east-assembled-3.png",
+  "method": "Native-size strip still-frame temporal/style/registration audit, not continuous playback",
+  "threshold": 8,
+  "passed": true,
+  "frames": [
+    {
+      "direction": "E",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 8,
+      "comparison": "8→1 heel lowers into near contact without root jump.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "3e2128b8165de2c20a29af6ec19bb12865b5fe61fa27afcdda01631a76ff1437"
+    },
+    {
+      "direction": "E",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 8,
+      "comparison": "1→2 rear heel lifts as support compresses.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "37d44c0b5acb5a097fc439ed337d4f9ae852e6413b84081c06f7e75ee6623872"
+    },
+    {
+      "direction": "E",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 8,
+      "comparison": "2→3 far leg passes behind near support.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "a40406d7d7faa9026bc850ae3627506c33b8bae6abf1c6629991cf04266ca029"
+    },
+    {
+      "direction": "E",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 8,
+      "comparison": "3→4 far leg advances toward opposite contact.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "e1c85abd8efbd8ab1548fea73bd9eb125f7ff2ceda95a3f0cc60c4743031f327"
+    },
+    {
+      "direction": "E",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 8,
+      "comparison": "4→5 opposite contact lands with reversed thigh overlap.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "b8f974148edf9c3020a8fb9c7da17e63269ef4bdbe20b3663a4cf0e77d0a44d2"
+    },
+    {
+      "direction": "E",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 8,
+      "comparison": "5→6 near rear heel lifts while far supports.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "c82cc83065952f165c585741b5f65c8ab4211e61903976e64b44f8f2172ea915"
+    },
+    {
+      "direction": "E",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 8,
+      "comparison": "6→7 near leg passes in foreground.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "cb79d3b2de92f789c76f1ae19d40de859a8d07a3b04e008e866bea29270c93e7"
+    },
+    {
+      "direction": "E",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 8,
+      "comparison": "7→8 near leg approaches next contact; seam closes.",
+      "issue": "No blocking defect at target size; minor ribbon microvariation and rigid upper torso limit polish to8.",
+      "correction": "None required at threshold8.",
+      "rgbaSha256": "0dd6207dad0e0f7d66eccc6671f83e36ab0f692fd6193bc8ca5fba9f9f3971fc"
+    }
+  ]
+}

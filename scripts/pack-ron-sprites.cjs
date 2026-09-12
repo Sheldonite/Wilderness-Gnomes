@@ -66,5 +66,12 @@ async function main() {
   }
   fs.writeFileSync(path.join(out,'ron-atlas.png'),PNG.sync.write(atlas));
   fs.writeFileSync(path.join(root,'docs/ron-animation/bounds.json'),JSON.stringify(bounds,null,2)+'\n');
+  const walkManifest=path.join(root,'docs/ron-animation/walk-revisions/manifest.json');
+  if(fs.existsSync(walkManifest)) {
+    // Preserve the reviewed walking revisions when rebuilding the original idle sources.
+    require('node:child_process').execFileSync(process.execPath,[path.join(root,'scripts/import-ron-walks.cjs'),walkManifest,path.join(out,'ron-atlas.png')],{cwd:root,stdio:'inherit'});
+    // One head per direction across idle and walk frames; see scripts/ron-lock-heads.py.
+    require('node:child_process').execFileSync(process.env.PYTHON??'python',[path.join(root,'scripts/ron-lock-heads.py'),path.join(out,'ron-atlas.png')],{cwd:root,stdio:'inherit'});
+  }
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

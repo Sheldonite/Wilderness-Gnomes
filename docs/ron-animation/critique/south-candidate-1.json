@@ -1,0 +1,70 @@
+{
+  "source": "docs/ron-animation/walk-revisions/south/source-v1.png",
+  "method": "4x2 contact sheet still-frame temporal audit",
+  "frames": [
+    {
+      "direction": "S",
+      "frame": 1,
+      "previousFrame": 8,
+      "score": 6,
+      "issue": "Repeats frame8 screen-left low boot contact; no approaching recovery.",
+      "correction": "Make preceding8 a recovery pose; keep A contact here."
+    },
+    {
+      "direction": "S",
+      "frame": 2,
+      "previousFrame": 1,
+      "score": 6,
+      "issue": "Minor down motion plausible but leg shapes almost held.",
+      "correction": "Compress A support knee modestly and lift opposite heel."
+    },
+    {
+      "direction": "S",
+      "frame": 3,
+      "previousFrame": 2,
+      "score": 4,
+      "issue": "Same contact as2, not passing; depth gap remains large.",
+      "correction": "Move support boot under pelvis and lift swing boot; narrow foot depth difference."
+    },
+    {
+      "direction": "S",
+      "frame": 4,
+      "previousFrame": 3,
+      "score": 4,
+      "issue": "Full boot-depth swap from3 instead of intermediate recovery.",
+      "correction": "Show B approaching contact with toe clearance, intermediate depth, not fully planted."
+    },
+    {
+      "direction": "S",
+      "frame": 5,
+      "previousFrame": 4,
+      "score": 6,
+      "issue": "Repeats frame4 opposite contact rather than first contact B.",
+      "correction": "First full B contact, opposite to1."
+    },
+    {
+      "direction": "S",
+      "frame": 6,
+      "previousFrame": 5,
+      "score": 6,
+      "issue": "Minor down plausible but support knee compression weak.",
+      "correction": "Compress B support knee, lift A heel."
+    },
+    {
+      "direction": "S",
+      "frame": 7,
+      "previousFrame": 6,
+      "score": 4,
+      "issue": "Abrupt switch from B to A contact; passing omitted.",
+      "correction": "B support under hip, A passing with shallow depth gap and toe clearance."
+    },
+    {
+      "direction": "S",
+      "frame": 8,
+      "previousFrame": 7,
+      "score": 4,
+      "issue": "Repeats A contact from7, no approaching contact seam.",
+      "correction": "A approaching next contact; intermediate depth and modest clearance rather than fully extended."
+    }
+  ]
+}

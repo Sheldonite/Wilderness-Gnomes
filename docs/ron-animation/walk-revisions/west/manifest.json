@@ -1,0 +1,43 @@
+{
+  "base": "artifacts/ron-walk-fix/before.png",
+  "directions": {
+    "west": [
+      {
+        "file": "docs/ron-animation/walk-revisions/west/phases-1234.png",
+        "columns": 4,
+        "rows": 1,
+        "cell": 0
+      },
+      {
+        "file": "docs/ron-animation/walk-revisions/west/phases-1234.png",
+        "columns": 4,
+        "rows": 1,
+        "cell": 1
+      },
+      {
+        "file": "docs/ron-animation/walk-revisions/west/phase3-v5.png"
+      },
+      {
+        "file": "docs/ron-animation/walk-revisions/west/phase4-v2.png"
+      },
+      {
+        "file": "docs/ron-animation/walk-revisions/west/contact-b.png"
+      },
+      {
+        "file": "docs/ron-animation/walk-revisions/west/phase6-v2.png"
+      },
+      {
+        "file": "docs/ron-animation/walk-revisions/west/passing-v2.png",
+        "columns": 2,
+        "rows": 1,
+        "cell": 1
+      },
+      {
+        "file": "docs/ron-animation/walk-revisions/west/phases-678.png",
+        "columns": 3,
+        "rows": 1,
+        "cell": 2
+      }
+    ]
+  }
+}
