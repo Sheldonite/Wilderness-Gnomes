@@ -43,6 +43,12 @@ export class ChestSystem {
 
   get positions(): Vector2Like[] { return this.drops.chests.map(chest => chest.position); }
 
+  /** An elite's chest, placed on dry ground where it fell. */
+  dropChest(position: Vector2Like): void {
+    const chest = this.drops.addChest(this.ground.nearest(position, 24));
+    this.createView(chest.id, chest.position);
+  }
+
   dropBoss(position: Vector2Like): void {
     const chest = this.drops.addBoss(this.ground.nearest(position, 24));
     this.createView(chest.id, chest.position, true);

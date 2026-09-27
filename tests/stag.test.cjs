@@ -67,7 +67,11 @@ test('the stomp where the charge ends hurts anyone close, and a blocked charge s
   wall.update(16, boss, player, 18, 1, quiet);
   let stomp = 0;
   wall.blocked({ x: boss.x + 40, y: boss.y }, { x: boss.x + 80, y: boss.y }, 18, d => stomp += d);
-  assert.equal(wall.phase, 'recovering'); assert.equal(stomp, STAG.stompDamage);
+  assert.equal(wall.phase, 'stunned', 'a tree stuns him'); assert.equal(stomp, STAG.stompDamage);
+  const edge = ready(); edge.update(STAG.windupMs, boss, player, 18, 1, quiet);
+  edge.update(16, boss, player, 18, 1, quiet);
+  edge.blocked({ x: boss.x + 40, y: boss.y }, { x: boss.x + 800, y: boss.y }, 18, quiet, false);
+  assert.equal(edge.phase, 'recovering', 'the arena edge only ends the charge');
 });
 
 test('below half health the stag winds up faster and charges twice before resting', () => {
@@ -97,4 +101,74 @@ test('defeat clears the lane and steps and stops the encounter', () => {
   let taken = 0;
   fight.update(5000, boss, player, 18, 1, d => taken += d);
   assert.equal(taken, 0); assert.equal(fight.phase, 'charging', 'frozen where it was');
+});
+
+test('a stag stunned against a tree takes extra damage until he shakes it off', () => {
+  const fight = ready(); fight.update(STAG.windupMs, boss, player, 18, 1, quiet);
+  fight.update(16, boss, player, 18, 1, quiet);
+  fight.blocked({ x: boss.x + 40, y: boss.y }, { x: 0, y: 0 }, 18, quiet);
+  assert.ok(fight.vulnerable);
+  fight.update(STAG.stunMs - 1, boss, { x: 0, y: 0 }, 18, 1, quiet);
+  assert.equal(fight.phase, 'stunned');
+  fight.update(1, boss, { x: 0, y: 0 }, 18, 1, quiet);
+  assert.equal(fight.phase, 'stalking'); assert.ok(!fight.vulnerable);
+  const enraged = ready(.4); enraged.update(STAG.enragedWindupMs, boss, player, 18, .4, quiet);
+  enraged.update(16, boss, player, 18, .4, quiet);
+  enraged.blocked(boss, { x: 0, y: 0 }, 18, quiet);
+  enraged.update(STAG.stunMs, boss, { x: 0, y: 0 }, 18, .4, quiet);
+  assert.equal(enraged.phase, 'stalking', 'a stun cancels the second enraged charge');
+});
+
+/** A charge that ends far away, leaving the stag recovering at `end`. */
+function recovering(health = 1) {
+  const fight = ready(health);
+  fight.update(health <= STAG.enrageFraction ? STAG.enragedWindupMs : STAG.windupMs, boss, player, 18, health, quiet);
+  const end = runCharge(fight, boss, { x: 0, y: 0 }, 18, quiet, 16, health);
+  return { fight, end };
+}
+
+test('hugging the stag through his rest earns a telegraphed antler sweep in front of him', () => {
+  const { fight, end } = recovering();
+  const close = { x: end.x + 100, y: end.y };
+  fight.update(STAG.recoverMs, end, close, 18, 1, quiet);
+  assert.equal(fight.phase, 'stalking');
+  fight.update(STAG.sweepHoldMs - STAG.recoverMs, end, close, 18, 1, quiet);
+  assert.equal(fight.phase, 'sweepWindup'); assert.ok(fight.sweep.direction.x > .99);
+  const blows = [];
+  fight.update(STAG.sweepWindupMs, end, close, 18, 1, (d, push, knockback) => blows.push({ d, push, knockback }));
+  assert.equal(blows.length, 1); assert.equal(blows[0].d, STAG.sweepDamage); assert.equal(blows[0].knockback, STAG.sweepKnockback);
+  assert.ok(blows[0].push.x > .99, 'thrown away from him'); assert.equal(fight.phase, 'stalking'); assert.ok(fight.swept);
+  const dodge = recovering();
+  const near = { x: dodge.end.x + 100, y: dodge.end.y };
+  dodge.fight.update(STAG.recoverMs, dodge.end, near, 18, 1, quiet);
+  dodge.fight.update(STAG.sweepHoldMs, dodge.end, near, 18, 1, quiet);
+  let taken = 0;
+  dodge.fight.update(STAG.sweepWindupMs, dodge.end, { x: dodge.end.x - 100, y: dodge.end.y }, 18, 1, d => taken += d);
+  assert.equal(taken, 0, 'slipping behind him dodges the sweep');
+  const distant = recovering();
+  distant.fight.update(STAG.recoverMs + STAG.sweepHoldMs, distant.end, { x: distant.end.x + 400, y: distant.end.y }, 18, 1, quiet);
+  assert.notEqual(distant.fight.phase, 'sweepWindup', 'keeping your distance never provokes it');
+});
+
+test('an enraged follow-up charge leads a moving player', () => {
+  const { fight, end } = recovering(.4);
+  let target;
+  for (let t = 0; fight.phase === 'recovering' && t < 5000; t += 20) {
+    target = { x: end.x - 350, y: 1600 + t * .3 };   // strafing down at 300 px/s
+    fight.update(20, end, target, 18, .4, quiet);
+  }
+  assert.equal(fight.phase, 'windup');
+  const direct = Math.atan2(target.y - end.y, target.x - end.x), aimed = Math.atan2(fight.lane.direction.y, fight.lane.direction.x);
+  assert.ok(Math.abs(aimed - direct) > .1, 'the lane is aimed ahead of the player');
+  assert.ok(fight.lane.direction.y > Math.sin(direct), 'leading in the direction they are running');
+});
+
+test('Wonky calls the herd once at each stampede threshold', () => {
+  assert.equal(STAG.name, 'Wonky');
+  const fight = ready();
+  fight.update(16, boss, player, 18, .6, quiet); assert.equal(fight.pendingStampedes, 0);
+  fight.update(16, boss, player, 18, .5, quiet); assert.equal(fight.pendingStampedes, 1);
+  fight.pendingStampedes = 0;
+  fight.update(16, boss, player, 18, .4, quiet); assert.equal(fight.pendingStampedes, 0);
+  fight.update(16, boss, player, 18, .1, quiet); assert.equal(fight.pendingStampedes, 1);
 });

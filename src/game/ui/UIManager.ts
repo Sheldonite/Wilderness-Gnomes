@@ -153,13 +153,25 @@ export class UIManager {
 
   showGameOver(onRestart: () => void, onTitle: () => void, market?: { earned: number; balance: number; saved: boolean; onVisit: () => void }): void {
     const snapshot = this.gameManager.getHudSnapshot();
-    const list = this.createOverlay('Every wanderer finds a way', 'Your story in the woods isn’t over yet.', 'UNTIL THE NEXT ADVENTURE', 'leaf', 'gameover-panel');
+    const won = this.gameManager.victorious;
+    const list = won
+      ? this.createOverlay('The woods are yours', 'Every boss has bowed. A legend walks home.', 'VICTORY', 'star', 'gameover-panel')
+      : this.createOverlay('Every wanderer finds a way', 'Your story in the woods isn’t over yet.', 'UNTIL THE NEXT ADVENTURE', 'leaf', 'gameover-panel');
     list.innerHTML = `<div class="result-stats"><span><b>${formatTime(snapshot.elapsedSeconds)}</b>TIME IN THE WOODS</span><span><b>${snapshot.kills}</b>FOES DEFEATED</span><span><b>${snapshot.level}</b>LEVEL REACHED</span></div>`;
     if (market) {
       list.insertAdjacentHTML('beforeend', `<div class="run-gold-reward">${icon('gold')}<span><strong>+${market.earned} gold earned</strong><small>${market.balance} gold in your purse${market.saved ? '' : ' · Saved for this session'}</small></span></div><p class="gold-milestones">Level 10: 5 gold · Level 20: 10 gold<br>+1 gold for each level beyond 20</p>`);
       this.addButton(list, 'Visit Market Day', market.onVisit, true);
     }
     this.addButton(list, 'Wander again', onRestart, true); this.addButton(list, 'Choose a wanderer', onTitle, false); this.focusFirst();
+  }
+
+  /** Every boss is down: keep wandering for more gold, or take the win home. */
+  showVictory(onContinue: () => void, onFinish: () => void): void {
+    const list = this.createOverlay('Victory!', 'Oven, Wonky and King Rumbles have all fallen.', 'THE WOODS ARE SAFE', 'star', 'pause-panel');
+    list.innerHTML = '<p class="pause-instruction">Head home a hero, or keep wandering. The woods only grow wilder, and every level past 20 is worth more gold.</p>';
+    this.addButton(list, 'Keep wandering', onContinue, true);
+    this.addButton(list, 'Head home victorious', onFinish, false);
+    this.focusFirst();
   }
 
   destroy(): void { window.removeEventListener('keydown', this.onKey); this.root.innerHTML = ''; this.root.classList.remove('run-frozen', 'low-health'); }

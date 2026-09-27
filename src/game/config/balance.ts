@@ -12,13 +12,54 @@ export const BALANCE = {
     contactDamage: 8,
     contactDamageCooldownMs: 520,
     separationRadius: 34,
-    xpValue: 8
+    xpValue: 8,
+    /** Every foe gains this much health per minute of the run. */
+    healthPerMinute: 8,
+    /** Speed rises per minute, but never past this fraction of the creature's own base speed. */
+    speedPerMinute: 6,
+    maxSpeedBonus: 0.4,
+    /** Contact damage grows by this fraction per minute, so late foes stay dangerous without outrunning you. */
+    damagePerMinute: 0.04
+  },
+  /** Crystals dropped per creature: sturdier foes are worth more. */
+  enemyXp: { brown: 8, grey: 10, fawn: 8, doe: 14, buck: 30, armadillo: 35 },
+  /** Bosses shrug off shoves and pulls, and are never slowed below this multiplier. */
+  boss: { slowFloor: 0.7 },
+  elite: {
+    firstMs: 150000,
+    everyMs: 75000,
+    healthMultiplier: 5,
+    damageMultiplier: 1.3,
+    scale: 1.35,
+    xpMultiplier: 5,
+    tint: 0xffd36a
+  },
+  /** Timed set pieces between bosses. Their clocks only run while the woods are open. */
+  events: {
+    ringFirstMs: 180000,
+    ringEveryMs: 90000,
+    ringRadius: 640,
+    ringBase: 16,
+    ringPerMinute: 2,
+    ringMax: 36,
+    stampedeFirstMs: 225000,
+    stampedeEveryMs: 90000,
+    stampedeWarnMs: 1400,
+    stampedeCount: 6,
+    stampedeSpeed: 430,
+    stampedeLength: 1500,
+    stampedeSpacing: 58,
+    stampedeLaneWidth: 70,
+    doubleStampedeMinute: 10,
+    /** Set pieces may exceed the spawner's cap by this many creatures, never more. */
+    capAllowance: 40
   },
   deer: {
-    unlockLevel: 10,          // from here every spawn is a deer; squirrels stop
+    unlockLevel: 10,          // from here most spawns are deer
     fawnChance: 0.35,
     buckLevel: 15,            // from here one deer in five is a buck
     buckChance: 0.2,
+    squirrelShare: 0.3,       // squirrels still make up this share of spawns once deer arrive
     doe: { health: 70, speed: 118, contactDamage: 12, radius: 22, scale: 1.05 },
     fawn: { health: 34, speed: 150, contactDamage: 6, radius: 15, scale: 0.85 },
     buck: { health: 150, speed: 105, contactDamage: 20, radius: 26, scale: 1.55 }
@@ -60,7 +101,11 @@ export const BALANCE = {
     initialMaxEnemies: 45,
     maxEnemiesCap: 180,
     maxEnemiesAddedPerMinute: 24,
-    spawnOutsideViewPadding: 90
+    spawnOutsideViewPadding: 90,
+    /** From this minute each spawn tick brings a small group, growing every few minutes. */
+    batchFromMinute: 6,
+    batchEveryMinutes: 4,
+    maxBatch: 3
   },
   weapon: {
     cooldownMs: 850,
@@ -139,6 +184,8 @@ export const BALANCE = {
     thresholdGrowth: 1.22,
     linearFromLevel: 10,        // past here each level needs a fixed amount more, not a percentage
     linearStepXp: 30,
-    choices: 3
+    choices: 3,
+    /** Split Charm can be picked this many times per run. */
+    maxSplitPicks: 4
   }
 } as const;

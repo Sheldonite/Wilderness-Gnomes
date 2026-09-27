@@ -17,7 +17,9 @@ export class XPOrb {
     y: number,
     readonly value: number
   ) {
-    this.sprite = scene.add.sprite(x, y, LOOK.texture.crystal).setDisplaySize(21, 21);
+    // Richer creatures drop visibly bigger crystals.
+    const size = 21 + Math.min(17, Math.max(0, value - BALANCE.enemy.xpValue) / 4);
+    this.sprite = scene.add.sprite(x, y, LOOK.texture.crystal).setDisplaySize(size, size);
     this.sprite.setDepth(5);
   }
 

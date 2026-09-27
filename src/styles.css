@@ -426,6 +426,9 @@ body:has(.storybook-overlay) .ability-review-controls{display:none}
 .boss-caption { font-size:12px; text-align:center; min-height:16px; }
 .boss-track { margin-top:7px; height:7px; background:#201c16; border-radius:5px; overflow:hidden; }
 .boss-track i { display:block; height:100%; transform-origin:left; background:linear-gradient(90deg,#e56835,#ffc568); }
+.event-banner { position:absolute; top:100px; left:50%; transform:translateX(-50%); max-width:calc(100% - 36px); padding:9px 18px; border:1px solid #d6a461; border-radius:14px; background:rgba(48,35,28,.92); color:#ffe2a2; font-family:Georgia,serif; font-size:15px; text-align:center; pointer-events:none; z-index:11; box-shadow:0 4px 18px #20160f45; animation:event-banner-in .35s ease-out; }
+.event-banner[hidden] { display:none; }
+@keyframes event-banner-in { from { opacity:0; transform:translate(-50%,-8px); } to { opacity:1; transform:translateX(-50%); } }
 .upgrade-panel .panel-emblem{display:none}
 .upgrade-panel .panel-intro{margin-bottom:12px}
 .upgrade-card.owned-upgrade{border:2px solid #a98539;background:linear-gradient(#fff8dd,#e8e5c6)}

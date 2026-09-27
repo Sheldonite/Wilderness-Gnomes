@@ -47,6 +47,12 @@ export class ChestDrops {
     return this.chests.splice(index, 1)[0];
   }
 
+  /** A chest left exactly where something fell (an elite). */
+  addChest(position: Vector2Like): ChestDrop {
+    const chest: ChestDrop = { id: ++this.nextId, position: { ...position }, kind: 'chest' };
+    this.chests.push(chest); return chest;
+  }
+
   addBoss(position: Vector2Like): ChestDrop {
     const chest: ChestDrop = { id: ++this.nextId, position: { ...position }, kind: 'boss' };
     this.chests.push(chest); return chest;

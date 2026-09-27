@@ -15,19 +15,22 @@ test('grey squirrels only appear from the unlock level, one in five spawns', () 
   assert.ok(greys > 1700 && greys < 2300, `expected roughly 20% grey, got ${greys / 100}%`);
 });
 
-test('from the deer level only does and fawns spawn, with fawns in the minority', () => {
+test('from the deer level most spawns are deer, with a steady share of squirrels', () => {
   const D = BALANCE.deer;
   assert.equal(rollSpawnVariant(D.unlockLevel - 1, () => 0.99), 'brown');
   const counts = { brown: 0, grey: 0, doe: 0, fawn: 0 };
-  for (let i = 0; i < 10000; i++) counts[rollSpawnVariant(D.unlockLevel)]++;
-  assert.equal(counts.brown + counts.grey, 0, 'no squirrels once deer arrive');
-  assert.ok(counts.fawn > 3000 && counts.fawn < 4000, `expected ~35% fawns, got ${counts.fawn / 100}%`);
-  assert.equal(counts.doe + counts.fawn, 10000);
+  for (let i = 0; i < 20000; i++) counts[rollSpawnVariant(D.unlockLevel)]++;
+  const squirrels = (counts.brown + counts.grey) / 200;
+  assert.ok(Math.abs(squirrels - D.squirrelShare * 100) < 2, `expected ~${D.squirrelShare * 100}% squirrels, got ${squirrels}%`);
+  const deer = counts.doe + counts.fawn;
+  assert.ok(Math.abs(counts.fawn / deer - D.fawnChance) < .02, `fawns are ~${D.fawnChance * 100}% of the deer`);
   const late = { brown: 0, grey: 0, doe: 0, fawn: 0, buck: 0 };
-  for (let i = 0; i < 10000; i++) late[rollSpawnVariant(D.buckLevel)]++;
-  assert.ok(late.buck > 1700 && late.buck < 2300, `expected ~20% bucks, got ${late.buck / 100}%`);
-  assert.equal(late.brown + late.grey, 0);
-  assert.equal(rollSpawnVariant(D.buckLevel - 1, () => 0), 'fawn', 'no bucks before their level');
+  for (let i = 0; i < 20000; i++) late[rollSpawnVariant(D.buckLevel)]++;
+  const lateDeer = late.doe + late.fawn + late.buck;
+  assert.ok(Math.abs(late.buck / lateDeer - D.buckChance) < .02, `expected ~20% bucks among deer, got ${late.buck / lateDeer}`);
+  assert.ok(late.brown + late.grey > 0, 'squirrels still turn up late');
+  const rolls = [0.99, 0];   // deer, then a fawn roll
+  assert.equal(rollSpawnVariant(D.buckLevel - 1, () => rolls.shift()), 'fawn', 'no bucks before their level');
 });
 
 test('a grey squirrel approaches, holds its range, and backs off when crowded', () => {

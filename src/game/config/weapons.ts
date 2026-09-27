@@ -90,5 +90,5 @@ export function getWeapon(id?: string): WeaponDefinition {
 export const CROSSBOW_STAT_UPGRADES: Partial<Record<string, { title: string; description: string; icon: string }>> = {
   'projectile-damage': { title: 'Honed Quarrels', description: '+8 quarrel damage', icon: 'bolt' },
   'fire-rate': { title: 'Swift String', description: 'Loose 15% faster', icon: 'clock' },
-  'projectile-count': { title: 'Twin Quarrels', description: '+1 quarrel per volley', icon: 'split' }
+  'projectile-count': { title: 'Twin Quarrels', description: '+1 quarrel per volley (up to 4 picks)', icon: 'split' }
 };

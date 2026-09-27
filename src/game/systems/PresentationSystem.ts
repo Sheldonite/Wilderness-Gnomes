@@ -52,7 +52,7 @@ export class PresentationSystem {
     for (const [sprite, actor] of this.actors) {
       actor.shadow.setPosition(sprite.x + 3, sprite.y + actor.foot);
       actor.contact?.setPosition(sprite.x, sprite.y + actor.foot);
-      if (actor.flash > 0) { actor.flash -= deltaMs; if (actor.flash <= 0) sprite.clearTint(); }
+      if (actor.flash > 0) { actor.flash -= deltaMs; if (actor.flash <= 0) { const tint = sprite.getData('tint'); if (tint !== undefined) sprite.setTint(tint); else sprite.clearTint(); } }
     }
     for (const p of this.particles) {
       if (!p.image.visible) continue;

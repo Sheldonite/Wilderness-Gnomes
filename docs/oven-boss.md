@@ -1,5 +1,7 @@
 # The Taco Toaster
 
+> **Update:** the Oven's health, attacks and hot phase were rebalanced. See `bosses-and-pacing.md` for current numbers.
+
 The first boss arrives once per run when play resumes at level 10 or higher. He uses scenery navigation, stomps to a 160-pixel throwing distance, and throws three flaming tacos at fixed, marked landing spots. There is an 800ms windup and 1100ms flight, with no damage until impact. Overlapping blasts deal only one 18-damage hit per volley. Below half health, the pause between attacks falls from 3000ms to 2200ms. Health is 1200; defeating him awards one kill and a 120-XP crystal, cancels all pending attacks, and shows a brief victory message. Balance is centralized in `src/game/config/ovenBoss.ts`.
 
 Existing spells, abilities, and both cats can damage him through the shared defeat handler. Pause, upgrade menus and game over freeze his encounter. Restart clears the boss, warning markers, taco sprites and health bar. Three taco images are reused. Reduced motion removes decorative taco spinning without changing flight or timing.

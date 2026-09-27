@@ -34,6 +34,18 @@ export interface EnemyAppearance {
   scale: number;
   animation: string;
   shadow?: ActorShadow;
+  /** Bosses: fixed contact damage, immune to shoves, pulls and roots, and only partly slowed. */
+  boss?: { contactDamage: number };
+}
+
+/** How much faster a creature has become after this many minutes: steady at first, then capped. */
+export function speedBonus(baseSpeed: number, minutes: number): number {
+  return Math.min(baseSpeed * BALANCE.enemy.maxSpeedBonus, BALANCE.enemy.speedPerMinute * Math.max(0, minutes));
+}
+
+/** Contact damage multiplier for a creature that arrived after this many minutes. */
+export function contactScale(minutes: number): number {
+  return 1 + BALANCE.enemy.damagePerMinute * Math.max(0, minutes);
 }
 
 interface VariantProfile {
@@ -67,9 +79,20 @@ export class EnemyController {
   readonly id = nextEnemyId++;
   readonly radius: number;
   private readonly baseContact: number;
+  private readonly contactMultiplier: number;
   readonly sprite: Phaser.GameObjects.Sprite;
   health: number;
+  /** Health at full strength, for boss bars and elite scaling. */
+  maxHealth: number;
   isDead = false;
+  /** Elites are tougher, gilded, worth more crystals, and leave a chest behind. */
+  elite = false;
+  /** Damage taken is multiplied by this; bosses raise it while stunned or dizzy. */
+  vulnerability = 1;
+  readonly isBoss: boolean;
+  private readonly bossContact?: number;
+  private scale: number;
+  private run?: { direction: Vector2Like; left: number; speed: number };
   slowMultiplier = 1;
   lastContactDamageAt = -Infinity;
   private rootMs = 0;
@@ -88,34 +111,74 @@ export class EnemyController {
     this.profile = profile;
     this.radius = appearance?.radius ?? profile.radius;
     this.baseContact = profile.contactDamage;
+    this.contactMultiplier = contactScale(difficultyMinutes);
+    this.isBoss = Boolean(appearance?.boss);
+    this.bossContact = appearance?.boss?.contactDamage;
+    this.scale = appearance?.scale ?? profile.scale;
     const spawn = navigation?.nearest({ x, y }, this.radius) ?? { x, y };
     this.sprite = scene.add.sprite(spawn.x, spawn.y, appearance?.texture ?? profile.textureKey, 0);
     this.walkAnimations = profile.walkAnimations;
     this.sprite.setDepth(10);
-    this.sprite.setScale(appearance?.scale ?? profile.scale);
+    this.sprite.setScale(this.scale);
     this.sprite.play(appearance?.animation ?? this.walkAnimations['0,1']);
     scene.events.emit('presentation:actor', this.sprite, appearance?.shadow);
-    this.health = Math.round(profile.health + difficultyMinutes * 8);
+    this.health = this.maxHealth = Math.round(profile.health + difficultyMinutes * BALANCE.enemy.healthPerMinute);
     if (profile.ranged) this.ranged = new RangedSquirrelBehavior();
     if (variant === 'armadillo') this.armadillo = new ArmadilloBehavior();
   }
 
   get contactDamage(): number {
-    return this.armadillo?.rolling ? BALANCE.armadillo.rollDamage : this.baseContact;
+    if (this.bossContact !== undefined) return this.bossContact;
+    const base = this.armadillo?.rolling ? BALANCE.armadillo.rollDamage : this.baseContact;
+    return Math.round(base * this.contactMultiplier * (this.elite ? BALANCE.elite.damageMultiplier : 1));
   }
+
+  /** Crystals this creature is worth when it falls. */
+  get xpValue(): number {
+    return BALANCE.enemyXp[this.variant] * (this.elite ? BALANCE.elite.xpMultiplier : 1);
+  }
+
+  /** Slow actually applied: bosses never drop below the floor. */
+  get effectiveSlow(): number {
+    return this.isBoss ? Math.max(BALANCE.boss.slowFloor, this.slowMultiplier) : this.slowMultiplier;
+  }
+
+  /** Promote a fresh spawn to an elite: five times the health, harder hits, a golden coat. */
+  makeElite(): void {
+    if (this.elite || this.isBoss) return;
+    this.elite = true;
+    this.health = this.maxHealth = Math.round(this.maxHealth * BALANCE.elite.healthMultiplier);
+    this.scale *= BALANCE.elite.scale;
+    this.sprite.setScale(this.scale);
+    this.setBaseTint(BALANCE.elite.tint);
+  }
+
+  /** A colour that survives hit flashes (elites, chili squirrels). */
+  setBaseTint(color: number): void {
+    this.sprite.setData?.('tint', color);
+    this.sprite.setTint?.(color);
+  }
+
+  /** Stampede: gallop straight along a lane for a while, then hunt the player as usual. */
+  stampede(direction: Vector2Like, distance: number, speed: number): void {
+    this.run = { direction: normalize(direction.x, direction.y), left: distance, speed };
+  }
+
+  get stampeding(): boolean { return Boolean(this.run); }
 
   get isRanged(): boolean {
     return this.profile.ranged;
   }
 
   /** Hold this enemy in place for a while (Living Bark). */
-  root(ms: number): void { this.rootMs = Math.max(this.rootMs, ms); }
+  root(ms: number): void { if (!this.isBoss) this.rootMs = Math.max(this.rootMs, ms); }
 
   update(deltaMs: number, target: Vector2Like, difficultyMinutes: number): void {
     if (this.isDead) return;
+    if (this.run) { this.updateRun(deltaMs); return; }
     if (this.rootMs > 0) { this.rootMs -= deltaMs; this.sprite.anims.pause(); return; }
     if (this.armadillo) { this.updateArmadillo(deltaMs, target); return; }
-    const speed = (this.profile.speed + difficultyMinutes * 8) * this.slowMultiplier;
+    const speed = (this.profile.speed + speedBonus(this.profile.speed, difficultyMinutes)) * this.slowMultiplier;
     const direction = this.ranged
       ? this.ranged.steer(this.position, target)
       : normalize(target.x - this.sprite.x, target.y - this.sprite.y);
@@ -142,6 +205,19 @@ export class EnemyController {
     const actual = normalize(safe.x - this.sprite.x, safe.y - this.sprite.y);
     this.sprite.setPosition(safe.x, safe.y);
     this.updateAnimation(actual.x === 0 && actual.y === 0 ? direction : actual);
+  }
+
+  private updateRun(deltaMs: number): void {
+    const run = this.run!;
+    const step = Math.min(run.left, run.speed * Math.max(.3, this.slowMultiplier) * deltaMs / 1000);
+    const before = this.position;
+    const wanted = { x: before.x + run.direction.x * step, y: before.y + run.direction.y * step };
+    const safe = this.navigation?.move(before, wanted, this.radius) ?? clampToArena(wanted, this.radius);
+    this.sprite.setPosition(safe.x, safe.y);
+    this.updateAnimation(run.direction);
+    run.left -= step;
+    // A tree or the arena edge ends the gallop early.
+    if (run.left <= 0 || (step > 0 && Math.hypot(safe.x - before.x, safe.y - before.y) < step * .3)) this.run = undefined;
   }
 
   /** Returns a launch velocity when this squirrel is ready to throw at the target, else undefined. */
@@ -171,17 +247,17 @@ export class EnemyController {
     }
     if (rolling || this.armadillo!.curling) {
       if (this.sprite.texture.key !== ARMADILLO_ROLL_KEY) this.sprite.setTexture(ARMADILLO_ROLL_KEY);
-      this.sprite.setScale(this.profile.scale);
+      this.sprite.setScale(this.scale);
       this.sprite.play(ARMADILLO_ROLL_ANIMATION, true);
       return;
     }
     if (this.sprite.texture.key !== ARMADILLO_SPRITE_KEY) this.sprite.setTexture(ARMADILLO_SPRITE_KEY, 0);
-    this.sprite.setScale(this.profile.scale);
+    this.sprite.setScale(this.scale);
     const moved = normalize(safe.x - before.x, safe.y - before.y);
     this.updateAnimation(moved.x === 0 && moved.y === 0 ? this.armadillo!.facing : moved);
   }
 
-  private updateAnimation(direction: Vector2Like): void {
+  protected updateAnimation(direction: Vector2Like): void {
     const horizontal = Math.sign(Math.round(direction.x));
     const vertical = Math.sign(Math.round(direction.y));
     const animationKey = this.walkAnimations[`${horizontal},${vertical}`];
@@ -202,13 +278,14 @@ export class EnemyController {
       return false;
     }
 
-    this.health -= amount;
+    this.health -= amount * this.vulnerability;
     this.sprite.scene.events.emit('presentation:hit', this.sprite);
     this.isDead = this.health <= 0;
     return this.isDead;
   }
 
   displace(x: number, y: number): void {
+    if (this.isBoss) return;   // knockback, pulls and crowd shoving never move a boss
     const target = { x: this.sprite.x + x, y: this.sprite.y + y };
     const safe = this.navigation?.move(this.position, target, this.radius) ?? clampToArena(target, this.radius);
     this.sprite.setPosition(safe.x, safe.y);

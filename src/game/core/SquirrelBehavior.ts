@@ -36,11 +36,16 @@ export class RangedSquirrelBehavior {
 
 export type SpawnVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck' | 'armadillo';
 
-/** Which creature a fresh spawn should be: deer only from the deer level, else squirrels with greys mixed in. */
+/**
+ * Which creature a fresh spawn should be. From the deer level most spawns are deer, but a share of
+ * squirrels stays in the mix so there is always quick fodder for chains and crystals.
+ */
 export function rollSpawnVariant(playerLevel: number, random: () => number = Math.random): SpawnVariant {
   if (playerLevel >= BALANCE.armadillo.unlockLevel && random() < BALANCE.armadillo.spawnChance) return 'armadillo';
-  if (playerLevel >= BALANCE.deer.buckLevel && random() < BALANCE.deer.buckChance) return 'buck';
-  if (playerLevel >= BALANCE.deer.unlockLevel) return random() < BALANCE.deer.fawnChance ? 'fawn' : 'doe';
+  if (playerLevel >= BALANCE.deer.unlockLevel && random() >= BALANCE.deer.squirrelShare) {
+    if (playerLevel >= BALANCE.deer.buckLevel && random() < BALANCE.deer.buckChance) return 'buck';
+    return random() < BALANCE.deer.fawnChance ? 'fawn' : 'doe';
+  }
   if (playerLevel >= BALANCE.rangedEnemy.unlockLevel && random() < BALANCE.rangedEnemy.spawnChance) return 'grey';
   return 'brown';
 }

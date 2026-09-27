@@ -46,7 +46,8 @@ export class UpgradeSystem {
     {
       id: 'projectile-count',
       title: 'Split Charm',
-      description: '+1 projectile per volley',
+      description: `+1 projectile per volley (up to ${BALANCE.leveling.maxSplitPicks} picks)`,
+      isAvailable: (stats) => (stats.upgradeCounts['projectile-count'] ?? 0) < BALANCE.leveling.maxSplitPicks,
       apply: (stats) => {
         stats.projectileCount += 1;
       }

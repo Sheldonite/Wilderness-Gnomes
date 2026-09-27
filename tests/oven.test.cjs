@@ -43,7 +43,7 @@ test('half health shortens the break and projectile count remains bounded',()=>{
  fight.update(OVEN.flightMs,boss,player,18,.5,()=>{});
  fight.update(OVEN.hotCooldownMs-1,boss,player,18,.5,()=>{});assert.equal(fight.phase,'walking');
  fight.update(1,boss,player,18,.5,()=>{});assert.equal(fight.phase,'windup');
- for(let i=0;i<2000;i++){fight.update(50,boss,player,18,.5,()=>{});assert.ok(fight.tacos.length<=OVEN.maxTacos);assert.ok(fight.salsa.length<=OVEN.maxTacos);}
+ for(let i=0;i<2000;i++){fight.update(50,boss,player,18,.5,()=>{});assert.ok(fight.tacos.length<=OVEN.maxTacos);assert.ok(fight.salsa.length<=OVEN.maxSalsa);}
 });
 test('defeat cancels every warning and taco and shared combat awards one boss death',()=>{
  const fight=ready();fight.update(OVEN.windupMs,boss,player,18,1,()=>{});
@@ -53,7 +53,7 @@ test('defeat cancels every warning and taco and shared combat awards one boss de
  fight.update(10000,boss,player,18,0,()=>assert.fail('post-defeat damage'));
 });
 
-test('Oven alternates the taco toss with a telegraphed ring that leaves the center safe',()=>{
+test('Oven rotates the taco toss, a telegraphed ring that leaves the center safe, and a flame cone',()=>{
  assert.equal(OVEN.name,'Oven');
  const fight=ready();assert.equal(fight.attack,'toss');
  fight.update(OVEN.windupMs,boss,player,18,1,()=>{});
@@ -66,6 +66,10 @@ test('Oven alternates the taco toss with a telegraphed ring that leaves the cent
  assert.deepEqual(fight.tacos.map(t=>t.target),targets);
  fight.update(OVEN.flightMs,boss,player,18,1,()=>assert.fail('ring center should be safe'));
  assert.equal(fight.salsa.length,5);
+ fight.update(OVEN.cooldownMs,boss,player,18,1,()=>{});
+ assert.equal(fight.attack,'cone');
+ fight.update(OVEN.coneWindupMs,boss,player,18,1,()=>{});
+ fight.update(OVEN.coneMs,boss,player,18,1,()=>{});
  fight.update(OVEN.cooldownMs,boss,player,18,1,()=>{});
  assert.equal(fight.attack,'toss');
 });
@@ -82,4 +86,51 @@ test('burning salsa has a grace period, cannot stack overlapping damage, expires
  fight.update(OVEN.salsaLifeMs,boss,{x:1000,y:1000},18,1,hit);assert.equal(fight.salsa.length,0);
  fight.salsa.push({...player,age:0});fight.defeat();assert.equal(fight.salsa.length,0);
  fight.update(5000,boss,player,18,0,()=>assert.fail('post-defeat burn'));
+});
+
+/** Step the fight until it is winding up the given attack. */
+function cycleTo(fight, attack, health = 1) {
+ for (let i = 0; i < 400 && !(fight.phase === 'windup' && fight.attack === attack); i++) fight.update(50, boss, player, 18, health, () => {});
+ assert.equal(fight.phase, 'windup'); assert.equal(fight.attack, attack);
+}
+
+test('the flame cone is aimed at windup, burns once in front of the door and misses anyone behind', () => {
+ const fight = ready(); cycleTo(fight, 'cone');
+ assert.ok(fight.cone.direction.x > .99, 'aimed at the player');
+ let damage = 0;
+ fight.update(OVEN.coneWindupMs, boss, { x: 1400, y: 1600 }, 18, 1, d => damage += d);
+ assert.equal(fight.phase, 'blasting'); assert.equal(damage, 0, 'stepping behind the Oven dodges it');
+ const front = ready(); cycleTo(front, 'cone'); damage = 0;
+ front.update(OVEN.coneWindupMs, boss, { x: 1600 + OVEN.coneRange - 20, y: 1600 }, 18, 1, d => damage += d);
+ assert.equal(damage, OVEN.coneDamage);
+ front.update(OVEN.coneMs, boss, player, 18, 1, d => damage += d);
+ assert.equal(damage, OVEN.coneDamage, 'one burst per cone'); assert.equal(front.phase, 'walking'); assert.equal(front.cone, undefined);
+});
+
+test('running hot, the ring comes twice: a delayed second ring fills the gaps, and each ring can hit once', () => {
+ const fight = ready(); cycleTo(fight, 'ring', .4);
+ fight.salsa = [];   // forget the toss that came before
+ assert.equal(fight.warnings.length, OVEN.hotRingTacos * 2);
+ let damage = 0; const hit = d => damage += d;
+ fight.update(OVEN.windupMs, boss, player, 200, .4, hit);
+ fight.update(OVEN.flightMs, boss, player, 200, .4, hit);
+ assert.equal(damage, OVEN.damage, 'first ring lands');
+ assert.equal(fight.salsa.length, OVEN.hotRingTacos);
+ assert.ok(fight.salsa.every(p => p.life === OVEN.hotSalsaLifeMs), 'hot salsa lingers longer');
+ fight.update(OVEN.secondRingDelayMs, boss, player, 200, .4, hit);
+ assert.equal(damage, OVEN.damage * 2, 'second ring lands');
+ assert.equal(fight.phase, 'walking');
+ fight.update(OVEN.salsaTickMs, boss, player, 200, .4, hit);
+ assert.equal(damage, OVEN.damage * 2 + OVEN.hotSalsaDamage, 'and the hot salsa burns harder');
+});
+
+test('line cooks are summoned once as the Oven passes each threshold, even if both pass at once', () => {
+ const fight = ready();
+ fight.update(16, boss, player, 18, .7, () => {}); assert.equal(fight.pendingAdds, 0);
+ fight.update(16, boss, player, 18, .6, () => {}); assert.equal(fight.pendingAdds, OVEN.addsPerWave);
+ fight.pendingAdds = 0;
+ fight.update(16, boss, player, 18, .6, () => {}); assert.equal(fight.pendingAdds, 0);
+ const burst = ready(); burst.update(16, boss, player, 18, .1, () => {});
+ assert.equal(burst.pendingAdds, OVEN.addsPerWave * OVEN.addThresholds.length);
+ burst.defeat(); assert.equal(burst.pendingAdds, 0);
 });

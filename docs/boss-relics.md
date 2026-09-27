@@ -1,5 +1,7 @@
 # Mandatory bosses and relic abilities
 
+> **Update:** there are now three bosses (Oven, Wonky, King Rumbles), so relic rank 3 is reachable. See `bosses-and-pacing.md` for current boss rules.
+
 The Taco Toaster at level 10 and Hollowcrown at level 15 now lock the player into a 520-pixel-radius arena. Existing regular enemies and their acorns clear without granting kills or XP. Regular spawning and ordinary chest collection stop until the boss dies. Player movement, knockback, and boss movement stay inside the ring. A stag charge that meets the ring ends in its normal blocked-charge stomp.
 
 XP can still be collected during the fight, but it banks without advancing beyond the boss level. Queued level-ups cannot skip either boss. Bosses must be fought in order, even if a development fixture skips levels. Defeat removes the ring and resumes regular spawning. Existing XP rewards remain intact.

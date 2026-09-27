@@ -1,16 +1,19 @@
-"""Generate the Hollowcrown stag boss sprite sheet.
+"""Generate the Wonky stag boss sprite sheet.
 
-128px cells, 4 columns x 2 rows, profile view facing right (the game flips for left):
-    row 0: walk cycle, 4 frames
-    row 1: windup (head lowered, hoof raised), charge A, charge B, rest (panting)
-Drawn at 4x and downsampled. A great dark stag with four-point antlers wreathed in moss,
-ember eyes, a pale chest blaze, and a faint green glow around the crown.
+128px cells, 4 columns x 4 rows, profile view:
+    row 0: facing right, walk cycle, 4 frames
+    row 1: facing right, windup (head lowered, hoof raised), charge A, charge B, rest (panting)
+    rows 2-3: the same, facing left
+Drawn at 4x and downsampled. A great dark stag with lopsided antlers wreathed in moss: three
+points on his left antler and five on his right (counting every tip, beam included). Because the
+sides differ, left-facing frames are drawn with the right antler nearest and then mirrored, rather
+than flipped in game. Ember eyes, a pale chest blaze, and a faint green glow around the crown.
 
 Usage: python scripts/build_stag.py   (needs Pillow)
 """
 import math
 import os
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 OUT = f'{ROOT}/src/assets/sprites/stag-boss-spritesheet.png'
@@ -48,28 +51,66 @@ def leg(draw, hip, knee, hoof, width, colour, raised=False):
     draw.ellipse([(hoof[0] - r) * SS, (hoof[1] - r * .6) * SS, (hoof[0] + r) * SS, (hoof[1] + r * .9) * SS], fill=HOOF)
 
 
-def antlers(draw, glow, base, scale=1.0):
-    """Four-point antlers: a main beam curving up and back with four tines each, moss at the base."""
+def point_along(pts, t):
+    """The point a fraction t of the way along a polyline."""
+    lengths = [math.dist(a, b) for a, b in zip(pts, pts[1:])]
+    goal = t * sum(lengths)
+    for (a, b), length in zip(zip(pts, pts[1:]), lengths):
+        if goal <= length:
+            f = goal / length if length else 0
+            return (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
+        goal -= length
+    return pts[-1]
+
+
+def antler_shape(points, lean):
+    """One antler: a beam and points - 1 tines, so it shows `points` tips in all (beam tip included).
+    `lean` is -1 for an antler that sweeps back over the neck, +1 for one that stands up and forward."""
+    height = 26 + points * 8
+    if lean < 0:
+        beam = [(-3, 0), (-8, -height * .33), (-15, -height * .66), (-22, -height)]
+    else:
+        beam = [(3, 0), (6, -height * .25), (8, -height * .5), (9, -height * .75), (8, -height)]
+    tines = []
+    count = points - 1
+    for i in range(count):
+        k = i / max(1, count - 1)
+        root = point_along(beam, (0.4 + 0.36 * k) if count < 3 else (0.2 + 0.62 * k))
+        size = 13 - 3 * k
+        dx, dy = lean * 1.0, -0.55                   # tines branch outward, away from the other antler
+        norm = math.hypot(dx, dy)
+        tines.append([root, (root[0] + dx / norm * size, root[1] + dy / norm * size)])
+    return [beam] + tines
+
+
+def antlers(draw, glow, base, facing_right):
+    """Wonky's lopsided rack: a short three-point antler on his left sweeping back, and a tall
+    five-point antler on his right standing up and forward. Whichever is on the viewer's side
+    is drawn last and brightest."""
     bx, by = base
-    for side, dx in ((-1, -6), (1, 6)):
-        beam = [(bx + dx, by), (bx + dx - 6 * side * -1 * 0.2, by - 12), (bx + dx - side * 4, by - 26), (bx + dx - side * 14, by - 40), (bx + dx - side * 22, by - 50)]
-        tines = [
-            [(bx + dx - side * 1, by - 14), (bx + dx + side * 9, by - 24)],
-            [(bx + dx - side * 5, by - 27), (bx + dx + side * 6, by - 38)],
-            [(bx + dx - side * 12, by - 38), (bx + dx - side * 2, by - 50)],
-            [(bx + dx - side * 19, by - 47), (bx + dx - side * 14, by - 60)],
-        ]
-        pts = [beam] + tines
-        for p in pts: glow.line(S([(x, y) for x, y in p]), fill=GLOW + (110,), width=int(9 * SS), joint='curve')
+    left = ('left', antler_shape(LEFT_POINTS, -1))
+    right = ('right', antler_shape(RIGHT_POINTS, 1))
+    # facing right we see his left flank, so his left antler is nearest
+    for name, lines in ((right, left) if facing_right else (left, right)):
+        near = (name == 'left') == facing_right
+        light, dark = (ANTLER, ANTLER_DARK) if near else (ANTLER_DARK, (122, 104, 78))
+        pts = [[(bx + x, by + y) for x, y in line] for line in lines]
+        for p in pts: glow.line(S(p), fill=GLOW + (110,), width=int(9 * SS), joint='curve')
         for p in pts: draw.line(S(p), fill=INK, width=int(6.4 * SS), joint='curve')
-        for p in pts: draw.line(S(p), fill=ANTLER_DARK, width=int(3.6 * SS), joint='curve')
-        for p in pts: draw.line(S([(x - side * .6, y - .6) for x, y in p]), fill=ANTLER, width=int(1.8 * SS), joint='curve')
-        for x, y in [(bx + dx, by - 2), (bx + dx - side * 2, by - 10), (bx + dx - side * 5, by - 24)]:
+        for p in pts: draw.line(S(p), fill=dark, width=int(3.6 * SS), joint='curve')
+        for p in pts: draw.line(S([(x + .6, y - .6) for x, y in p]), fill=light, width=int(1.8 * SS), joint='curve')
+        beam = pts[0]
+        for t in (0.04, 0.2, 0.36):
+            x, y = point_along(beam, t)
             draw.ellipse([(x - 3.2) * SS, (y - 2.4) * SS, (x + 3.2) * SS, (y + 2.4) * SS], fill=MOSS)
 
 
-def draw_stag(pose, phase):
-    """pose: 'walk' | 'windup' | 'charge' | 'rest'. phase in [0,1) for walk/charge cycles."""
+LEFT_POINTS, RIGHT_POINTS = 3, 5
+
+
+def draw_stag(pose, phase, facing_right=True):
+    """pose: 'walk' | 'windup' | 'charge' | 'rest'. phase in [0,1) for walk/charge cycles.
+    Always drawn facing right; a left-facing frame puts his right antler nearest, then mirrors."""
     img = Image.new('RGBA', (BIG * SS, BIG * SS), (0, 0, 0, 0))
     glow = Image.new('RGBA', img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(img); g = ImageDraw.Draw(glow)
@@ -119,7 +160,7 @@ def draw_stag(pose, phase):
     hx, hy = nx + 14 + (6 if pose == 'charge' else 0), ny - 30 + head_drop
     thick_line(d, [(nx, ny), (hx - 2, hy + 2)], COAT, 15)
     d.line(S([(nx + 3, ny + 5), (hx - 1, hy + 6)]), fill=CHEST, width=int(5 * SS))   # chest blaze up the throat
-    antlers(d, g, (hx + 1, hy - 8))
+    antlers(d, g, (hx + 1, hy - 8), facing_right)
     outlined_ellipse(d, (hx - 9, hy - 9, hx + 15, hy + 8), COAT)
     d.ellipse(S([(hx - 7, hy - 7), (hx + 8, hy + 2)]), fill=SHADE)
     # ears
@@ -150,12 +191,14 @@ def draw_stag(pose, phase):
     tx, ty = (BIG - CELL) / 2 * SS + CELL * SS / 2, (BIG - CELL) / 2 * SS + CELL * SS - 6 * SS
     out = out.transform(out.size, Image.AFFINE, (1 / FIT, 0, gx - tx / FIT, 0, 1 / FIT, gy - ty / FIT), Image.BICUBIC)
     off = (BIG - CELL) // 2 * SS
-    return out.crop((off, off, off + CELL * SS, off + CELL * SS)).resize((CELL, CELL), Image.LANCZOS)
+    cell = out.crop((off, off, off + CELL * SS, off + CELL * SS)).resize((CELL, CELL), Image.LANCZOS)
+    return cell if facing_right else ImageOps.mirror(cell)
 
 
-sheet = Image.new('RGBA', (CELL * COLS, CELL * 2), (0, 0, 0, 0))
-for i in range(4): sheet.paste(draw_stag('walk', i / 4), (i * CELL, 0))
-for i, (pose, phase) in enumerate([('windup', 0), ('charge', 0), ('charge', .5), ('rest', .25)]):
-    sheet.paste(draw_stag(pose, phase), (i * CELL, CELL))
+sheet = Image.new('RGBA', (CELL * COLS, CELL * 4), (0, 0, 0, 0))
+for row, facing_right in ((0, True), (2, False)):
+    for i in range(4): sheet.paste(draw_stag('walk', i / 4, facing_right), (i * CELL, row * CELL))
+    for i, (pose, phase) in enumerate([('windup', 0), ('charge', 0), ('charge', .5), ('rest', .25)]):
+        sheet.paste(draw_stag(pose, phase, facing_right), (i * CELL, (row + 1) * CELL))
 sheet.save(OUT)
 print('saved', OUT)

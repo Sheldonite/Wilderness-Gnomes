@@ -4,6 +4,10 @@ import { OvenBossSystem } from '../../systems/OvenBossSystem';
 import { OVEN } from '../../config/ovenBoss';
 import { StagBossSystem } from '../../systems/StagBossSystem';
 import { STAG } from '../../config/stagBoss';
+import { KingBossSystem } from '../../systems/KingBossSystem';
+import { KING } from '../../config/kingBoss';
+import { RunEventSystem } from '../../systems/RunEventSystem';
+import { ringCount, type RunEvent } from '../../core/RunEvents';
 import { clampToArena } from '../../utils/math';
 import { BALANCE } from '../../config/balance';
 import { GAME_CONFIG } from '../../config/gameConfig';
@@ -11,7 +15,7 @@ import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config
 import { getWeapon } from '../../config/weapons';
 import type { WeaponId } from '../../core/types';
 import { GameManager, xpThreshold } from '../../core/GameManager';
-import { EnemyController } from '../../entities/EnemyController';
+import { EnemyController, type EnemyVariant } from '../../entities/EnemyController';
 import { PlayerController } from '../../entities/PlayerController';
 import { Projectile } from '../../entities/Projectile';
 import { XPOrb } from '../../entities/XPOrb';
@@ -67,6 +71,10 @@ export class GameScene extends Phaser.Scene {
   private combat!: CombatResolver;
   private oven!: OvenBossSystem;
   private stag!: StagBossSystem;
+  private king!: KingBossSystem;
+  private runEvents!: RunEventSystem;
+  /** Counts down after the final boss falls, then offers the victory screen. */
+  private victoryInMs = 0;
   private visualsPaused = false;
   private reviewChoices?: UpgradeDefinition[];
   private keys!: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
@@ -98,6 +106,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverDisplayed = false;
     this.visualsPaused = false;
     this.bossArena = undefined;
+    this.victoryInMs = 0;
     this.reviewChoices = undefined;
     this.reviewWalking = false;
     this.reviewPathMs = 0;
@@ -141,14 +150,18 @@ export class GameScene extends Phaser.Scene {
     this.bossArenaLabel = this.add.text(0, 0, 'BOSS ARENA · DEFEAT THE BOSS TO LEAVE', {
       fontFamily: 'Georgia', fontSize: '13px', color: '#ffe2a2', stroke: '#263828', strokeThickness: 4
     }).setOrigin(.5).setDepth(24).setVisible(false);
-    this.oven = new OvenBossSystem(this, this.gameManager, this.scenerySystem.navigation);
-    this.stag = new StagBossSystem(this, this.gameManager, this.scenerySystem.navigation, (damage, push) => {
-      this.gameManager.damagePlayer(damage);
-      // thrown back along the blow, but never into scenery or off the arena
-      const thrown = clampToArena({ x: this.player.position.x + push.x * STAG.chargeKnockback, y: this.player.position.y + push.y * STAG.chargeKnockback }, this.player.radius);
-      const safe = this.scenerySystem.navigation.move(this.player.position, thrown, this.player.radius);
-      this.player.sprite.setPosition(safe.x, safe.y);
-    });
+    const summon = (variant: EnemyVariant, count: number, tint?: number) => this.summonAdds(variant, count, tint);
+    this.runEvents = new RunEventSystem(this, this.scenerySystem.navigation);
+    this.oven = new OvenBossSystem(this, this.gameManager, this.scenerySystem.navigation, summon);
+    this.stag = new StagBossSystem(this, this.gameManager, this.scenerySystem.navigation,
+      (damage, push, knockback) => this.knockPlayer(damage, push, knockback ?? STAG.chargeKnockback),
+      (lanes, count) => this.runEvents.launchStampede(this.bossArena?.center ?? this.player.position, lanes, count, this.gameManager.level));
+    this.king = new KingBossSystem(this, this.gameManager, this.scenerySystem.navigation,
+      () => this.bossArena ? { center: this.bossArena.center, radius: BOSS_ARENA_RADIUS } : undefined,
+      (damage, push) => this.knockPlayer(damage, push, KING.rollKnockback),
+      (origin, directions) => {
+        for (const d of directions) this.acorns.push(new Acorn(this, origin.x, origin.y - 10, { x: d.x * KING.shardSpeed, y: d.y * KING.shardSpeed }, KING.shardDamage, 0xe8c070));
+      }, summon);
 
     this.player = new PlayerController(
       this,
@@ -205,7 +218,7 @@ export class GameScene extends Phaser.Scene {
         this.gameManager.addXp(this.gameManager.xpToNextLevel);
       };
       buttons[1].onclick = () => {
-        const boss = this.bossArena?.id === 'oven' ? this.oven.boss : this.stag.boss;
+        const boss = this.bossArena ? this.bossFor(this.bossArena.id) : undefined;
         if (this.gameManager.state === 'Playing' && boss) this.combat.damage(boss, boss.health);
       };
       buttons[2].onclick = () => {
@@ -282,7 +295,7 @@ export class GameScene extends Phaser.Scene {
       const buttons = this.reviewControls.querySelectorAll('button');
       buttons[0].onclick = () => this.gameManager.addXp(this.gameManager.xpToNextLevel - this.gameManager.xp);
       buttons[1].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[1].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
-      buttons[2].onclick = () => { if (this.gameManager.state === 'Playing' && this.oven.boss) this.combat.damage(this.oven.boss, OVEN.health); };
+      buttons[2].onclick = () => { if (this.gameManager.state === 'Playing' && this.oven.boss) this.combat.damage(this.oven.boss, this.oven.boss.health); };
       buttons[3].onclick = () => this.finishReviewRun();
       if (new URLSearchParams(location.search).get('look') === '1') {
         this.gameManager.level = 10;
@@ -307,7 +320,7 @@ export class GameScene extends Phaser.Scene {
       const buttons = this.reviewControls.querySelectorAll('button');
       buttons[0].onclick = () => this.gameManager.addXp(this.gameManager.xpToNextLevel - this.gameManager.xp);
       buttons[1].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[1].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
-      buttons[2].onclick = () => { if (this.gameManager.state === 'Playing' && this.stag.boss) this.combat.damage(this.stag.boss, STAG.health); };
+      buttons[2].onclick = () => { if (this.gameManager.state === 'Playing' && this.stag.boss) this.combat.damage(this.stag.boss, this.stag.boss.health); };
       buttons[3].onclick = () => this.finishReviewRun();
       if (new URLSearchParams(location.search).get('look') === '1') {
         this.gameManager.level = 15; this.gameManager.playerStats.level = 15;
@@ -315,6 +328,39 @@ export class GameScene extends Phaser.Scene {
         this.stag.update(0, this.player.position, this.player.radius, this.enemies);
         this.stag.boss!.sprite.setPosition(1420, 1660);
       }
+      document.body.append(this.reviewControls); return;
+    }
+    if (review === 'king') {
+      this.reviewNoEnemies = true;
+      this.gameManager.level = 24; this.gameManager.playerStats.level = 24;
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 10000;
+      this.gameManager.playerStats.projectileDamage = 90;
+      this.oven.encounter.spawned = this.stag.encounter.spawned = true;   // the earlier bosses have been and gone
+      this.gameManager.bossGate.defeat('oven'); this.gameManager.bossGate.defeat('stag');
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span>KING REVIEW</span><button>Reach level 25</button><button>Walk trail</button><button>Defeat boss</button><button>End run</button>';
+      const buttons = this.reviewControls.querySelectorAll('button');
+      buttons[0].onclick = () => this.gameManager.addXp(this.gameManager.xpToNextLevel - this.gameManager.xp);
+      buttons[1].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[1].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
+      buttons[2].onclick = () => { if (this.gameManager.state === 'Playing' && this.king.boss) this.combat.damage(this.king.boss, this.king.boss.health); };
+      buttons[3].onclick = () => this.finishReviewRun();
+      document.body.append(this.reviewControls); return;
+    }
+    if (review === 'events') {
+      // Set pieces on demand; the regular spawner stays on so the crowd feels real.
+      this.gameManager.level = 12; this.gameManager.playerStats.level = 12;
+      this.gameManager.bossGate.defeat('oven');
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 10000;
+      this.gameManager.xpToNextLevel = 100000;
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span>EVENTS REVIEW</span><button>Elite</button><button>Ring</button><button>Stampede</button><button>Two stampedes</button>';
+      const buttons = this.reviewControls.querySelectorAll('button');
+      const fire = (event: RunEvent) => this.runEvents.trigger(event, this.gameManager.level, this.gameManager.getDifficultyMinutes(),
+        this.player.position, this.cameras.main, this.enemies, this.enemySpawner);
+      buttons[0].onclick = () => fire({ kind: 'elite' });
+      buttons[1].onclick = () => fire({ kind: 'ring', count: ringCount(this.gameManager.getDifficultyMinutes()) });
+      buttons[2].onclick = () => fire({ kind: 'stampede', lanes: 1 });
+      buttons[3].onclick = () => fire({ kind: 'stampede', lanes: 2 });
       document.body.append(this.reviewControls); return;
     }
     if (review === 'midnight' || review === 'companions' || review === 'midnight-upgrade' || review === 'cats-rest') {
@@ -484,7 +530,7 @@ export class GameScene extends Phaser.Scene {
       const readout = document.getElementById('performance-readout');
       if (readout) { readout.dataset.enemies = String(this.enemies.length); readout.dataset.pickups = String(this.xpOrbs.length); }
       const bossReadout = this.reviewControls?.querySelector('[data-boss-review]');
-      if (bossReadout) bossReadout.textContent = `Level ${this.gameManager.level} · Foes ${this.enemies.filter(e => !e.isDead && e !== this.oven.boss && e !== this.stag.boss).length} · ${this.bossArena ? `LOCKED ${Math.round(Math.hypot(this.player.position.x - this.bossArena.center.x, this.player.position.y - this.bossArena.center.y))}px` : 'OPEN'} · Relics ${this.chestSystem.drops.chests.filter(c => c.kind === 'boss').length}`;
+      if (bossReadout) bossReadout.textContent = `Level ${this.gameManager.level} · Foes ${this.enemies.filter(e => !e.isDead && !e.isBoss).length} · ${this.bossArena ? `LOCKED ${Math.round(Math.hypot(this.player.position.x - this.bossArena.center.x, this.player.position.y - this.bossArena.center.y))}px` : 'OPEN'} · Relics ${this.chestSystem.drops.chests.filter(c => c.kind === 'boss').length}`;
     }
     this.uiManager.update(this.gameManager.getHudSnapshot());
     this.uiManager.setPauseButtonState(this.gameManager.state === 'Paused');
@@ -534,10 +580,17 @@ export class GameScene extends Phaser.Scene {
     }
     this.oven.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.stag.update(deltaMs, this.player.position, this.player.radius, this.enemies);
+    this.king.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     if (this.gameManager.state !== 'Playing') return;
+    if (this.victoryInMs > 0) {
+      this.victoryInMs -= deltaMs;
+      if (this.victoryInMs <= 0) { this.showVictory(); return; }
+    }
 
     const difficulty = this.gameManager.getDifficultyMinutes();
-    if (!this.reviewNoEnemies && !this.gameManager.bossGate.required(this.gameManager.level)) this.enemySpawner.update(deltaMs, this.player.position, this.cameras.main, this.enemies, difficulty, this.gameManager.level);
+    const open = !this.reviewNoEnemies && !this.gameManager.bossGate.required(this.gameManager.level);
+    if (open) this.enemySpawner.update(deltaMs, this.player.position, this.cameras.main, this.enemies, difficulty, this.gameManager.level);
+    this.runEvents.update(deltaMs, open, this.gameManager.level, difficulty, this.player.position, this.cameras.main, this.enemies, this.enemySpawner);
     this.weaponSystem.update(
       deltaMs,
       this.player.position,
@@ -638,19 +691,61 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('presentation:defeat', enemy.position);
     this.abilities.simulation.noteKill(enemy.position);
     this.gameManager.addKill();
-    const isOven = enemy === this.oven.boss, isStag = enemy === this.stag.boss;
-    const isBoss = isOven || isStag;
-    if (isOven) this.oven.defeated();
-    if (isStag) this.stag.defeated();
-    if (isBoss && this.gameManager.bossGate.defeat(isOven ? 'oven' : 'stag')) {
+    const bossId: BossId | undefined = enemy === this.oven.boss ? 'oven' : enemy === this.stag.boss ? 'stag' : enemy === this.king.boss ? 'king' : undefined;
+    if (bossId === 'oven') this.oven.defeated();
+    if (bossId === 'stag') this.stag.defeated();
+    if (bossId === 'king') this.king.defeated();
+    if (bossId && this.gameManager.bossGate.defeat(bossId)) {
       this.chestSystem.dropBoss(enemy.position);
       this.bossArena = undefined;
       this.bossBoundary.clear(); this.bossArenaLabel.setVisible(false);
+      if (this.gameManager.bossGate.allDefeated && !this.gameManager.victorious) {
+        this.gameManager.victorious = true;
+        this.victoryInMs = 4000;   // let the celebration and relic chest land first
+      }
     }
-    if (isBoss || this.xpOrbs.length < BALANCE.xp.maxOrbs) {
-      this.xpOrbs.push(new XPOrb(this, enemy.position.x, enemy.position.y, isOven ? OVEN.xp : isStag ? STAG.xp : BALANCE.enemy.xpValue));
+    const creature = enemy instanceof EnemyController ? enemy : undefined;
+    if (creature?.elite) this.chestSystem.dropChest(enemy.position);
+    if (bossId || creature?.elite || this.xpOrbs.length < BALANCE.xp.maxOrbs) {
+      const xp = bossId === 'oven' ? OVEN.xp : bossId === 'stag' ? STAG.xp : bossId === 'king' ? KING.xp : creature?.xpValue ?? BALANCE.enemy.xpValue;
+      this.xpOrbs.push(new XPOrb(this, enemy.position.x, enemy.position.y, xp));
     }
+  }
 
+  private bossFor(id: BossId): EnemyController | undefined {
+    return id === 'oven' ? this.oven.boss : id === 'stag' ? this.stag.boss : this.king.boss;
+  }
+
+  /** A boss blow: damage, then thrown back along it, but never into scenery or out of the world. */
+  private knockPlayer(damage: number, push: Vector2Like, distance: number): void {
+    this.gameManager.damagePlayer(damage);
+    const thrown = clampToArena({ x: this.player.position.x + push.x * distance, y: this.player.position.y + push.y * distance }, this.player.radius);
+    const safe = this.scenerySystem.navigation.move(this.player.position, thrown, this.player.radius);
+    this.player.sprite.setPosition(safe.x, safe.y);
+  }
+
+  /** Boss reinforcements, spread evenly just inside the arena's edge (or around the player). */
+  private summonAdds(variant: EnemyVariant, count: number, tint?: number): void {
+    const center = this.bossArena?.center ?? this.player.position;
+    const radius = this.bossArena ? BOSS_ARENA_RADIUS - 60 : 420;
+    const offset = Math.random() * Math.PI * 2, minutes = this.gameManager.getDifficultyMinutes();
+    for (let i = 0; i < count; i++) {
+      const a = offset + i * Math.PI * 2 / count;
+      const spot = this.scenerySystem.navigation.nearest(clampToArena({ x: center.x + Math.cos(a) * radius, y: center.y + Math.sin(a) * radius }, 30), 24);
+      if (this.scenerySystem.navigation.blocked(spot, 20)) continue;
+      const add = new EnemyController(this, spot.x, spot.y, minutes, this.scenerySystem.navigation, undefined, variant);
+      if (tint !== undefined) add.setBaseTint(tint);
+      this.enemies.push(add);
+    }
+  }
+
+  private showVictory(): void {
+    this.gameManager.pause();
+    this.pausedDisplayed = true;   // this overlay stands in for the pause menu
+    this.uiManager.showVictory(() => this.resumeFromPause(), () => {
+      this.uiManager.hideOverlay();
+      this.gameManager.finishRun();
+    });
   }
 
   private showLevelUpOnce(): void {
@@ -695,7 +790,8 @@ export class GameScene extends Phaser.Scene {
     const center = { ...this.player.position };
     this.bossArena = { id, center };
     // Clear the crowd without awarding kills or XP: this encounter is a duel.
-    const bosses: (EnemyController | undefined)[] = [this.oven.boss, this.stag.boss];
+    const bosses: (EnemyController | undefined)[] = [this.oven.boss, this.stag.boss, this.king.boss];
+    this.runEvents.clear();
     for (const enemy of this.enemies) if (!bosses.includes(enemy)) { enemy.destroy(); this.combat.release(enemy.id); }
     this.enemies = this.enemies.filter(enemy => bosses.includes(enemy));
     for (const acorn of this.acorns) acorn.destroy();
@@ -710,13 +806,14 @@ export class GameScene extends Phaser.Scene {
     const center = this.bossArena.center;
     const player = insideBossArena(this.player.position, center, this.player.radius);
     this.player.sprite.setPosition(player.x, player.y);
-    const boss = this.bossArena.id === 'oven' ? this.oven.boss : this.stag.boss;
+    const boss = this.bossFor(this.bossArena.id);
     if (boss && !boss.isDead) {
       const before = boss.position;
       const safe = insideBossArena(before, center, boss.radius);
       if (this.bossArena.id === 'stag' && this.stag.encounter.phase === 'charging' &&
         Math.hypot(safe.x - before.x, safe.y - before.y) > .01) {
-        this.stag.encounter.blocked(safe, player, this.player.radius, this.stag.boss!.blockedHit);
+        // The arena's edge ends a charge; only trees stun him.
+        this.stag.encounter.blocked(safe, player, this.player.radius, this.stag.boss!.blockedHit, false);
       }
       boss.sprite.setPosition(safe.x, safe.y);
     }
@@ -808,6 +905,8 @@ export class GameScene extends Phaser.Scene {
     this.abilities?.destroy();
     this.oven?.destroy();
     this.stag?.destroy();
+    this.king?.destroy();
+    this.runEvents?.destroy();
     this.player?.destroy();
     for (const enemy of this.enemies) {
       enemy.destroy();

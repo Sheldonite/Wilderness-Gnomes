@@ -6,6 +6,13 @@ import type { Vector2Like } from '../core/types';
 import { EnemyController, type EnemyVariant } from '../entities/EnemyController';
 import { rollSpawnVariant } from '../core/SquirrelBehavior';
 
+/** Creatures per spawn tick: one at first, then a growing group once the late game begins. */
+export function spawnBatch(difficultyMinutes: number): number {
+  const s = BALANCE.spawner;
+  if (difficultyMinutes < s.batchFromMinute) return 1;
+  return Math.min(s.maxBatch, 2 + Math.floor((difficultyMinutes - s.batchFromMinute) / s.batchEveryMinutes));
+}
+
 export class EnemySpawner {
   private spawnTimerMs = 0;
 
@@ -38,11 +45,15 @@ export class EnemySpawner {
     }
 
     this.spawnTimerMs = 0;
-    const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel));
-    if (enemy) enemies.push(enemy);
+    const batch = Math.min(spawnBatch(difficultyMinutes), maxEnemies - enemies.length);
+    for (let i = 0; i < batch; i++) {
+      const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel));
+      if (enemy) enemies.push(enemy);
+    }
   }
 
-  private spawnEnemy(
+  /** One creature of the given kind just outside the camera, for set pieces such as elites. */
+  spawnEnemy(
     playerPosition: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera,
     difficultyMinutes: number,

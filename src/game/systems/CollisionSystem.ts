@@ -59,7 +59,7 @@ export class CollisionSystem {
       const minDistance = player.radius + acorn.radius;
       if (distanceSq(player.position, acorn.position) > minDistance * minDistance) continue;
       acorn.isDead = true;
-      gameManager.damagePlayer(BALANCE.rangedEnemy.acornDamage);
+      gameManager.damagePlayer(acorn.damage);
       if (gameManager.state !== 'Playing') return;
     }
   }

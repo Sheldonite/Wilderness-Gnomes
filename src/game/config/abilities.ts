@@ -71,7 +71,7 @@ export const ABILITIES = {
     damagePerSecond: [0, 6, 9, 12, 15, 20, 22, 24, 26, 28, 40],
     bloom: [{ lifeMs: 8000, maxPatches: 16, sproutReach: 0 }, { lifeMs: 12000, maxPatches: 24, sproutReach: 120 }] },
   acorn: { cooldownMs: 4000, targetRange: 420, warningMs: 450,
-    damage: [0, 24, 32, 40, 48, 200, 210, 220, 230, 240, 480], radius: [0, 60, 75, 90, 100, 130, 132, 134, 136, 138, 160],
+    damage: [0, 24, 32, 40, 48, 120, 128, 136, 144, 152, 260], radius: [0, 60, 75, 90, 100, 130, 132, 134, 136, 138, 160],
     oak: [{ cooldownMs: 8000, rollMs: 2500, rollSpeed: 220, rollRadius: 50, shardCount: 8, shardSpread: 110 },
           { cooldownMs: 7000, rollMs: 3500, rollSpeed: 260, rollRadius: 65, shardCount: 12, shardSpread: 140 }] },
   ward: { rechargeMs: [0, 18000, 14000, 10000, 8000, 8000, 7500, 7000, 6500, 6000, 5000], protectionMs: 500,

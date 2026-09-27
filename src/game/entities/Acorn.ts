@@ -3,7 +3,7 @@ import { BALANCE } from '../config/balance';
 import { LOOK } from '../config/presentation';
 import type { Vector2Like } from '../core/types';
 
-/** An acorn thrown by a grey squirrel. Flies straight, spins, and hurts the player on contact. */
+/** An acorn thrown by a grey squirrel (or a shell shard from the Armadillo King). Flies straight, spins, and hurts the player on contact. */
 export class Acorn {
   readonly radius = BALANCE.rangedEnemy.acornRadius;
   readonly sprite: Phaser.GameObjects.Sprite;
@@ -14,9 +14,12 @@ export class Acorn {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    private readonly velocity: Vector2Like
+    private readonly velocity: Vector2Like,
+    readonly damage: number = BALANCE.rangedEnemy.acornDamage,
+    tint?: number
   ) {
     this.sprite = scene.add.sprite(x, y, LOOK.texture.acorn).setDisplaySize(18, 18);
+    if (tint !== undefined) this.sprite.setTint(tint);
     this.sprite.setDepth(LOOK.depth.spell);
   }
 

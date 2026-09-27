@@ -21,6 +21,8 @@ export class GameManager {
   upgradeSource: UpgradeSource = 'level';
   readonly bossGate = new BossGate();
   bossUpgradeAvailable = false;
+  /** Set once the final boss falls; the run may continue as an encore. */
+  victorious = false;
   elapsedMs = 0;
   kills = 0;
   level = 1;
@@ -250,6 +252,11 @@ export class GameManager {
     if (this.playerStats.health <= 0) {
       this.state = 'GameOver';
     }
+  }
+
+  /** End the run on the player's terms (after a victory). */
+  finishRun(): void {
+    if (this.state === 'Playing' || this.state === 'Paused') this.state = 'GameOver';
   }
 
   getDifficultyMinutes(): number {
