@@ -9,7 +9,7 @@ import { STAG_FRAME_SIZE, STAG_TEXTURE, createStagAnimations, stagSheetUrl } fro
 import { ART, LOOK } from '../../config/presentation';
 import { createStorybookTextures } from '../storybookTextures';
 import { MIDNIGHT_SOURCE_URL, MIDNIGHT_SOURCE_KEY, createMidnightAnimations } from '../../config/midnightSprite';
-import { FRANKIE_SPRITE_KEY, FRANKIE_SPRITE_URL, FRANKIE_PORTRAIT_KEY, FRANKIE_PORTRAIT_URL, FRANKIE_FEATHER_URL, FRANKIE_FRAME_SIZE, createFrankieAnimations } from '../../config/frankieSprite';
+import { FRANKIE_SPRITE_KEY, FRANKIE_SPRITE_URL, FRANKIE_PORTRAIT_KEY, FRANKIE_PORTRAIT_URL, FRANKIE_FEATHER_URL, FRANKIE_FRAME_SIZE, KING_FRANKIE_SPRITE_KEY, KING_FRANKIE_SPRITE_URL, createFrankieAnimations } from '../../config/frankieSprite';
 import playerSpriteSheetUrl from '../../../assets/sprites/code-wizard-main-spritesheet.png';
 import haileySpriteSheetUrl from '../../../assets/sprites/Hailey-Walk.png';
 import haileyIdleUrl from '../../../assets/sprites/Hailey-Idle-Matched.png';
@@ -84,6 +84,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image(MIDNIGHT_SOURCE_KEY, MIDNIGHT_SOURCE_URL);
     this.load.image(FRANKIE_PORTRAIT_KEY, FRANKIE_PORTRAIT_URL);
     this.load.image(LOOK.texture.feather, FRANKIE_FEATHER_URL);
+    this.load.spritesheet(KING_FRANKIE_SPRITE_KEY, KING_FRANKIE_SPRITE_URL, { frameWidth: FRANKIE_FRAME_SIZE, frameHeight: FRANKIE_FRAME_SIZE });
     this.load.spritesheet(FRANKIE_SPRITE_KEY, FRANKIE_SPRITE_URL, {
       frameWidth: FRANKIE_FRAME_SIZE,
       frameHeight: FRANKIE_FRAME_SIZE
@@ -138,8 +139,8 @@ export class BootScene extends Phaser.Scene {
     for (const key of [RON_SPRITE_KEY, TOBIAS_SPRITE_KEY]) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get('heartwood-crossbow').setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.textures.get('heartwood-crossbow-top').setFilter(Phaser.Textures.FilterMode.LINEAR);
-    this.textures.get(FRANKIE_SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
-    this.textures.get(FRANKIE_PORTRAIT_KEY).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    // The buzzards are pixel art now: keep their pixels crisp.
+    for (const key of [FRANKIE_SPRITE_KEY, KING_FRANKIE_SPRITE_KEY, FRANKIE_PORTRAIT_KEY]) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures.get(LOOK.texture.feather).setFilter(Phaser.Textures.FilterMode.LINEAR);
     applyPlayerSpriteAdjustments(this);
     alignMysteryFrames(this);

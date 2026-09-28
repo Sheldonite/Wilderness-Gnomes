@@ -18,10 +18,10 @@
 }
 
 /* ---------- Type: bookish, with small caps where the old UI used tiny spaced-out capitals ---------- */
-:is(.eyebrow,.xp-meta,.run-stats small,.upgrade-category,.result-stats span,.market-eyebrow,.title-eyebrow,
+:is(.eyebrow,.upgrade-category,.result-stats span,.market-eyebrow,.title-eyebrow,
   .wanderer-selection legend,.weapon-selection legend,.begin-hint,.chapter-label,.brand-mark,.overlay-hint,
-  .upgrade-select,.frankie-hud strong,.market-item-art>span,.upgrade-comparison small,.journal-ability small,
-  .upgrade-owned-list>strong,.title-gold-balance small,.market-purse span,.market-welcome>span,.run-location,
+  .upgrade-select,.market-item-art>span,.upgrade-comparison small,.journal-ability small,
+  .upgrade-owned-list>strong,.title-gold-balance small,.market-purse span,.market-welcome>span,
   .market-item-benefits small,.gold-milestones){
   font-family:var(--display);font-variant:small-caps;text-transform:lowercase;letter-spacing:1.2px;font-weight:600
 }
@@ -29,7 +29,7 @@ kbd{font:600 10px var(--display);border:1px solid currentColor;border-radius:3px
 button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 
 /* ---------- Materials ---------- */
-.dark-board,.run-stats,.pause-button,.frankie-hud,.rare-rock-hud,.build-strip,.boss-hud,.health-hud,.desktop-updates,
+.dark-board,.desktop-updates,
 .title-weapons-link,.market-purse,.market-directory>button,.market-interact button,.market-preview,.title-rock-balance{
   border:2px solid transparent;border-image:var(--board-dark);border-radius:0;background:none;box-shadow:none;
   filter:drop-shadow(0 4px 5px #0b0703a0);color:var(--cream)
@@ -80,52 +80,6 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 .title-footer,.mystery-hint{text-shadow:0 1px 3px #0d1a10}
 .mystery-hint{font-family:var(--display)}
 .brand-mark{font-size:13px}.chapter-label{font-size:12px}
-
-/* ---------- In-run HUD ---------- */
-.health-hud{padding:9px 14px 10px 9px;gap:10px}
-.hud-portrait{width:54px;height:54px;border-radius:50%;border:3px solid #7a4d27;padding-top:4px;
-  background:radial-gradient(circle at 50% 35%,#6f8a55,#2d4a2f 75%);box-shadow:0 0 0 2px #2a1407,inset 0 0 10px #000a}
-.health-heading strong{font:700 18px var(--display);color:var(--gold);text-shadow:var(--carved)}
-.health-value{font-family:var(--display);font-size:11px;color:var(--cream);text-shadow:0 1px 0 #2a1407}
-:is(.health-track,.xp-track,.boss-track){background:#241307;border:2px solid #150a03;border-radius:8px;padding:1px;
-  box-shadow:inset 0 2px 4px #000c,0 1px 0 #b07a4280}
-.health-track{height:15px}
-.health-fill{border-radius:5px;background:linear-gradient(180deg,#ff9a80 0%,#d8433a 45%,#9b1f1c 100%);box-shadow:inset 0 2px 0 #ffc2b066}
-.low-health .health-track{box-shadow:inset 0 2px 4px #000c,0 0 12px #ff5a4a,0 0 3px #ff9a80}
-.run-stats{padding:9px 20px;gap:16px}
-.run-stats b{font:700 18px var(--display);color:var(--gold);text-shadow:var(--carved)}
-.run-stats small{font-size:11px;color:var(--cream)}
-.run-stats svg{color:var(--gold)}
-.run-stats i{background:#e9c07a55}
-.pause-button{padding:9px 16px;font:700 13px var(--display);color:var(--cream);text-shadow:var(--carved)}
-.pause-button:hover{background:none;filter:brightness(1.2) drop-shadow(0 4px 5px #0b0703a0)}
-.frankie-hud{padding:10px 12px}
-.frankie-hud strong{font-size:12px;color:var(--gold)}
-.frankie-hud b{font-family:var(--display);color:#ffe7ae}
-.frankie-hud small{color:#f1e2c0;font-style:italic}
-.rare-rock-hud{padding:9px 13px;color:#efe2ff}
-.rare-rock-hud strong{font-family:var(--display)}
-.rare-rock-hud>svg{color:#d6b8ff;filter:drop-shadow(0 0 4px #b98cff)}
-.xp-hud{padding-left:50px}
-.xp-meta{font-size:12px;color:var(--cream);text-shadow:0 1px 0 #1d1006,0 0 6px #0d1a10}
-.xp-track{height:12px}
-.xp-fill{border-radius:5px;background:repeating-linear-gradient(115deg,#0000 0 16px,#ffffff26 16px 19px),linear-gradient(180deg,#d7f39a 0%,#7fb24a 50%,#46752c 100%);box-shadow:inset 0 2px 0 #f2ffd066}
-.level-seal{left:-4px;bottom:-15px;width:46px;height:46px;clip-path:none;background:url(../../assets/ui/seal.png) center/contain no-repeat;
-  color:#ffe6c4;font:700 17px var(--display);text-shadow:0 1px 0 #4a0808,0 -1px 0 #d6655a;filter:drop-shadow(0 3px 3px #000a)}
-.run-location{font-size:12px;color:#fff1cfcc}
-.build-strip{padding:6px 12px;gap:8px}
-.build-item{color:var(--cream)}.build-item b{font-family:var(--display);color:var(--gold)}
-.build-item svg{color:#ffe7ae}
-.upgrade-receipt{border:2px solid transparent;border-image:var(--parchment-small);border-radius:0;background:none;color:var(--ink);padding:14px 22px;
-  filter:drop-shadow(0 6px 8px #0b0703a0)}
-.upgrade-receipt strong{font-family:var(--display)}.upgrade-receipt span{color:var(--ink-soft)}
-.boss-hud{padding:12px 20px 14px}
-.boss-hud strong{font:700 22px var(--display);color:var(--gold);text-shadow:var(--carved);letter-spacing:.5px}
-.boss-caption{font:italic 13px var(--display);color:var(--cream)}
-.boss-track{height:14px;margin-top:9px}
-.boss-track i{border-radius:5px;background:linear-gradient(180deg,#ffcf7a 0%,#e5652e 50%,#9e2d17 100%);box-shadow:inset 0 2px 0 #ffe0a066}
-.event-banner{padding:12px 60px;border:0;border-image:var(--ribbon);border-radius:0;background:none;box-shadow:none;
-  font:700 17px var(--display);color:var(--cream);text-shadow:0 2px 0 #102414;filter:drop-shadow(0 5px 6px #0b0703a0)}
 
 /* ---------- Storybook pages: menus, level ups, pause, results ---------- */
 .storybook-overlay{background:radial-gradient(ellipse at center,#1a0f0770,#0b0704d8);backdrop-filter:blur(2px)}
@@ -227,49 +181,76 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 ::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#a4703e,#6e4420);border:2px solid #0000;background-clip:padding-box;border-radius:6px}
 ::-webkit-scrollbar-track{background:#0000}
 
-/* ---------- Compact in-run HUD: small plaques tucked into the corners, so the woods stay in view ---------- */
-.game-ui :is(.health-hud,.run-stats,.pause-button,.frankie-hud,.rare-rock-hud,.build-strip,.boss-hud){
-  border-image:url(../../assets/ui/board-dark.png) 28 fill / 10px stretch}
-.health-hud{top:10px;left:10px;padding:5px 10px 6px 6px;gap:8px}
-.hud-portrait{width:38px;height:38px;border-width:2px;padding-top:2px}
-.hud-portrait img{height:46px}
-.health-info{width:150px}
-.health-heading{margin-bottom:4px}
-.health-heading strong{font-size:14px}
-.health-value{font-size:10px}
-.health-track{height:10px}
-.run-stats{top:10px;padding:5px 12px;gap:10px}
-.run-stats b{font-size:14px}
-.run-stats small{font-size:9px}
-.run-stats svg{width:14px;height:14px}
-.pause-button{top:10px;right:10px;padding:5px 10px;font-size:11px;gap:6px}
-.pause-button svg{width:13px;height:13px}
-.pause-button kbd{display:none}
-.frankie-hud{top:66px;left:10px;width:auto;max-width:190px;padding:5px 9px;gap:7px}
-.frankie-hud img{width:24px;height:32px}
-.frankie-hud div{gap:2px}
-.frankie-hud strong{font-size:10px}
-.frankie-hud b{font-size:11px}
-.frankie-hud small{font-size:9px;line-height:1.25}
-.rare-rock-hud{top:44px;right:10px;padding:4px 9px;gap:6px}
-.rare-rock-hud>svg{width:16px;height:16px}
-.rare-rock-hud strong{font-size:11px}
-.rare-rock-hud small{display:none}
-.xp-hud{bottom:10px;left:14px;right:14px;padding-left:36px}
-.xp-meta{font-size:10px;margin-bottom:3px}
-.xp-track{height:8px}
-.level-seal{width:34px;height:34px;bottom:-11px;left:-2px;font-size:13px}
-.run-location{display:none}
-.build-strip{bottom:32px;padding:3px 8px;gap:4px}
-.build-item{font-size:10px;padding:1px}
-.build-item svg{width:16px;height:16px}
-.upgrade-receipt{bottom:62px;padding:9px 16px;font-size:12px}
-/* the boss plaque: name and hint on one line, a slim bar beneath */
-.boss-hud{top:49px;width:min(380px,calc(100% - 20px));padding:5px 14px 7px}
-.boss-hud>div:first-child{flex-direction:row;justify-content:space-between;align-items:baseline;gap:10px}
-.boss-hud strong{font-size:15px;flex-shrink:0}
-.boss-caption{font-size:11px;min-height:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.boss-track{height:8px;margin-top:4px}
-.event-banner{top:49px;padding:6px 44px;font-size:13px}
-@media(max-width:850px){.health-hud{top:8px;left:8px}.run-stats{top:8px}.pause-button{top:8px;right:8px}.frankie-hud{top:62px;left:8px}}
-@media(max-width:600px){.run-stats{top:8px;right:8px;left:auto;transform:none}.pause-button{top:44px}.rare-rock-hud{top:78px;right:8px}.boss-hud{top:108px}.event-banner{top:108px}}
+/* ---------- In-run HUD: three quiet corners in one material ----------
+ * Flat walnut panels with a thin gold edge, cream text, gold accents. Red for health, green for
+ * experience, ember for bosses. Nothing smaller than 12px; details live in the pause menu. */
+:root{
+  --walnut:linear-gradient(180deg,#3b2717eb,#22160ceb);
+  --walnut-edge:#c9a15a;
+  --panel-shadow:inset 0 1px 0 #ffe3a026,0 3px 10px #0009;
+  --outline-text:0 1px 0 #1b1006,1px 0 0 #1b1006,-1px 0 0 #1b1006,0 -1px 0 #1b1006,0 2px 6px #000a;
+}
+.visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#ui-root :is(.hero-card,.boss-hud,.event-banner,.rare-rock-toast,.upgrade-receipt){
+  background:var(--walnut);border:1px solid var(--walnut-edge);border-radius:12px;border-image:none;
+  box-shadow:var(--panel-shadow);filter:none;color:var(--cream)
+}
+/* the wanderer, top left */
+.hero-card{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:10px;padding:7px 12px 7px 7px}
+#ui-root .hud-portrait{position:relative;width:52px;height:52px;flex-shrink:0;border-radius:50%;border:2px solid var(--walnut-edge);padding:0;
+  display:flex;justify-content:center;align-items:flex-start;overflow:visible;
+  background:radial-gradient(circle at 50% 35%,#5d7a4a,#243a26 75%);box-shadow:inset 0 0 8px #000a}
+#ui-root .hud-portrait img{height:58px;margin-top:2px;clip-path:circle(26px at 50% 24px);image-rendering:pixelated}
+#ui-root .level-seal{position:absolute;right:-8px;bottom:-6px;left:auto;width:28px;height:28px;display:grid;place-items:center;clip-path:none;
+  background:url(../../assets/ui/seal.png) center/contain no-repeat;color:#ffe9c9;font:700 12px var(--display);
+  text-shadow:0 1px 0 #4a0808;filter:drop-shadow(0 2px 2px #0009)}
+.hero-info{width:170px;display:flex;flex-direction:column;gap:5px}
+#ui-root .health-heading{display:flex;justify-content:space-between;align-items:baseline;margin:0}
+#ui-root .health-heading strong{font:700 15px var(--display);color:var(--gold);text-shadow:none}
+#ui-root .health-value{font:600 12px var(--display);color:var(--cream);text-shadow:none;font-variant-numeric:tabular-nums}
+#ui-root :is(.health-track,.xp-track,.boss-track){background:#140b05;border:1px solid #0a0502;border-radius:6px;padding:1px;box-shadow:inset 0 1px 3px #000c}
+#ui-root .health-track{height:10px}
+#ui-root .health-fill{border-radius:4px;background:linear-gradient(180deg,#ff8f78,#cf3b33 55%,#962019);box-shadow:inset 0 1px 0 #ffc2b066}
+#ui-root.low-health .health-track{box-shadow:inset 0 1px 3px #000c,0 0 10px #ff5a4a}
+.companion-badge{display:flex;align-items:center;gap:6px;min-height:16px;cursor:default;pointer-events:auto}
+.companion-badge img{width:18px;height:18px;object-fit:contain;border-radius:50%;background:#140b05;border:1px solid #c9a15a88}
+.companion-name{font:600 12px var(--display);color:#f1e2c0}
+.companion-pips{display:flex;gap:2px;margin-left:auto}
+.companion-pips i{width:6px;height:6px;border-radius:50%;background:#140b05;box-shadow:inset 0 0 0 1px #c9a15a66}
+.companion-pips i.on{background:var(--gold);box-shadow:0 0 3px #f2c86588}
+/* the clock, top centre: no box, just outlined text */
+#ui-root .run-stats{top:14px;padding:0;gap:18px;background:none;border:0;border-image:none;box-shadow:none;filter:none}
+#ui-root .run-stats b{font:700 18px var(--display);color:var(--cream);text-shadow:var(--outline-text)}
+#ui-root .run-stats svg{width:16px;height:16px;color:var(--gold);filter:drop-shadow(0 1px 1px #000)}
+/* pause, top right */
+#ui-root .pause-button{top:10px;right:10px;width:38px;height:38px;padding:0;justify-content:center;border-radius:50%;
+  background:var(--walnut);border:1px solid var(--walnut-edge);border-image:none;box-shadow:var(--panel-shadow);filter:none;color:var(--gold)}
+#ui-root .pause-button svg{width:16px;height:16px}
+#ui-root .pause-button:hover{background:linear-gradient(180deg,#4d331d,#2c1c0f);filter:none}
+/* experience, along the bottom */
+#ui-root .xp-hud{left:14px;right:14px;bottom:8px;padding:0}
+#ui-root .xp-track{height:7px}
+#ui-root .xp-fill{border-radius:4px;background:linear-gradient(180deg,#d9f59c,#7fb24a 55%,#4a7a2e);box-shadow:inset 0 1px 0 #f2ffd066}
+#ui-root .xp-value{position:absolute;right:2px;bottom:11px;font:600 12px var(--display);color:var(--cream);text-shadow:var(--outline-text);font-variant-numeric:tabular-nums}
+/* the boss, under the clock */
+#ui-root .boss-hud{top:46px;width:min(400px,calc(100% - 20px));padding:7px 14px 9px}
+#ui-root .boss-hud>div:first-child{flex-direction:row;justify-content:space-between;align-items:baseline;gap:10px}
+#ui-root .boss-hud strong{font:700 15px var(--display);color:var(--gold);text-shadow:none;flex-shrink:0}
+#ui-root .boss-caption{font:italic 12px var(--display);color:#f1e2c0;min-height:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ui-root .boss-track{height:8px;margin-top:5px}
+#ui-root .boss-track i{border-radius:4px;background:linear-gradient(180deg,#ffcf7a,#e5652e 55%,#9e2d17);box-shadow:inset 0 1px 0 #ffe0a066}
+/* short notes: set pieces under the clock, rocks under pause, upgrades above the xp bar */
+#ui-root .event-banner{top:46px;padding:7px 18px;font:700 14px var(--display);color:var(--gold);text-shadow:none}
+#ui-root .rare-rock-toast{position:absolute;top:56px;right:10px;display:flex;align-items:center;gap:8px;padding:7px 12px;pointer-events:none;animation:event-banner-in .3s ease-out}
+.rare-rock-toast>svg{width:18px;height:18px;color:var(--gold)}
+.rare-rock-toast span{display:flex;flex-direction:column}
+.rare-rock-toast strong{font:600 13px var(--display)}
+.rare-rock-toast small{font-size:12px;color:#f1e2c0}
+.rare-rock-toast small:empty{display:none}
+#ui-root .upgrade-receipt{bottom:28px;padding:8px 16px;font-size:13px}
+#ui-root .upgrade-receipt strong{font-family:var(--display);color:var(--gold)}
+#ui-root .upgrade-receipt span{color:#f1e2c0}
+@media(max-width:600px){
+  .hero-info{width:130px}#ui-root .run-stats{left:auto;right:58px;transform:none;top:18px;gap:12px}#ui-root .run-stats b{font-size:15px}
+  #ui-root .boss-hud,#ui-root .event-banner{top:84px}.rare-rock-toast{top:132px}
+}

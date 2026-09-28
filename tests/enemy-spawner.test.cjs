@@ -31,7 +31,9 @@ function harness({ level = 20, side = 0, roll = 0, view, navigation } = {}) {
   }
   const scene = { events: { emit() {} }, add: { sprite(x, y, texture) {
     return { x, y, scene, texture: { key: texture },
-      anims: { isPaused: false, pause() { this.isPaused = true; }, resume() { this.isPaused = false; } },
+      anims: { isPaused: false, pause() { this.isPaused = true; }, resume() { this.isPaused = false; }, stop() { this.isPaused = true; } },
+      data: {}, setData(key, value) { this.data[key] = value; }, getData(key) { return this.data[key]; },
+      setTint(color) { this.tint = color; }, setOrigin() {}, setFlipX(flip) { this.flipX = flip; return this; }, setRotation(r) { this.rotation = r; return this; }, setFrame(frame) { this.frame = frame; },
       setDepth() {}, setScale() {},
       setTexture(key) { this.texture.key = key; },
       setPosition(x, y) { this.x = x; this.y = y; },
@@ -172,6 +174,22 @@ test('bosses ignore shoves, pulls and roots, resist slows, and hit with their ow
   const squirrel = new EnemyController(scene, 500, 500, 0);
   squirrel.displace(20, 0); assert.equal(squirrel.position.x, 520);
   squirrel.slowMultiplier = 0; assert.equal(squirrel.effectiveSlow, 0);
+});
+
+test('after King Frankie, the spawner sends buzzards that fly, swoop harder, and are worth more', () => {
+  const run = harness({ level: BALANCE.buzzard.unlockLevel, roll: 0 });
+  run.update();
+  const bird = run.enemies[0];
+  assert.equal(bird.variant, 'buzzard');
+  assert.equal(bird.sprite.texture.key, 'companion-frankie');
+  assert.equal(bird.health, BALANCE.buzzard.health);
+  assert.equal(bird.xpValue, BALANCE.enemyXp.buzzard);
+  assert.equal(bird.contactDamage, BALANCE.buzzard.contactDamage);
+  assert.equal(bird.sprite.tint, BALANCE.buzzard.tint);
+  // bring it close, let its first swoop come ready, and watch it wind up then dive
+  bird.sprite.setPosition(run.player.x - 200, run.player.y);
+  for (let i = 0; i < 400 && bird.contactDamage === BALANCE.buzzard.contactDamage; i++) bird.update(16, run.player, 0);
+  assert.equal(bird.contactDamage, BALANCE.buzzard.swoopDamage, 'a swoop hits harder');
 });
 
 test('a stampeding deer gallops its lane, then hunts like any other', () => {

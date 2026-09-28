@@ -21,12 +21,21 @@ import {
 import type { Vector2Like } from '../core/types';
 import { RangedSquirrelBehavior } from '../core/SquirrelBehavior';
 import { ArmadilloBehavior } from '../core/ArmadilloBehavior';
-import { clampToArena, normalize } from '../utils/math';
+import { BuzzardFlight } from '../core/BuzzardFlight';
+import { FRANKIE_DIVE_KEY, FRANKIE_FLAP_KEY, FRANKIE_SPRITE_KEY } from '../config/frankieKeys';
+import { clampToArena, normalize, spriteHeading } from '../utils/math';
 
 let nextEnemyId = 1;
 
-/** Brown squirrels charge, grey squirrels throw acorns, deer from level 10, and armadillos roll in from level 20. */
-export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck' | 'armadillo';
+/**
+ * Brown squirrels charge, grey squirrels throw acorns, deer from level 10, armadillos roll in from
+ * level 20, and buzzards swoop down once King Frankie has fallen at level 25.
+ */
+export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck' | 'armadillo' | 'buzzard';
+
+/** Buzzards flap whichever way they fly; the sheet faces right and is flipped for left. */
+const BUZZARD_ANIMATIONS: Record<string, string> = Object.fromEntries(
+  [-1, 0, 1].flatMap(x => [-1, 0, 1].map(y => [`${x},${y}`, FRANKIE_FLAP_KEY])));
 
 export interface EnemyAppearance {
   texture: string;
@@ -71,7 +80,9 @@ const VARIANTS: Record<EnemyVariant, VariantProfile> = {
   buck: { textureKey: BUCK_SPRITE_KEY, walkAnimations: BUCK_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.buck.scale,
     health: BALANCE.deer.buck.health, speed: BALANCE.deer.buck.speed, contactDamage: BALANCE.deer.buck.contactDamage, radius: BALANCE.deer.buck.radius, ranged: false },
   armadillo: { textureKey: ARMADILLO_SPRITE_KEY, walkAnimations: ARMADILLO_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.armadillo.scale,
-    health: BALANCE.armadillo.health, speed: BALANCE.armadillo.walkSpeed, contactDamage: BALANCE.armadillo.walkDamage, radius: BALANCE.armadillo.radius, ranged: false }
+    health: BALANCE.armadillo.health, speed: BALANCE.armadillo.walkSpeed, contactDamage: BALANCE.armadillo.walkDamage, radius: BALANCE.armadillo.radius, ranged: false },
+  buzzard: { textureKey: FRANKIE_SPRITE_KEY, walkAnimations: BUZZARD_ANIMATIONS, scale: BALANCE.buzzard.scale,
+    health: BALANCE.buzzard.health, speed: BALANCE.buzzard.speed, contactDamage: BALANCE.buzzard.contactDamage, radius: BALANCE.buzzard.radius, ranged: false }
 };
 
 export class EnemyController {
@@ -98,6 +109,7 @@ export class EnemyController {
   private rootMs = 0;
   private readonly ranged?: RangedSquirrelBehavior;
   private readonly armadillo?: ArmadilloBehavior;
+  private readonly flight?: BuzzardFlight;
   private readonly profile: VariantProfile;
   private readonly walkAnimations: Record<string, string>;
 
@@ -125,11 +137,17 @@ export class EnemyController {
     this.health = this.maxHealth = Math.round(profile.health + difficultyMinutes * BALANCE.enemy.healthPerMinute);
     if (profile.ranged) this.ranged = new RangedSquirrelBehavior();
     if (variant === 'armadillo') this.armadillo = new ArmadilloBehavior();
+    if (variant === 'buzzard' && !appearance) {
+      this.flight = new BuzzardFlight();
+      // Fliers are drawn above their shadow and above the creatures on the ground.
+      this.sprite.setDepth(22);
+      this.setBaseTint(BALANCE.buzzard.tint);
+    }
   }
 
   get contactDamage(): number {
     if (this.bossContact !== undefined) return this.bossContact;
-    const base = this.armadillo?.rolling ? BALANCE.armadillo.rollDamage : this.baseContact;
+    const base = this.armadillo?.rolling ? BALANCE.armadillo.rollDamage : this.flight?.swooping ? BALANCE.buzzard.swoopDamage : this.baseContact;
     return Math.round(base * this.contactMultiplier * (this.elite ? BALANCE.elite.damageMultiplier : 1));
   }
 
@@ -155,8 +173,8 @@ export class EnemyController {
 
   /** A colour that survives hit flashes (elites, chili squirrels). */
   setBaseTint(color: number): void {
-    this.sprite.setData?.('tint', color);
-    this.sprite.setTint?.(color);
+    this.sprite.setData('tint', color);
+    this.sprite.setTint(color);
   }
 
   /** Stampede: gallop straight along a lane for a while, then hunt the player as usual. */
@@ -178,6 +196,7 @@ export class EnemyController {
     if (this.run) { this.updateRun(deltaMs); return; }
     if (this.rootMs > 0) { this.rootMs -= deltaMs; this.sprite.anims.pause(); return; }
     if (this.armadillo) { this.updateArmadillo(deltaMs, target); return; }
+    if (this.flight) { this.updateFlight(deltaMs, target, difficultyMinutes); return; }
     const speed = (this.profile.speed + speedBonus(this.profile.speed, difficultyMinutes)) * this.slowMultiplier;
     const direction = this.ranged
       ? this.ranged.steer(this.position, target)
@@ -224,6 +243,25 @@ export class EnemyController {
   tryThrow(target: Vector2Like): Vector2Like | undefined {
     if (!this.ranged || this.isDead) return undefined;
     return this.ranged.tryThrow(this.position, target);
+  }
+
+  /** Buzzards fly straight over scenery; only the edge of the world stops them. */
+  private updateFlight(deltaMs: number, target: Vector2Like, difficultyMinutes: number): void {
+    const flight = this.flight!;
+    const speed = (this.profile.speed + speedBonus(this.profile.speed, difficultyMinutes)) * this.slowMultiplier;
+    const before = this.position;
+    const step = flight.update(deltaMs, before, target, speed);
+    const wanted = { x: before.x + step.x, y: before.y + step.y };
+    const safe = clampToArena(wanted, this.radius);
+    if (flight.swooping && (safe.x !== wanted.x || safe.y !== wanted.y)) flight.blocked();
+    this.sprite.setPosition(safe.x, safe.y);
+    const heading = step.x || step.y ? step : flight.facing;
+    const pose = spriteHeading(heading.x, heading.y);
+    this.sprite.setFlipX(pose.flipX).setRotation(pose.rotation);
+    if (flight.winding) {
+      // The tell: wings raised, hanging in the air.
+      this.sprite.anims.stop(); this.sprite.setFrame(10);
+    } else this.sprite.play(flight.swooping ? FRANKIE_DIVE_KEY : FRANKIE_FLAP_KEY, true);
   }
 
   private updateArmadillo(deltaMs: number, target: Vector2Like): void {

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { KING, KING_LOOK } from '../config/kingBoss';
 import { scaledBossHealth } from '../core/BossGate';
-import { KingEncounter, distanceToEdge, type KingArena, type KingHit } from '../core/KingEncounter';
+import { KingEncounter, distanceToEdge, type GroundRipple, type KingArena, type KingHit } from '../core/KingEncounter';
 import type { GameManager } from '../core/GameManager';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import type { Vector2Like } from '../core/types';
@@ -73,6 +73,7 @@ export class KingBossSystem {
     this.fill.style.transform = `scaleX(${Math.max(0, fraction)})`;
     this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuenow', String(Math.max(0, Math.ceil(this.boss.health))));
     if (phase === 'curling') this.drawLane(this.boss.position, this.encounter.direction, arena);
+    for (const ripple of this.encounter.ripples) this.drawRipple(ripple);
     if (phase === 'dizzy') {
       const head = { x: this.boss.position.x, y: this.boss.position.y - this.boss.sprite.displayHeight * .4 };
       for (let i = 0; i < 3; i++) {
@@ -84,6 +85,36 @@ export class KingBossSystem {
       this.scene.events.emit('presentation:level', p);
       this.scene.cameras.main.shake(140, .004);
     }
+  }
+
+  /**
+   * A ground ripple: a rolling ring of churned earth with a gap where it crosses the safe lane, and the
+   * lane itself glowing green so the player knows where to stand.
+   */
+  private drawRipple(ripple: GroundRipple): void {
+    const g = this.graphics, { origin, from, radius } = ripple;
+    const fade = Math.max(0, 1 - radius / KING.rippleReach);
+    const lane = Math.hypot(origin.x - from.x, origin.y - from.y);
+    const back = Math.atan2(from.y - origin.y, from.x - origin.x);
+    if (lane > 0) {
+      const dir = { x: (from.x - origin.x) / lane, y: (from.y - origin.y) / lane }, nx = -dir.y, ny = dir.x, h = KING.rippleSafeHalfWidth;
+      g.fillStyle(0x9be27a, .12 * fade + .04).fillPoints([
+        { x: origin.x + nx * h, y: origin.y + ny * h }, { x: from.x + nx * h, y: from.y + ny * h },
+        { x: from.x - nx * h, y: from.y - ny * h }, { x: origin.x - nx * h, y: origin.y - ny * h }], true);
+      g.lineStyle(2, 0xc8f5a8, .5 * fade + .2).lineBetween(origin.x + nx * h, origin.y + ny * h, from.x + nx * h, from.y + ny * h)
+        .lineBetween(origin.x - nx * h, origin.y - ny * h, from.x - nx * h, from.y - ny * h);
+    }
+    if (radius < 4) return;
+    // leave a gap where the ring crosses the lane (only while the ring is within the lane's length)
+    const gap = radius <= lane + KING.rippleSafeHalfWidth ? Math.asin(Math.min(1, KING.rippleSafeHalfWidth / radius)) : 0;
+    const start = back + gap, end = back + Math.PI * 2 - gap;
+    const ring = (r: number, width: number, colour: number, alpha: number) => {
+      if (r > 2) g.lineStyle(width, colour, alpha).beginPath().arc(origin.x, origin.y, r, start, end).strokePath();
+    };
+    ring(radius, KING.rippleWidth, 0x6e4218, .7 * fade + .1);                 // the churned band of earth
+    ring(radius + KING.rippleWidth / 2 - 3, 6, 0xffd57a, .95 * fade + .05);    // its bright leading edge
+    ring(radius - KING.rippleWidth / 2 + 2, 3, 0x2e1a08, .6 * fade);           // dark trailing lip
+    ring(radius - KING.rippleWidth * 1.6, 3, 0xffd57a, .35 * fade);             // a faint echo behind
   }
 
   /** The locked first leg, and a fainter guess at the first ricochet. */

@@ -19,11 +19,11 @@ export class RareRockSystem {
     this.drops = new RareRockDrops({ blocked: (p, r) => ground.blocked(p, r) || navigation.blocked(p, r),
       clear: (a, b, r) => navigation.clear(a, b, r) });
     this.hud = document.createElement('div');
-    this.hud.className = 'rare-rock-hud';
+    this.hud.className = 'rare-rock-toast';
     this.hud.innerHTML = `${icon('rock')}<span><strong></strong><small></small></span>`;
     this.hud.setAttribute('role', 'status');
+    this.hud.hidden = true;
     document.querySelector('.game-ui')!.append(this.hud);
-    this.refreshHud();
   }
 
   update(deltaMs: number, player: Vector2Like, allowSpawn: boolean): void {
@@ -40,17 +40,18 @@ export class RareRockSystem {
       const result = this.wallet.collectRock(`${this.runId}:rock:${picked.id}`);
       this.views.get(picked.id)?.destroy(); this.views.delete(picked.id);
       this.noticeUntil = this.age + 3000;
-      this.refreshHud(result.saved ? '+1 rock saved!' : '+1 rock · save unavailable');
+      this.refreshHud(result.saved ? '+1 rare rock ·' : '+1 rare rock (not saved) ·');
     } else if (this.noticeUntil && this.age >= this.noticeUntil) {
-      this.noticeUntil = 0; this.refreshHud();
+      this.noticeUntil = 0; this.hud.hidden = true;
     }
   }
 
-  private refreshHud(notice?: string): void {
+  /** Shown for a few seconds when a rock is found; the running total lives on the title screen and market. */
+  private refreshHud(notice: string): void {
     const balance = this.wallet.profile.rocks;
-    this.hud.querySelector('strong')!.textContent = `${balance.toLocaleString()} rare ${balance === 1 ? 'rock' : 'rocks'}`;
-    this.hud.querySelector('small')!.textContent = this.preview ? 'Practice collection' : notice ??
-      (this.wallet.storageStatus === 'ready' ? 'Kept between runs' : 'Saving unavailable · session only');
+    this.hud.querySelector('strong')!.textContent = `${notice} ${balance.toLocaleString()} in all`;
+    this.hud.querySelector('small')!.textContent = this.preview ? 'Practice collection' : this.wallet.storageStatus === 'ready' ? '' : 'Saving unavailable · session only';
+    this.hud.hidden = false;
   }
 
   private createView(rock: RareRock): void {

@@ -22,7 +22,7 @@ export const BALANCE = {
     damagePerMinute: 0.04
   },
   /** Crystals dropped per creature: sturdier foes are worth more. */
-  enemyXp: { brown: 8, grey: 10, fawn: 8, doe: 14, buck: 30, armadillo: 35 },
+  enemyXp: { brown: 8, grey: 10, fawn: 8, doe: 14, buck: 30, armadillo: 35, buzzard: 26 },
   /** Bosses shrug off shoves and pulls, and are never slowed below this multiplier. */
   boss: { slowFloor: 0.7 },
   elite: {
@@ -63,6 +63,27 @@ export const BALANCE = {
     doe: { health: 70, speed: 118, contactDamage: 12, radius: 22, scale: 1.05 },
     fawn: { health: 34, speed: 150, contactDamage: 6, radius: 15, scale: 0.85 },
     buck: { health: 150, speed: 105, contactDamage: 20, radius: 26, scale: 1.55 }
+  },
+  /**
+   * Buzzards join the spawns from King Frankie's level (the gate holds the run at 25 until he falls).
+   * They fly straight over scenery, and when close they hover, then swoop in a locked straight line.
+   */
+  buzzard: {
+    unlockLevel: 25,
+    spawnChance: 0.2,
+    health: 110,
+    speed: 150,
+    contactDamage: 14,
+    radius: 20,
+    scale: 0.42,
+    swoopRange: 300,
+    swoopWindupMs: 480,
+    swoopSpeed: 520,
+    swoopDistance: 380,
+    swoopDamage: 20,
+    recoverMs: 420,
+    swoopCooldownMs: 2600,
+    tint: 0xc9a894
   },
   armadillo: {
     unlockLevel: 20,

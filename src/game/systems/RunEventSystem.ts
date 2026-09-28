@@ -13,7 +13,7 @@ import type { EnemySpawner } from './EnemySpawner';
 interface PendingStampede { lane: StampedeLane; warnMs: number; count: number; variants: EnemyVariant[] }
 
 const VARIANT_NAMES: Record<EnemyVariant, string> = {
-  brown: 'squirrel', grey: 'acorn-thrower', doe: 'doe', fawn: 'fawn', buck: 'buck', armadillo: 'armadillo'
+  brown: 'squirrel', grey: 'acorn-thrower', doe: 'doe', fawn: 'fawn', buck: 'buck', armadillo: 'armadillo', buzzard: 'buzzard'
 };
 
 /**

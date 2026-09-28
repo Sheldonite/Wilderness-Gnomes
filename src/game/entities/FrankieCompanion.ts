@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { spriteHeading } from '../utils/math';
 import { LOOK } from '../config/presentation';
 import { FRANKIE_DIVE_KEY, FRANKIE_FLAP_KEY, FRANKIE_SPRITE_KEY } from '../config/frankieSprite';
 import { FrankieFlock } from '../core/FrankieFlock';
@@ -56,8 +57,8 @@ export class FrankieCompanion {
       const bird = this.flock.birds[i];
       const sprite = this.birds[i];
       sprite.setPosition(bird.position.x, bird.position.y);
-      sprite.setFlipX(bird.facing.x < 0);
-      sprite.setRotation(Math.atan2(bird.facing.y, Math.abs(bird.facing.x) || 1) * 0.4);
+      const pose = spriteHeading(bird.facing.x, bird.facing.y);
+      sprite.setFlipX(pose.flipX).setRotation(pose.rotation);
       sprite.setDepth(bird.facing.y >= 0 ? 22 : 18);
       const diving = bird.state === 'diving';
       sprite.setDisplaySize(diving ? 60 : 54, diving ? 60 : 54);

@@ -27,9 +27,24 @@ Each time he finishes stalking he uses the next attack in `STAG.attackOrder`: **
 - **Rut (below 30%):** he is tinted red and frenzied, with triple charges, quicker windups and recoveries, faster charges and stalking, an 8-shard volley, and 1.6s stuns.
 - He calls the herd (two stampede lanes) at 50% and 25%.
 
-## King Rumbles (level 25): the final boss
+## King Frankie (level 25)
 
-A crowned armadillo. He curls up with his first lane and a faint first ricochet shown, then rolls, bouncing off the arena wall 2 times (3 enraged). He can hit once per leg. When the roll ends he is **dizzy** (+20% damage taken) and sprays a ring of shell shards. His royal guard of armadillos arrives at 66% and 33%. Defeating him wins the run: a victory screen offers to keep wandering (endless) or head home. Three bosses also make relic rank 3 reachable.
+A great buzzard in a little gold crown, in pixel art seen from above as he soars (`scripts/build_buzzard.py` draws him, the buzzard enemies and Sheldon's Frankie). He turns to face where he flies, his shadow falls well below him to show his height, and he flies over scenery.
+
+- **Circling:** he orbits the player on a flattened ellipse, so he stays on screen. In the air he takes **half damage** and cannot body-check.
+- He cycles **dive → feather volley → dive → gust**.
+- **Dive:** a shadow lane is locked through the player (stopping short of the arena edge), then he dives down it. Each dive can hit once (28 damage, knockback). Afterwards he **lands** for 1.7s and takes **+30% damage**: the window to strike.
+- **Feather volley:** a fan of 7 feathers along a locked aim, 9 damage each.
+- **Gust:** a wing-beat cone (400px) that hurls a player caught inside it (10 damage, big knockback).
+- **Enraged (below 40%):** two dives back to back, quicker windups, an 11-feather volley, shorter circling and shorter landings.
+
+### Buzzard enemies (after King Frankie)
+
+From level 25, one spawn in five is a buzzard. Normal spawns pause during the boss fight and the gate holds the run at 25 until he falls, so they arrive right after him. They fly straight at the player over scenery (`core/BuzzardFlight.ts`). When close and ready, one hovers with wings raised for about half a second (the tell), then swoops along the line it locked (20 damage instead of 14). It climbs away, then comes round again after a cooldown. 110 health, worth 26 crystals, and they can be elites. `?review=buzzard` has a **Send buzzards** button.
+
+## King Rumbles (level 30): the final boss
+
+A crowned armadillo. He curls up with his first lane and a faint first ricochet shown, then rolls, bouncing off the arena wall 2 times (3 enraged). He can hit once per leg. **Every wall (or tree) he strikes sends out a ground ripple**: an expanding ring (430px/s, 18 damage and a shove) that hurts everywhere it passes except the lane he just rolled in along, which glows green while the ripple travels. Step into his trail to let it pass. When the roll ends he is **dizzy** (+20% damage taken) and sprays a ring of shell shards. His royal guard of armadillos arrives at 66% and 33%. Defeating him wins the run: a victory screen offers to keep wandering (endless) or head home. With four bosses, a run earns four relic picks, so rank 3 of a relic is reachable.
 
 ## Between bosses
 
@@ -46,4 +61,4 @@ A crowned armadillo. He curls up with his first lane and a faint first ricochet 
 
 ## Review pages (dev only)
 
-`?review=oven`, `?review=stag`, `?review=king` (reach the boss level, walk, defeat, end run) and `?review=events` (buttons for an elite, a ring, and one or two stampedes).
+`?review=oven`, `?review=stag`, `?review=buzzard`, `?review=king` (reach the boss level, walk, defeat, end run) and `?review=events` (buttons for an elite, a ring, and one or two stampedes).

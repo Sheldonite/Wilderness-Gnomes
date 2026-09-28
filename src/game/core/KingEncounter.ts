@@ -4,9 +4,24 @@ import { distanceSq, normalize } from '../utils/math';
 
 export type KingPhase = 'arrival' | 'stalking' | 'curling' | 'rolling' | 'dizzy';
 export interface KingArena { center: Vector2Like; radius: number }
-/** A blow the King lands: damage and the direction the player is thrown. */
-export type KingHit = (damage: number, push: Vector2Like) => void;
+/** A blow the King lands: damage, the direction the player is thrown, and how far (default: a roll's). */
+export type KingHit = (damage: number, push: Vector2Like, knockback?: number) => void;
 export interface ShardBurst { origin: Vector2Like; directions: Vector2Like[] }
+/**
+ * A ground ripple spreading from where he struck a wall. `from` is where the leg he rolled in on
+ * began: the lane between `from` and `origin` is the safe corridor.
+ */
+export interface GroundRipple { origin: Vector2Like; from: Vector2Like; radius: number; landed: boolean }
+
+/** Whether a point (with this body radius) stands in the lane a ripple's leg rolled along. */
+export function inSafeLane(ripple: GroundRipple, point: Vector2Like, bodyRadius = 0): boolean {
+  const ax = ripple.from.x, ay = ripple.from.y, bx = ripple.origin.x, by = ripple.origin.y;
+  const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+  if (!len2) return false;
+  const t = ((point.x - ax) * dx + (point.y - ay) * dy) / len2;
+  if (t < 0 || t > 1) return false;
+  return distanceSq({ x: ax + dx * t, y: ay + dy * t }, point) <= Math.max(0, KING.rippleSafeHalfWidth - bodyRadius) ** 2;
+}
 
 /** Distance along unit `direction` from `from` to where it leaves the circle (0 if already leaving it). */
 export function distanceToEdge(from: Vector2Like, direction: Vector2Like, center: Vector2Like, limit: number): number {
@@ -21,7 +36,8 @@ export function distanceToEdge(from: Vector2Like, direction: Vector2Like, center
  * One encounter per run, advanced only on the gameplay clock.
  * The King stalks to a standoff, curls up while aiming (the first leg is locked and shown), then
  * rolls, ricocheting off the arena's edge a few times. Each leg can hit the player once. When the
- * roll ends he is dizzy, taking extra damage, and his shell sprays a ring of shards. Below the
+ * roll ends he is dizzy, taking extra damage, and his shell sprays a ring of shards. Every wall
+ * he strikes sends a ground ripple out that hurts everywhere except the lane he rolled in on. Below the
  * enrage fraction he curls faster, bounces more and throws more shards. Loyal armadillos join
  * as he passes each summon threshold.
  */
@@ -39,6 +55,10 @@ export class KingEncounter {
   shards?: ShardBurst;
   /** Armadillos owed to the fight; the system spawns them and resets this. */
   pendingAdds = 0;
+  /** Ground ripples still spreading. */
+  ripples: GroundRipple[] = [];
+  /** Where the current leg of the roll began. */
+  private legStart: Vector2Like = { x: 0, y: 0 };
   private timer: number = KING.introductionMs;
   private bouncesLeft = 0;
   private rollMs = 0;
@@ -64,6 +84,7 @@ export class KingEncounter {
     while (this.addWaves < KING.addThresholds.length && healthFraction <= KING.addThresholds[this.addWaves]) {
       this.addWaves++; this.pendingAdds += KING.addsPerWave;
     }
+    this.spreadRipples(deltaMs, player, playerRadius, hit);
     if (this.phase === 'rolling') { this.roll(deltaMs, boss, player, playerRadius, arena, hit); return; }
     this.timer -= deltaMs;
     if (this.timer > 0) return;
@@ -74,7 +95,7 @@ export class KingEncounter {
       const aim = normalize(player.x - boss.x, player.y - boss.y);
       this.direction = aim.x === 0 && aim.y === 0 ? { x: 1, y: 0 } : aim;
     } else if (this.phase === 'curling') {
-      this.phase = 'rolling'; this.rollMs = 0; this.hitThisLeg = false;
+      this.phase = 'rolling'; this.rollMs = 0; this.hitThisLeg = false; this.legStart = { ...boss };
       this.bouncesLeft = this.enraged ? KING.enragedBounces : KING.bounces;
     } else if (this.phase === 'dizzy') {
       this.phase = 'stalking'; this.timer = this.enraged ? KING.enragedCooldownMs : KING.cooldownMs;
@@ -114,8 +135,28 @@ export class KingEncounter {
     hit(KING.rollDamage, this.direction);
   }
 
+  /** Grow every ripple; each can hurt the player once as its ring passes, unless they stand in its safe lane. */
+  private spreadRipples(deltaMs: number, player: Vector2Like, playerRadius: number, hit: KingHit): void {
+    for (const r of this.ripples) {
+      const before = r.radius;
+      r.radius += KING.rippleSpeed * deltaMs / 1000;
+      if (r.landed) continue;
+      // the ring's leading edge swept over the player this frame (or the player stands in its band)
+      const d = Math.sqrt(distanceSq(r.origin, player));
+      const band = KING.rippleWidth / 2 + playerRadius;
+      if (d > r.radius + band || d < before - band) continue;
+      if (inSafeLane(r, player, playerRadius)) continue;
+      r.landed = true;
+      const push = normalize(player.x - r.origin.x, player.y - r.origin.y);
+      hit(KING.rippleDamage, push.x === 0 && push.y === 0 ? { x: 1, y: 0 } : push, KING.rippleKnockback);
+    }
+    this.ripples = this.ripples.filter(r => r.radius < KING.rippleReach);
+  }
+
   private bounce(at: Vector2Like): void {
     this.bounces.push({ ...at });
+    this.ripples.push({ origin: { ...at }, from: { ...this.legStart }, radius: 0, landed: false });
+    this.legStart = { ...at };
     this.hitThisLeg = false;
     this.bouncesLeft--;
     if (this.bouncesLeft < 0) this.endRoll(at);
@@ -140,6 +181,6 @@ export class KingEncounter {
   }
 
   defeat(): void {
-    this.defeated = true; this.rollStep = { x: 0, y: 0 }; this.bounces = []; this.shards = undefined; this.pendingAdds = 0;
+    this.defeated = true; this.rollStep = { x: 0, y: 0 }; this.bounces = []; this.shards = undefined; this.pendingAdds = 0; this.ripples = [];
   }
 }

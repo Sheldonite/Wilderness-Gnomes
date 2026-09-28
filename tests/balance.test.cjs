@@ -39,12 +39,14 @@ test('boss health scales with the run clock', () => {
   assert.equal(scaledBossHealth(1000, 100, -3), 1000);
 });
 
-test('three bosses gate the run in order, and the last one wins it', () => {
+test('four bosses gate the run in order, and the last one wins it', () => {
   const gate = new BossGate();
-  assert.equal(gate.required(25), 'oven'); gate.defeat('oven');
-  assert.equal(gate.required(25), 'stag'); gate.defeat('stag');
+  assert.equal(gate.required(30), 'oven'); gate.defeat('oven');
+  assert.equal(gate.required(30), 'stag'); gate.defeat('stag');
   assert.equal(gate.required(24), undefined);
-  assert.equal(gate.required(25), 'king'); assert.ok(!gate.allDefeated);
+  assert.equal(gate.required(25), 'buzzard'); gate.defeat('buzzard');
+  assert.equal(gate.required(29), undefined);
+  assert.equal(gate.required(30), 'king'); assert.ok(!gate.allDefeated);
   gate.defeat('king'); assert.ok(gate.allDefeated); assert.equal(gate.required(40), undefined);
 });
 

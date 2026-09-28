@@ -8,7 +8,7 @@ import type { Vector2Like } from '../core/types';
 /** Small gold-banded woodland chests, drawn with the game's existing vector effects. */
 export class ChestSystem {
   readonly drops: ChestDrops;
-  private readonly views = new Map<number, { body: Phaser.GameObjects.Graphics; glow: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text }>();
+  private readonly views = new Map<number, { body: Phaser.GameObjects.Graphics; glow: Phaser.GameObjects.Graphics }>();
   private retryMs = 0;
   private readonly ground = new SceneryNavigation();
 
@@ -74,16 +74,12 @@ export class ChestSystem {
       body.fillStyle(0xffdf83).fillTriangle(-10, -32, -12, -43, 0, -37).fillTriangle(0, -37, 12, -43, 10, -32).fillRect(-10, -34, 20, 4);
       body.setScale(1.3);
     }
-    const label = this.scene.add.text(x, y + 20, boss ? 'BOSS RELIC' : 'FREE UPGRADE', {
-      fontFamily: 'Georgia', fontSize: '10px', color: '#fff0b2',
-      stroke: '#283b24', strokeThickness: 3
-    }).setOrigin(.5).setDepth(LOOK.depth.pickup + 1);
-    this.views.set(id, { body, glow, label });
+this.views.set(id, { body, glow });
   }
 
   private removeView(id: number): void {
     const view = this.views.get(id);
-    if (view) { view.body.destroy(); view.glow.destroy(); view.label.destroy(); }
+    if (view) { view.body.destroy(); view.glow.destroy(); }
     this.views.delete(id);
   }
 

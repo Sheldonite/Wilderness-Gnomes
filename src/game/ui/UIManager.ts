@@ -46,21 +46,23 @@ export class UIManager {
     private readonly companionPortrait: string
   ) {
     this.root = document.getElementById('ui-root')!;
+    // Three quiet corners: the wanderer (with companion) top left, the clock top centre, pause top
+    // right, and a slim experience bar along the bottom. Details live in the pause menu.
     this.root.innerHTML = `
       <div class="game-ui">
-        <section class="health-hud" aria-label="${character.name} health">
-          <div class="hud-portrait"><img src="${portrait}" alt=""></div>
-          <div class="health-info"><div class="health-heading"><strong>${character.name}</strong><span class="health-value"></span></div>
+        <section class="hero-card" aria-label="${character.name} health">
+          <div class="hud-portrait"><img src="${portrait}" alt=""><span class="level-seal">1</span></div>
+          <div class="hero-info">
+            <div class="health-heading"><strong>${character.name}</strong><span class="health-value"></span></div>
             <div class="health-track" role="progressbar" aria-label="Health" aria-valuemin="0"><div class="health-fill"></div></div>
+            <div class="companion-badge"><img src="${this.companionPortrait}" alt=""><span class="companion-name"></span><span class="companion-pips" aria-hidden="true"></span>
+              <span class="visually-hidden"><span class="companion-rank"></span> <span class="companion-detail"></span></span></div>
           </div>
         </section>
-        <section class="frankie-hud companion-hud" aria-label="Companion"><img src="${this.companionPortrait}" alt=""><div><strong class="companion-name"></strong><b class="frankie-bonus companion-rank"></b><small class="frankie-total companion-detail"></small></div></section>
-        <div class="run-stats"><span class="time-stat">${icon('clock')}<b>0:00</b></span><i></i><span class="kill-stat">${icon('leaf')}<b>0</b><small>FOES</small></span></div>
-        <button class="pause-button" type="button" aria-label="Pause game">${icon('pause')}<span>Pause</span><kbd>ESC</kbd></button>
-        <div class="xp-hud"><span class="level-seal">1</span><div class="xp-meta"><span>WOODLAND WISDOM</span><span class="xp-value"></span></div>
-          <div class="xp-track" role="progressbar" aria-label="Experience" aria-valuemin="0"><div class="xp-fill"></div></div>
-        </div>
-        <div class="build-strip" role="list" aria-label="Your current upgrades" hidden></div><div class="upgrade-receipt" role="status" hidden></div><div class="run-location">THE GOLDEN WOODS <span>•</span> WANDER & WONDER</div>
+        <div class="run-stats"><span class="time-stat" aria-label="Time in the woods">${icon('clock')}<b>0:00</b></span><span class="kill-stat" aria-label="Foes defeated">${icon('leaf')}<b>0</b></span></div>
+        <button class="pause-button" type="button" aria-label="Pause game" title="Pause (Esc)">${icon('pause')}<span class="visually-hidden">Pause</span></button>
+        <div class="xp-hud"><div class="xp-track" role="progressbar" aria-label="Experience" aria-valuemin="0"><div class="xp-fill"></div></div><span class="xp-value"></span></div>
+        <div class="upgrade-receipt" role="status" hidden></div>
       </div>`;
     this.healthFill = this.query('.health-fill'); this.xpFill = this.query('.xp-fill');
     this.healthValue = this.query('.health-value'); this.xpValue = this.query('.xp-value');
@@ -163,7 +165,7 @@ export class UIManager {
 
   /** Every boss is down: keep wandering for more gold, or take the win home. */
   showVictory(onContinue: () => void, onFinish: () => void): void {
-    const list = this.createOverlay('Victory!', 'Oven, Wonky and King Rumbles have all fallen.', 'THE WOODS ARE SAFE', 'star', 'pause-panel');
+    const list = this.createOverlay('Victory!', 'Oven, Wonky, King Frankie and King Rumbles have all fallen.', 'THE WOODS ARE SAFE', 'star', 'pause-panel');
     list.innerHTML = '<p class="pause-instruction">Head home a hero, or keep wandering. The woods only grow wilder, and every level past 20 is worth more gold.</p>';
     this.addButton(list, 'Keep wandering', onContinue, true);
     this.addButton(list, 'Head home victorious', onFinish, false);
@@ -177,15 +179,18 @@ export class UIManager {
     const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.companionId, stats.companionRank, stats.frankieCount, stats.frankieFeatherBonus]);
     if (key === this.buildFingerprint) return;
     this.buildFingerprint = key;
-    this.query('.companion-name').textContent = COMPANION_NAMES[stats.companionId].toUpperCase();
+    const name = COMPANION_NAMES[stats.companionId];
+    this.query('.companion-name').textContent = name;
     const nextAt = levelForCompanionRank(stats.companionRank + 1);
-    this.query('.companion-rank').textContent = stats.companionRank >= MAX_COMPANION_RANK
+    const rank = stats.companionRank >= MAX_COMPANION_RANK
       ? `Rank ${MAX_COMPANION_RANK} · fully grown` : `Rank ${stats.companionRank} · grows at level ${nextAt}`;
+    this.query('.companion-rank').textContent = rank;
     const feather = stats.hasFrankieCompanion ? ` · +${Math.min(BALANCE.companion.frankieFeatherCap, stats.frankieFeatherBonus)} feather damage` : '';
-    this.query('.companion-detail').textContent = `${describeCompanionRank(stats.companionId, stats.companionRank, stats)}${feather}`;
-    const owned = ownedUpgrades(stats), strip = this.query('.build-strip');
-    strip.hidden = !owned.length;
-    strip.innerHTML = owned.map(id => `<span class="build-item" role="listitem" title="${upgradeName(id, stats)} · ${upgradeBenefit(id, stats)}" aria-label="${upgradeName(id, stats)}, rank ${upgradeRank(id, stats)}${isRanked(id) ? ` of ${upgradeMaxRank(id)}` : ''}">${icon(UPGRADE_ICONS[id])}<b>${upgradeRank(id, stats)}${isRanked(id) ? `/${upgradeMaxRank(id)}` : '×'}</b></span>`).join('');
+    const detail = `${describeCompanionRank(stats.companionId, stats.companionRank, stats)}${feather}`;
+    this.query('.companion-detail').textContent = detail;
+    // One dot per rank; the full story is a hover away, and always in the pause menu.
+    this.query('.companion-pips').innerHTML = Array.from({ length: MAX_COMPANION_RANK }, (_, i) => `<i${i < stats.companionRank ? ' class="on"' : ''}></i>`).join('');
+    this.query('.companion-badge').title = `${name} · ${rank}\n${detail}`;
   }
 
   private createOverlay(title: string, body: string, eyebrow: string, emblem: string, className: string): HTMLElement {

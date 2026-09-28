@@ -5,6 +5,9 @@ import { OVEN } from '../../config/ovenBoss';
 import { StagBossSystem } from '../../systems/StagBossSystem';
 import { STAG, STAG_LOOK } from '../../config/stagBoss';
 import { KingBossSystem } from '../../systems/KingBossSystem';
+import { BuzzardBossSystem } from '../../systems/BuzzardBossSystem';
+import { BUZZARD, BUZZARD_LOOK } from '../../config/buzzardBoss';
+import { LOOK } from '../../config/presentation';
 import { KING } from '../../config/kingBoss';
 import { RunEventSystem } from '../../systems/RunEventSystem';
 import { ringCount, type RunEvent } from '../../core/RunEvents';
@@ -60,7 +63,6 @@ export class GameScene extends Phaser.Scene {
   private bossPowers!: BossPowerSystem;
   private bossArena?: { id: BossId; center: Vector2Like };
   private bossBoundary!: Phaser.GameObjects.Graphics;
-  private bossArenaLabel!: Phaser.GameObjects.Text;
   private weaponSystem!: WeaponSystem;
   private upgradeSystem!: UpgradeSystem;
   private collisionSystem!: CollisionSystem;
@@ -71,6 +73,7 @@ export class GameScene extends Phaser.Scene {
   private combat!: CombatResolver;
   private oven!: OvenBossSystem;
   private stag!: StagBossSystem;
+  private buzzard!: BuzzardBossSystem;
   private king!: KingBossSystem;
   private runEvents!: RunEventSystem;
   /** Counts down after the final boss falls, then offers the victory screen. */
@@ -147,9 +150,6 @@ export class GameScene extends Phaser.Scene {
     this.rareRocks = new RareRockSystem(this, this.scenerySystem.navigation, this.practiceRun ? new MarketProgress(null) : marketProgress, this.practiceRun);
     this.bossPowers = new BossPowerSystem(this);
     this.bossBoundary = this.add.graphics().setDepth(3);
-    this.bossArenaLabel = this.add.text(0, 0, 'BOSS ARENA · DEFEAT THE BOSS TO LEAVE', {
-      fontFamily: 'Georgia', fontSize: '13px', color: '#ffe2a2', stroke: '#263828', strokeThickness: 4
-    }).setOrigin(.5).setDepth(24).setVisible(false);
     const summon = (variant: EnemyVariant, count: number, tint?: number) => this.summonAdds(variant, count, tint);
     this.runEvents = new RunEventSystem(this, this.scenerySystem.navigation);
     this.oven = new OvenBossSystem(this, this.gameManager, this.scenerySystem.navigation, summon);
@@ -159,9 +159,16 @@ export class GameScene extends Phaser.Scene {
       (origin, directions) => {
         for (const d of directions) this.acorns.push(new Acorn(this, origin.x, origin.y - 40, { x: d.x * STAG.volleySpeed, y: d.y * STAG.volleySpeed }, STAG.volleyDamage, STAG_LOOK.velvet));
       });
+    const arenaCircle = () => this.bossArena ? { center: this.bossArena.center, radius: BOSS_ARENA_RADIUS } : undefined;
+    this.buzzard = new BuzzardBossSystem(this, this.gameManager, this.scenerySystem.navigation, arenaCircle,
+      (damage, push, knockback) => this.knockPlayer(damage, push, knockback),
+      (origin, directions) => {
+        for (const d of directions) this.acorns.push(new Acorn(this, origin.x, origin.y - 50, { x: d.x * BUZZARD.featherSpeed, y: d.y * BUZZARD.featherSpeed },
+          BUZZARD.featherDamage, BUZZARD_LOOK.feather, { texture: LOOK.texture.feather, size: 26 }));
+      });
     this.king = new KingBossSystem(this, this.gameManager, this.scenerySystem.navigation,
       () => this.bossArena ? { center: this.bossArena.center, radius: BOSS_ARENA_RADIUS } : undefined,
-      (damage, push) => this.knockPlayer(damage, push, KING.rollKnockback),
+      (damage, push, knockback) => this.knockPlayer(damage, push, knockback ?? KING.rollKnockback),
       (origin, directions) => {
         for (const d of directions) this.acorns.push(new Acorn(this, origin.x, origin.y - 10, { x: d.x * KING.shardSpeed, y: d.y * KING.shardSpeed }, KING.shardDamage, 0xe8c070));
       }, summon);
@@ -333,15 +340,42 @@ export class GameScene extends Phaser.Scene {
       }
       document.body.append(this.reviewControls); return;
     }
-    if (review === 'king') {
+    if (review === 'buzzard') {
       this.reviewNoEnemies = true;
-      this.gameManager.level = 24; this.gameManager.playerStats.level = 24;
+      this.gameManager.level = BUZZARD.level - 1; this.gameManager.playerStats.level = BUZZARD.level - 1;
       this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 10000;
       this.gameManager.playerStats.projectileDamage = 90;
       this.oven.encounter.spawned = this.stag.encounter.spawned = true;   // the earlier bosses have been and gone
       this.gameManager.bossGate.defeat('oven'); this.gameManager.bossGate.defeat('stag');
       this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
-      this.reviewControls.innerHTML = '<span>KING REVIEW</span><button>Reach level 25</button><button>Walk trail</button><button>Defeat boss</button><button>End run</button>';
+      this.reviewControls.innerHTML = `<span>BUZZARD REVIEW</span><button>Reach level ${BUZZARD.level}</button><button>Walk trail</button><button>Defeat boss</button><button>End run</button><button>Send buzzards</button>`;
+      const buttons = this.reviewControls.querySelectorAll('button');
+      buttons[0].onclick = () => this.gameManager.addXp(this.gameManager.xpToNextLevel - this.gameManager.xp);
+      buttons[1].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[1].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
+      buttons[2].onclick = () => {
+        if (this.gameManager.state !== 'Playing' || !this.buzzard.boss) return;
+        this.combat.damage(this.buzzard.boss, this.buzzard.boss.health / this.buzzard.boss.vulnerability);
+        this.reviewNoEnemies = false;   // the woods reopen, and the buzzards come
+        this.gameManager.playerStats.projectileDamage = BALANCE.weapon.projectileDamage;   // ordinary shots, so they live long enough to see
+      };
+      buttons[3].onclick = () => this.finishReviewRun();
+      buttons[4].onclick = () => {
+        for (let i = 0; i < 5; i++) {
+          const bird = this.enemySpawner.spawnEnemy(this.player.position, this.cameras.main, this.gameManager.getDifficultyMinutes(), 'buzzard');
+          if (bird) this.enemies.push(bird);
+        }
+      };
+      document.body.append(this.reviewControls); return;
+    }
+    if (review === 'king') {
+      this.reviewNoEnemies = true;
+      this.gameManager.level = KING.level - 1; this.gameManager.playerStats.level = KING.level - 1;
+      this.gameManager.playerStats.health = this.gameManager.playerStats.maxHealth = 10000;
+      this.gameManager.playerStats.projectileDamage = 90;
+      this.oven.encounter.spawned = this.stag.encounter.spawned = this.buzzard.encounter.spawned = true;   // the earlier bosses have been and gone
+      this.gameManager.bossGate.defeat('oven'); this.gameManager.bossGate.defeat('stag'); this.gameManager.bossGate.defeat('buzzard');
+      this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
+      this.reviewControls.innerHTML = '<span>KING REVIEW</span><button>Reach level 30</button><button>Walk trail</button><button>Defeat boss</button><button>End run</button>';
       const buttons = this.reviewControls.querySelectorAll('button');
       buttons[0].onclick = () => this.gameManager.addXp(this.gameManager.xpToNextLevel - this.gameManager.xp);
       buttons[1].onclick = () => { this.reviewWalking = !this.reviewWalking; buttons[1].textContent = this.reviewWalking ? 'Stop walking' : 'Walk trail'; };
@@ -577,6 +611,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.oven.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.stag.update(deltaMs, this.player.position, this.player.radius, this.enemies);
+    this.buzzard.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.king.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     if (this.gameManager.state !== 'Playing') return;
     if (this.victoryInMs > 0) {
@@ -688,14 +723,16 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('presentation:defeat', enemy.position);
     this.abilities.simulation.noteKill(enemy.position);
     this.gameManager.addKill();
-    const bossId: BossId | undefined = enemy === this.oven.boss ? 'oven' : enemy === this.stag.boss ? 'stag' : enemy === this.king.boss ? 'king' : undefined;
+    const bossId: BossId | undefined = enemy === this.oven.boss ? 'oven' : enemy === this.stag.boss ? 'stag'
+      : enemy === this.buzzard.boss ? 'buzzard' : enemy === this.king.boss ? 'king' : undefined;
     if (bossId === 'oven') this.oven.defeated();
     if (bossId === 'stag') this.stag.defeated();
+    if (bossId === 'buzzard') this.buzzard.defeated();
     if (bossId === 'king') this.king.defeated();
     if (bossId && this.gameManager.bossGate.defeat(bossId)) {
       this.chestSystem.dropBoss(enemy.position);
       this.bossArena = undefined;
-      this.bossBoundary.clear(); this.bossArenaLabel.setVisible(false);
+      this.bossBoundary.clear();
       if (this.gameManager.bossGate.allDefeated && !this.gameManager.victorious) {
         this.gameManager.victorious = true;
         this.victoryInMs = 4000;   // let the celebration and relic chest land first
@@ -704,13 +741,13 @@ export class GameScene extends Phaser.Scene {
     const creature = enemy instanceof EnemyController ? enemy : undefined;
     if (creature?.elite) this.chestSystem.dropChest(enemy.position);
     if (bossId || creature?.elite || this.xpOrbs.length < BALANCE.xp.maxOrbs) {
-      const xp = bossId === 'oven' ? OVEN.xp : bossId === 'stag' ? STAG.xp : bossId === 'king' ? KING.xp : creature?.xpValue ?? BALANCE.enemy.xpValue;
+      const xp = bossId === 'oven' ? OVEN.xp : bossId === 'stag' ? STAG.xp : bossId === 'buzzard' ? BUZZARD.xp : bossId === 'king' ? KING.xp : creature?.xpValue ?? BALANCE.enemy.xpValue;
       this.xpOrbs.push(new XPOrb(this, enemy.position.x, enemy.position.y, xp));
     }
   }
 
   private bossFor(id: BossId): EnemyController | undefined {
-    return id === 'oven' ? this.oven.boss : id === 'stag' ? this.stag.boss : this.king.boss;
+    return id === 'oven' ? this.oven.boss : id === 'stag' ? this.stag.boss : id === 'buzzard' ? this.buzzard.boss : this.king.boss;
   }
 
   /** A boss blow: damage, then thrown back along it, but never into scenery or out of the world. */
@@ -787,7 +824,7 @@ export class GameScene extends Phaser.Scene {
     const center = { ...this.player.position };
     this.bossArena = { id, center };
     // Clear the crowd without awarding kills or XP: this encounter is a duel.
-    const bosses: (EnemyController | undefined)[] = [this.oven.boss, this.stag.boss, this.king.boss];
+    const bosses: (EnemyController | undefined)[] = [this.oven.boss, this.stag.boss, this.buzzard.boss, this.king.boss];
     this.runEvents.clear();
     for (const enemy of this.enemies) if (!bosses.includes(enemy)) { enemy.destroy(); this.combat.release(enemy.id); }
     this.enemies = this.enemies.filter(enemy => bosses.includes(enemy));
@@ -795,7 +832,6 @@ export class GameScene extends Phaser.Scene {
     this.acorns = [];
     this.bossBoundary.lineStyle(9, 0x6d3c91, .25).strokeCircle(center.x, center.y, BOSS_ARENA_RADIUS);
     this.bossBoundary.lineStyle(3, 0xf4cd84, .9).strokeCircle(center.x, center.y, BOSS_ARENA_RADIUS);
-    this.bossArenaLabel.setPosition(center.x, center.y - 110).setVisible(true);
   }
 
   private confineToBossArena(): void {
@@ -898,10 +934,11 @@ export class GameScene extends Phaser.Scene {
     this.chestSystem?.destroy();
     this.rareRocks?.destroy();
     this.bossPowers?.destroy();
-    this.bossBoundary?.destroy(); this.bossArenaLabel?.destroy(); this.bossArena = undefined;
+    this.bossBoundary?.destroy(); this.bossArena = undefined;
     this.abilities?.destroy();
     this.oven?.destroy();
     this.stag?.destroy();
+    this.buzzard?.destroy();
     this.king?.destroy();
     this.runEvents?.destroy();
     this.player?.destroy();

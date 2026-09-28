@@ -18,6 +18,15 @@ export function lerpAngle(from: number, to: number, t: number): number {
   return from + delta * t;
 }
 
+/**
+ * How to pose a right-facing, seen-from-above sprite so it points along (dx, dy): mirrored when
+ * heading left, so anything drawn upright on it (a crown) never turns upside down.
+ */
+export function spriteHeading(dx: number, dy: number): { flipX: boolean; rotation: number } {
+  if (dx === 0 && dy === 0) return { flipX: false, rotation: 0 };
+  return dx >= 0 ? { flipX: false, rotation: Math.atan2(dy, dx) } : { flipX: true, rotation: Math.atan2(-dy, -dx) };
+}
+
 export function normalize(x: number, y: number): Vector2Like {
   const length = Math.hypot(x, y);
   if (length === 0) {

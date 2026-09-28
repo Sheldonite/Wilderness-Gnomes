@@ -1,11 +1,12 @@
 import { OVEN } from '../config/ovenBoss';
 import { STAG } from '../config/stagBoss';
+import { BUZZARD } from '../config/buzzardBoss';
 import { KING } from '../config/kingBoss';
 import type { Vector2Like } from './types';
 
-export type BossId = 'oven' | 'stag' | 'king';
+export type BossId = 'oven' | 'stag' | 'buzzard' | 'king';
 export const BOSS_ARENA_RADIUS = 520;
-export const BOSS_ORDER: BossId[] = ['oven', 'stag', 'king'];
+export const BOSS_ORDER: BossId[] = ['oven', 'stag', 'buzzard', 'king'];
 
 /** Boss health grows with the run clock, so a slow run and a fast run both get a real fight. */
 export function scaledBossHealth(base: number, perMinute: number, minutes: number): number {
@@ -18,6 +19,7 @@ export class BossGate {
   required(level: number): BossId | undefined {
     if (level >= OVEN.level && !this.victories.has('oven')) return 'oven';
     if (level >= STAG.level && !this.victories.has('stag')) return 'stag';
+    if (level >= BUZZARD.level && !this.victories.has('buzzard')) return 'buzzard';
     if (level >= KING.level && !this.victories.has('king')) return 'king';
   }
   /** Every boss has fallen: the run is won, and anything further is an encore. */
