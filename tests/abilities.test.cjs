@@ -36,27 +36,28 @@ test('three distinct choices reserve an unlock and a rank increase through many 
   }
 });
 
-test('Double Pounce belongs to Nick alone, and no companion is ever offered as a card', () => {
+test('no wanderer is ever offered a companion card at any level; companions grow with the level instead', () => {
   const upgrades = new UpgradeSystem();
-  const nick = new GameManager('spell', undefined, 'wizard').playerStats;
-  assert.equal(nick.hasMysteryCompanion, true);
-  assert.ok(upgrades.getAvailable(nick).some(c => c.id === 'mystery-double-pounce'));
-  for (const character of ['hailey', 'sheldon', 'ron']) {
-    const other = new GameManager('spell', undefined, character).playerStats;
-    assert.ok(!upgrades.getAvailable(other).some(c => c.id === 'mystery-double-pounce'), character);
-  }
+  const petCard = /pounce|swat|companion|frankie|flock|tobias|mystery|midnight/;
   for (const character of ['wizard', 'hailey', 'sheldon', 'ron']) {
-    const stats = new GameManager('spell', undefined, character).playerStats;
-    assert.ok(!upgrades.getAvailable(stats).some(c => c.id.startsWith('gain-companion')), character);
-    assert.ok(!upgrades.getAvailable(stats).some(c => c.id === 'frankie-flock'), character);
+    const game = new GameManager('spell', undefined, character);
+    for (let level = 1; level <= 40; level++) {
+      game.playerStats.level = level;
+      const offers = upgrades.getAvailable(game.playerStats).map(c => c.id);
+      assert.ok(!offers.some(id => petCard.test(id)), `${character} at level ${level} was offered ${offers.filter(id => petCard.test(id))}`);
+    }
+    const run = new GameManager('spell', undefined, character);
+    for (const [level, rank] of [[2, 0], [3, 1], [14, 4], [15, 5], [30, 10], [40, 10]]) {
+      run.level = level; run.syncCompanionToLevel();
+      assert.equal(run.playerStats.companionRank, rank, `${character} at level ${level}`);
+    }
   }
 });
 
 test('all ability ranks have real next-benefit descriptions; stale cards cannot apply twice', () => {
   const stats = new GameManager().playerStats, upgrades = new UpgradeSystem();
   stats.hasMysteryCompanion = true; stats.hasMidnightCompanion = true; stats.level = 10;
-  const owner = { 'mystery-double-pounce': 'wizard', 'midnight-mighty-swat': 'hailey',
-    'ribbon-sweep': 'ron', 'inspiring-shout': 'ron', 'dizzying-flurry': 'ron' };
+  const owner = { 'ribbon-sweep': 'ron', 'inspiring-shout': 'ron', 'dizzying-flurry': 'ron' };
   for (const id of ABILITY_IDS) {
     stats.characterId = owner[id] ?? 'wizard';
     for (let rank = 1; rank <= 10; rank++) {

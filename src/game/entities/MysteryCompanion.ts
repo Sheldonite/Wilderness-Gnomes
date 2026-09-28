@@ -9,7 +9,7 @@ import {
   MYSTERY_SPRITE_KEY,
   MYSTERY_WALK_ANIMATION_BY_DIRECTION
 } from '../config/companionSprite';
-import type { PlayerStats, Vector2Like } from '../core/types';
+import type { AbilityRank, PlayerStats, Vector2Like } from '../core/types';
 import { EnemyController } from './EnemyController';
 import { distanceSq, normalize } from '../utils/math';
 
@@ -107,12 +107,17 @@ export class MysteryCompanion {
     ) {
       this.hasHitThisPounce = true;
       this.chainHits.add(this.target.id);
-      const rank = this.stats.abilityRanks['mystery-double-pounce'];
+      const rank = this.companionRank;
       damage(this.target, this.stats.mysteryDamage * (this.isSecondPounce ? chainDamageScale(rank) : 1));
       const next = nextPounceTarget(rank, this.chainHits, this.chained, this.position, playerPosition, this.stats.mysteryPounceRange, enemies);
       if (next) { this.chained++; this.beginPounce(next, true); return; }
       this.beginReturn();
     }
+  }
+
+  /** Mystery's chained pounces and her frenzy grow with her companion rank (the player's level). */
+  private get companionRank(): AbilityRank {
+    return Math.max(0, Math.min(10, Math.floor(this.stats.companionRank))) as AbilityRank;
   }
 
   private beginPounce(target: EnemyController, second = false): void {
@@ -123,7 +128,7 @@ export class MysteryCompanion {
     this.isSecondPounce = second;
     if (!second) {
       this.chainHits.clear(); this.chained = 0;
-      const rank = this.stats.abilityRanks['mystery-double-pounce'];
+      const rank = this.companionRank;
       this.cooldownRemainingMs = this.stats.mysteryCooldownMs * pounceCooldownScale(rank, this.stats.health, this.stats.maxHealth);
     }
 

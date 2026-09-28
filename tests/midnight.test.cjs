@@ -12,21 +12,21 @@ function foe(x, y, health = 100) {
 }
 const damage = (enemy, amount) => enemy.takeDamage(amount);
 
-test('Mighty Swat belongs to Hailey, ranks up once per pick, and resets each run', () => {
-  const stats = new GameManager('spell', undefined, 'hailey').playerStats, upgrades = new UpgradeSystem();
-  const offer = () => upgrades.getAvailable(stats).find(u => u.id === 'midnight-mighty-swat');
-  assert.equal(upgrades.getAvailable(new GameManager().playerStats).find(u => u.id === 'midnight-mighty-swat'), undefined);
-  const first = offer(); assert.equal(first.rank, 1);
-  upgrades.applyUpgrade(first, stats); upgrades.applyUpgrade(first, stats);
-  assert.equal(stats.abilityRanks['midnight-mighty-swat'], 1);
-  assert.equal(offer().rank, 2);
-  assert.equal(new GameManager().playerStats.abilityRanks['midnight-mighty-swat'], 0);
+test("Midnight's swat grows by itself as Hailey levels up, and resets each run", () => {
+  const game = new GameManager('spell', undefined, 'hailey');
+  const cat = new MidnightBehavior(player, undefined, game.playerStats);
+  const start = cat.swatPower.damage;
+  game.addXp(game.xpToNextLevel); game.resumeAfterUpgrade();
+  game.addXp(game.xpToNextLevel); game.resumeAfterUpgrade();
+  assert.equal(game.level, 3); assert.equal(game.playerStats.companionRank, 1);
+  assert.ok(cat.swatPower.damage > start, 'stronger without picking any card');
+  assert.equal(new GameManager('spell', undefined, 'hailey').playerStats.companionRank, 0);
 });
 
-test('swat rank upgrades reach and damage on the existing companion, without duplicate hits', () => {
+test('companion rank grows reach and damage on the existing companion, without duplicate hits', () => {
   const stats = new GameManager().playerStats;
   const cat = new MidnightBehavior(player, undefined, stats);
-  stats.abilityRanks['midnight-mighty-swat'] = 3;
+  stats.companionRank = 3;
   const near = foe(cat.position.x + 34, cat.position.y, 1000);
   const extended = foe(cat.position.x + 82, cat.position.y, 1000);
   cat.update(600, player, [near, extended], damage);
@@ -38,7 +38,7 @@ test('swat rank upgrades reach and damage on the existing companion, without dup
 
 test('rank five sweeps beside Midnight, and rank ten also hits behind her', () => {
   for (const rank of [0, 5, 10]) {
-    const stats = new GameManager().playerStats; stats.abilityRanks['midnight-mighty-swat'] = rank;
+    const stats = new GameManager().playerStats; stats.companionRank = rank;
     const cat = new MidnightBehavior(player, undefined, stats);
     const front = foe(cat.position.x + 30, cat.position.y, 1000);
     const side = foe(cat.position.x, cat.position.y + 50, 1000);
@@ -50,9 +50,9 @@ test('rank five sweeps beside Midnight, and rank ten also hits behind her', () =
   }
 });
 
-test('higher swat ranks shorten the interval without moving the impact frame', () => {
+test('higher companion ranks shorten the swat interval without moving the impact frame', () => {
   const strikes = rank => {
-    const stats = new GameManager().playerStats; stats.abilityRanks['midnight-mighty-swat'] = rank;
+    const stats = new GameManager().playerStats; stats.companionRank = rank;
     const cat = new MidnightBehavior(player, undefined, stats), target = foe(cat.position.x + 30, cat.position.y, 10000);
     let hits = 0;
     cat.update(600, player, [target], () => hits++);
@@ -72,7 +72,7 @@ test('each wanderer brings exactly one companion, and never the others', () => {
     assert.equal(stats.hasMidnightCompanion, companion === 'midnight', character);
     assert.equal(stats.hasFrankieCompanion, companion === 'frankie', character);
     assert.equal(stats.hasTobiasCompanion, companion === 'tobias', character);
-    assert.equal(upgrades.getAvailable(stats).some(u => u.id === 'midnight-mighty-swat'), character === 'hailey', character);
+    assert.ok(!upgrades.getAvailable(stats).some(u => /swat|pounce/.test(u.id)), character);
   }
 });
 

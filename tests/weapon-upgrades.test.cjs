@@ -58,7 +58,7 @@ test('both weapons offer and apply every ability rank, companion, stat, and boss
       const choice = upgrades.getAvailable(stats).find(c => c.id === id); assert.ok(choice, `${weapon}: ${id}`);
       upgrades.applyUpgrade(choice, stats); assert.equal(stats.upgradeCounts[id], 1);
     }
-    const owner = { 'mystery-double-pounce': 'wizard', 'midnight-mighty-swat': 'hailey',
+    const owner = {
       'ribbon-sweep': 'ron', 'inspiring-shout': 'ron', 'dizzying-flurry': 'ron' };
     for (const id of ABILITY_IDS) for (let rank = 1; rank <= 10; rank++) {
       stats.characterId = owner[id] ?? 'wizard';

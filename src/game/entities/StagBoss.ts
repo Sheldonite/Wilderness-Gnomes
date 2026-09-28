@@ -23,6 +23,7 @@ export class StagBoss extends EnemyController {
     if (this.isDead) return;
     const phase = this.encounter.phase;
     this.vulnerability = this.encounter.vulnerable ? STAG.stunVulnerability : 1;
+    this.sprite.setAngle(0);   // poses below that lean or shake set their own angle
     if (phase === 'charging') {
       const step = this.encounter.chargeStep;
       const before = this.position;
@@ -39,18 +40,29 @@ export class StagBoss extends EnemyController {
     }
     if (phase === 'windup') { this.face(this.encounter.lane!.direction.x); this.still(STAG_FRAMES.windup); return; }
     if (phase === 'sweepWindup') { this.face(this.encounter.sweep!.direction.x); this.still(STAG_FRAMES.windup); return; }
+    if (phase === 'volleyWindup') {
+      // Head down, shaking the velvet loose.
+      this.face(this.encounter.volleyAim!.x); this.still(STAG_FRAMES.windup);
+      this.sprite.setAngle(Math.sin(performance.now() / 45) * 5);
+      return;
+    }
+    if (phase === 'bellowWindup') {
+      // Rearing back to roar.
+      this.face(target.x - this.position.x); this.still(STAG_FRAMES.rest);
+      this.sprite.setAngle(this.facingRight ? -9 : 9);
+      return;
+    }
     if (phase === 'stunned') {
       // Dazed: rest frame with a woozy sway.
       this.still(STAG_FRAMES.rest);
       this.sprite.setAngle(Math.sin(performance.now() / 120) * 4);
       return;
     }
-    this.sprite.setAngle(0);
     if (phase === 'recovering' || phase === 'arrival') { this.still(STAG_FRAMES.rest); return; }
     // stalking: close to the standoff distance and hold there
     const before = this.position;
     const remaining = Math.max(0, Math.hypot(target.x - before.x, target.y - before.y) - STAG.standOff);
-    const next = this.navigation!.toward(before, target, Math.min(remaining, STAG.speed * this.effectiveSlow * deltaMs / 1000), this.radius, this.route);
+    const next = this.navigation!.toward(before, target, Math.min(remaining, STAG.speed * (this.encounter.rut ? STAG.rutStalkSpeed : 1) * this.effectiveSlow * deltaMs / 1000), this.radius, this.route);
     this.sprite.setPosition(next.x, next.y);
     const dx = next.x - before.x, dy = next.y - before.y;
     if (Math.hypot(dx, dy) > .05) { this.face(dx); this.play('stag-walk'); }

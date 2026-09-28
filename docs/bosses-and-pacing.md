@@ -15,12 +15,17 @@ Rotates **toss** (three tacos) → **ring** (five tacos around the player) → *
 
 ## Wonky (level 15)
 
-A lopsided old stag: three points on his left antler, five on his right. The sprite sheet has drawn left-facing rows (`scripts/build_stag.py`) so the antlers never swap sides.
+A lopsided summer whitetail in velvet: three points on his left antler, five on his right. The sprite sheet has drawn left-facing rows (`scripts/build_stag.py`), so the antlers never swap sides.
 
-- Charges are unchanged, but ramming a **tree** stuns him for 2.5s, and he takes 25% more damage while stunned. The arena edge only ends a charge.
-- Staying within ~150px for 1.5s earns a telegraphed **antler sweep** across the half circle in front of him (22 damage, big knockback). Slip behind him or back off.
+Each time he finishes stalking he uses the next attack in `STAG.attackOrder`: **charge → velvet volley → charge → bellow**, round and round. His windups, rests and recoveries are all shorter than before.
+
+- **Charge:** a locked, telegraphed lane. Ramming a **tree** stuns him for 2.2s, and he takes 25% more damage while stunned. The arena edge only ends a charge.
+- **Velvet volley:** he shakes his head (a fan telegraph), then flings 5 antler shards along the locked aim (10 damage each). Standing still at range is no longer safe.
+- **Bellow:** he rears up with a ring telegraph (360px). A player inside is slowed to half speed for 2.5s, and he charges straight after.
+- **Antler sweep:** staying within about 150px for 1.5s earns a telegraphed sweep across the half circle in front of him (22 damage, big knockback).
+- **Enraged (below 50%):** double charges, and the second one leads a moving player. Every other fresh charge is a **feint**: the lane turns orange and swings to your new spot after a short pause, with a full windup still to come.
+- **Rut (below 30%):** he is tinted red and frenzied, with triple charges, quicker windups and recoveries, faster charges and stalking, an 8-shard volley, and 1.6s stuns.
 - He calls the herd (two stampede lanes) at 50% and 25%.
-- Enraged, his second charge **leads** a moving player.
 
 ## King Rumbles (level 25): the final boss
 

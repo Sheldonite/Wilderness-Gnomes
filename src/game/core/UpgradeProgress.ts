@@ -1,4 +1,3 @@
-import { midnightSwatPower, describeMidnightSwat } from '../config/midnightSwat';
 import { ABILITIES, ABILITY_IDS, ABILITY_NAMES, MAX_ABILITY_RANK, awakeningTier, isAscended, isAwakened, tierName } from '../config/abilities';
 import { BALANCE } from '../config/balance';
 import { BOSS_ABILITY_IDS, BOSS_ABILITY_NAMES, MAX_BOSS_RANK, bossPower, isBossAbility } from '../config/bossAbilities';
@@ -31,7 +30,6 @@ export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
     return `${power.heal} healing + ${power.damage} damage · every 10s`;
   }
   if (isAbility(id) && !rank) return 'Not learned yet';
-  if (id === 'midnight-mighty-swat') return describeMidnightSwat(rank);
   if (isAbility(id) && isAwakened(rank)) return `${isAscended(rank) ? 'Ascended' : 'Awakened'}: ${tierName(id, rank)} (rank ${rank})`;
   switch (id) {
     case 'ricochet-charm': return `${rank} extra bounces`;
@@ -41,7 +39,6 @@ export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
     case 'acorn-shower': return `${ABILITIES.acorn.damage[rank]} damage · ${ABILITIES.acorn.radius[rank]} radius`;
     case 'barkskin-ward': return `${ABILITIES.ward.rechargeMs[rank] / 1000}s shield recharge`;
     case 'woodland-magnet': return `${ABILITIES.magnet.cooldownMs[rank] / 1000}s interval · ${ABILITIES.magnet.range[rank]} range`;
-    case 'mystery-double-pounce': return `${Math.round(ABILITIES.pounce.damageScale[rank] * 100)}% second-pounce damage`;
     case 'projectile-damage': return `${Number(stats.projectileDamage.toFixed(2))} damage per shot`;
     case 'fire-rate': return `${(stats.weaponCooldownMs / 1000).toFixed(2)}s between shots`;
     case 'projectile-count': return `${stats.projectileCount} shots per volley`;
@@ -73,7 +70,6 @@ export function upgradeChanges(choice: UpgradeDefinition, stats: PlayerStats): s
     }
     const t = Math.max(0, awakeningTier(r));
     switch (id) {
-      case 'midnight-mighty-swat': { const p = midnightSwatPower(r); return { Damage: p.damage, Reach: p.range, 'Cooldown (s)': p.cooldownMs / 1000, 'Arc (degrees)': p.arcDegrees }; }
       case 'projectile-damage': return { Damage: s.projectileDamage };
       case 'fire-rate': return { 'Cooldown (s)': s.weaponCooldownMs / 1000 };
       case 'move-speed': return { Speed: s.speed };
@@ -86,7 +82,6 @@ export function upgradeChanges(choice: UpgradeDefinition, stats: PlayerStats): s
       case 'acorn-shower': return { Damage: c.acorn.damage[r], Radius: c.acorn.radius[r], 'Cooldown (s)': (isAwakened(r) ? c.acorn.oak[t].cooldownMs : c.acorn.cooldownMs) / 1000 };
       case 'barkskin-ward': return { Shields: isAwakened(r) ? c.ward.bark[t].leaves : 1, 'Recharge (s)': c.ward.rechargeMs[r] / 1000 };
       case 'woodland-magnet': return { Range: c.magnet.range[r], 'Cooldown (s)': c.magnet.cooldownMs[r] / 1000, 'Bonus damage (%)': isAwakened(r) ? Math.round(c.magnet.harvest[t].maxBonus * 100) : 0 };
-      case 'mystery-double-pounce': return { 'Pounce damage (%)': Math.round(c.pounce.damageScale[r] * 100), 'Chain targets': isAwakened(r) ? c.pounce.frenzy[t].maxChain : 2 };
       case 'ribbon-sweep': return { Damage: c.ribbon.damage[r], Knockback: c.ribbon.knockback[r], Arc: isAwakened(r) ? c.ribbon.cyclone[t].arcDegrees : c.ribbon.arcDegrees };
       case 'inspiring-shout': return { 'Attack speed (%)': Math.round(c.shout.attackSpeed[r] * 100), 'Move speed (%)': Math.round(c.shout.moveSpeed[r] * 100), 'Healing/s': isAwakened(r) ? c.shout.anthem[t].healPerSecond : 0 };
       case 'dizzying-flurry': return { Damage: c.flurry.damage[r], Radius: c.flurry.radius[r], 'Spin (s)': (isAwakened(r) ? c.flurry.vortex[t].durationMs : c.flurry.durationMs) / 1000 };
@@ -94,7 +89,7 @@ export function upgradeChanges(choice: UpgradeDefinition, stats: PlayerStats): s
     }
   };
   const before = metrics(stats), after = metrics(next);
-  const format = (value: number) => Number(value.toFixed(choice.id === 'midnight-mighty-swat' ? 3 : 2));
+  const format = (value: number) => Number(value.toFixed(2));
   return Object.entries(after).filter(([label, value]) => value !== before[label])
     .map(([label, value]) => `${label}: ${format(before[label])} → ${format(value)}`).join(' · ');
 }
@@ -102,7 +97,6 @@ export function upgradeChanges(choice: UpgradeDefinition, stats: PlayerStats): s
 /** A compact effect summary for choosing cards; full descriptions remain available. */
 export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): string {
   const id = choice.id, rank = choice.rank ?? upgradeRank(id, stats) + 1;
-  if (id === 'midnight-mighty-swat') return `Stronger, longer-reaching swats.${rank >= 10 ? ' Hits all around her.' : rank >= 5 ? ' Sweeps a wider arc.' : ''}`;
   const c = ABILITIES, pct = (value: number) => Math.round(value * 100);
   if (isBossAbility(id)) {
     const p = bossPower(id, rank);
@@ -120,7 +114,6 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
       case 'acorn-shower': return `Rolling acorns: ${c.acorn.damage[rank]} damage, then ${c.acorn.oak[tier].shardCount} shards.`;
       case 'barkskin-ward': return `${c.ward.bark[tier].leaves} shields. Regrow every ${c.ward.rechargeMs[rank] / 1000}s. Burst when depleted.`;
       case 'woodland-magnet': return `Pull XP from ${c.magnet.range[rank]} range. Gain up to +${pct(c.magnet.harvest[tier].maxBonus)}% damage${isAscended(rank) ? ' + healing' : ''}.`;
-      case 'mystery-double-pounce': return `${c.pounce.frenzy[tier].maxChain} chained pounces at ${pct(c.pounce.damageScale[rank])}% damage.${isAscended(rank) ? '' : ' Faster above half health.'}`;
       case 'ribbon-sweep': return `Ribbons whirl all the way around for ${c.ribbon.damage[rank]} damage, then echo again.`;
       case 'inspiring-shout': return `+${pct(c.shout.attackSpeed[rank])}% attack speed and ${c.shout.anthem[tier].healPerSecond} healing a second.`;
       case 'dizzying-flurry': return `${c.flurry.vortex[tier].durationMs / 1000}s spin that drags foes in and slows them ${pct(c.flurry.vortex[tier].slow)}%.`;
@@ -142,7 +135,6 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
     case 'acorn-shower': return `Falling acorns: ${c.acorn.damage[rank]} area damage every 4s.`;
     case 'barkskin-ward': return `Block a hit every ${c.ward.rechargeMs[rank] / 1000}s.`;
     case 'woodland-magnet': return `Pull XP from ${c.magnet.range[rank]} range every ${c.magnet.cooldownMs[rank] / 1000}s.`;
-    case 'mystery-double-pounce': return `Mystery pounces again for ${pct(c.pounce.damageScale[rank])}% damage.`;
   }
 }
 export function ownedUpgrades(stats: PlayerStats): UpgradeId[] {

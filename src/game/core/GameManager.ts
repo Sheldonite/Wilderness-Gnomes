@@ -37,6 +37,8 @@ export class GameManager {
   private nextLeafAt = 0;
   private barkBurstPending = false;
   private heartRegenMs = 0;
+  private slowUntil = 0;
+  private slowFactor = 1;
 
   constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile, characterId: PlayerCharacterId = 'wizard') {
     const arm = getWeapon(weaponId);
@@ -112,6 +114,7 @@ export class GameManager {
     }
 
     this.elapsedMs += deltaMs;
+    this.playerStats.moveSlow = this.elapsedMs < this.slowUntil ? this.slowFactor : 1;
     if (this.playerStats.heartRegen > 0 && deltaMs > 0) {
       this.heartRegenMs += deltaMs;
       const ticks = Math.floor(this.heartRegenMs / 5000);
@@ -253,6 +256,15 @@ export class GameManager {
       this.state = 'GameOver';
     }
   }
+
+  /** Hinder the player's movement to `factor` of normal for a while (the strongest current slow wins). */
+  slowPlayer(ms: number, factor: number): void {
+    if (this.elapsedMs >= this.slowUntil || factor <= this.slowFactor) this.slowFactor = factor;
+    this.slowUntil = Math.max(this.slowUntil, this.elapsedMs + ms);
+    this.playerStats.moveSlow = this.slowFactor;
+  }
+
+  get playerSlowed(): boolean { return this.elapsedMs < this.slowUntil; }
 
   /** End the run on the player's terms (after a victory). */
   finishRun(): void {

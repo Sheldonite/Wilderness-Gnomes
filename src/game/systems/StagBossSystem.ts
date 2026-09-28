@@ -10,6 +10,8 @@ import { StagBoss } from '../entities/StagBoss';
 
 /** Wonky calls the herd: the scene runs `lanes` stampedes of `count` deer across the fight. */
 export type CallHerd = (lanes: number, count: number) => void;
+/** Launch velvet antler shards from `origin` along each direction. */
+export type FlingShards = (origin: Vector2Like, directions: Vector2Like[]) => void;
 
 export class StagBossSystem {
   readonly encounter = new StagEncounter();
@@ -20,9 +22,15 @@ export class StagBossSystem {
   private readonly caption: HTMLElement;
   private celebrationMs = 0;
   private shoutMs = 0;
+  private shout = '';
+  /** Age of the expanding roar ring after a bellow, or -1 when there is none. */
+  private roarMs = -1;
+  private roarAt: Vector2Like = { x: 0, y: 0 };
+  private rutShown = false;
 
   constructor(private readonly scene: Phaser.Scene, private readonly game: GameManager, private readonly navigation: SceneryNavigation,
-    private readonly hitPlayer: StagHit, private readonly callHerd: CallHerd = () => {}) {
+    private readonly hitPlayer: StagHit, private readonly callHerd: CallHerd = () => {},
+    private readonly flingShards: FlingShards = () => {}) {
     this.graphics = scene.add.graphics().setDepth(5);
     this.hud = document.createElement('section'); this.hud.className = 'boss-hud'; this.hud.hidden = true;
     this.hud.setAttribute('aria-label', STAG.name);
@@ -57,15 +65,35 @@ export class StagBossSystem {
     if (this.encounter.pendingStampedes) {
       this.callHerd(STAG.stampedeLanes * this.encounter.pendingStampedes, STAG.stampedeCount);
       this.encounter.pendingStampedes = 0;
-      this.shoutMs = 2600;
+      this.announce('Wonky bellows for the herd! Watch the lanes!');
+    }
+    if (this.encounter.volley) this.flingShards(this.encounter.volley.origin, this.encounter.volley.directions);
+    if (this.encounter.bellowed) {
+      this.roarMs = 0; this.roarAt = { ...this.boss.position };
+      this.scene.cameras.main.shake(260, .006);
+      if (this.encounter.bellowHit) {
+        this.game.slowPlayer(STAG.bellowSlowMs, STAG.bellowSlow);
+        this.announce('Shaken by the roar! You are slowed!');
+      }
+    }
+    if (this.encounter.rut && !this.rutShown) {
+      this.rutShown = true;
+      this.boss.setBaseTint(STAG.rutTint);
+      this.announce('RUT! Wonky is in a frenzy!');
     }
     this.shoutMs = Math.max(0, this.shoutMs - deltaMs);
     const phase = this.encounter.phase;
-    const message = this.shoutMs ? 'Wonky bellows for the herd! Watch the lanes!'
-      : phase === 'arrival' ? 'Wonky, the lopsided old stag!' : phase === 'windup' ? 'He lowers his crooked crown. Step out of the lane!'
+    const feint = phase === 'windup' && this.encounter.lane?.feinted;
+    const message = this.shoutMs ? this.shout
+      : phase === 'arrival' ? 'Wonky, the lopsided old stag!'
+      : feint ? 'A feint! The lane swung. Move!'
+      : phase === 'windup' ? 'He lowers his crooked crown. Step out of the lane!'
       : phase === 'charging' ? 'CHARGE!' : phase === 'stunned' ? 'Antlers stuck in a tree! Hit him hard!'
       : phase === 'sweepWindup' ? 'Too close! He swings his antlers!'
-      : this.encounter.enraged ? 'Enraged! He charges twice, and leads the second.' : 'Keep moving. Lure him into a tree!';
+      : phase === 'volleyWindup' ? 'He shakes his velvet. Shards incoming!'
+      : phase === 'bellowWindup' ? 'He rears to bellow. Get clear of the ring!'
+      : this.encounter.rut ? 'Frenzied: three charges at a time!'
+      : this.encounter.enraged ? 'Enraged! Double charges, and some are feints.' : 'Keep moving. Lure him into a tree!';
     if (this.caption.textContent !== message) this.caption.textContent = message;
     this.fill.style.transform = `scaleX(${Math.max(0, fraction)})`;
     this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuenow', String(Math.max(0, Math.ceil(this.boss.health))));
@@ -75,13 +103,35 @@ export class StagBossSystem {
       const nx = -direction.y, ny = direction.x, half = STAG.radius + 6;
       const end = { x: from.x + direction.x * length, y: from.y + direction.y * length };
       const alpha = phase === 'windup' ? .18 : .1;
-      this.graphics.fillStyle(STAG_LOOK.laneColor, alpha).fillPoints([
+      const fill = lane.feinted ? STAG_LOOK.feintColor : STAG_LOOK.laneColor, edge = lane.feinted ? STAG_LOOK.feintEdge : STAG_LOOK.laneEdge;
+      this.graphics.fillStyle(fill, alpha).fillPoints([
         { x: from.x + nx * half, y: from.y + ny * half }, { x: end.x + nx * half, y: end.y + ny * half },
         { x: end.x - nx * half, y: end.y - ny * half }, { x: from.x - nx * half, y: from.y - ny * half }
       ], true);
-      this.graphics.lineStyle(3, STAG_LOOK.laneEdge, .8).lineBetween(from.x + nx * half, from.y + ny * half, end.x + nx * half, end.y + ny * half)
+      this.graphics.lineStyle(3, edge, .8).lineBetween(from.x + nx * half, from.y + ny * half, end.x + nx * half, end.y + ny * half)
         .lineBetween(from.x - nx * half, from.y - ny * half, end.x - nx * half, end.y - ny * half);
-      this.graphics.lineStyle(2, STAG_LOOK.laneColor, .9).strokeCircle(end.x, end.y, STAG.stompRadius * .35);
+      this.graphics.lineStyle(2, fill, .9).strokeCircle(end.x, end.y, STAG.stompRadius * .35);
+    }
+    const aim = this.encounter.volleyAim;
+    if (aim && phase === 'volleyWindup') {
+      // The fan of shards he is about to fling.
+      const origin = this.boss.position, base = Math.atan2(aim.y, aim.x);
+      const count = this.encounter.rut ? STAG.rutVolleyShards : STAG.volleyShards;
+      for (let i = 0; i < count; i++) {
+        const a = base - STAG.volleySpread / 2 + i * STAG.volleySpread / Math.max(1, count - 1);
+        this.graphics.lineStyle(3, STAG_LOOK.velvet, .55).lineBetween(origin.x, origin.y - 40, origin.x + Math.cos(a) * 320, origin.y - 40 + Math.sin(a) * 320);
+      }
+    }
+    if (phase === 'bellowWindup') {
+      const p = this.boss.position, pulse = (Math.sin(performance.now() / 90) + 1) / 2;
+      this.graphics.fillStyle(0xfff0c0, .06 + pulse * .05).fillCircle(p.x, p.y, STAG.bellowRadius);
+      this.graphics.lineStyle(3, 0xffe2a2, .6 + pulse * .3).strokeCircle(p.x, p.y, STAG.bellowRadius);
+    }
+    if (this.roarMs >= 0) {
+      this.roarMs += deltaMs;
+      const t = this.roarMs / 450;
+      if (t >= 1) this.roarMs = -1;
+      else for (const k of [1, .7, .4]) this.graphics.lineStyle(5, 0xfff4d0, (1 - t) * .8).strokeCircle(this.roarAt.x, this.roarAt.y, STAG.bellowRadius * t * k);
     }
     const sweep = this.encounter.sweep;
     if (sweep && phase === 'sweepWindup') {
@@ -109,8 +159,10 @@ export class StagBossSystem {
     }
   }
 
+  private announce(text: string): void { this.shout = text; this.shoutMs = 2600; }
+
   defeated(): void {
-    this.encounter.defeat(); this.celebrationMs = 3500;
+    this.encounter.defeat(); this.celebrationMs = 3500; this.roarMs = -1;
     this.graphics.clear();
     this.fill.style.transform = 'scaleX(0)'; this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuenow', '0');
     this.caption.textContent = 'Wonky kneels, crooked crown and all. The deep woods fall quiet.';

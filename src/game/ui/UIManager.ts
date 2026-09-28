@@ -124,18 +124,14 @@ export class UIManager {
     choices.forEach((choice, index) => {
       const progress = upgradePreview(choice, this.gameManager.playerStats);
       const button = document.createElement('button'); button.type = 'button'; button.className = `upgrade-card ${progress.current ? 'owned-upgrade' : 'new-upgrade'}`;
-      const isCompanion = choice.id === 'mystery-double-pounce' || choice.id === 'midnight-mighty-swat';
-      if (isCompanion) button.classList.add('epic-companion');
       if (isBossAbility(choice.id)) button.classList.add('boss-relic');
-      const portrait = this.companionPortrait;
-      const name = COMPANION_NAMES[this.gameManager.playerStats.companionId];
       const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
         ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
         : UPGRADE_ICONS[choice.id];
       const summary = upgradeSummary(choice, this.gameManager.playerStats);
-      const changes = progress.current || choice.id === 'midnight-mighty-swat' ? upgradeChanges(choice, this.gameManager.playerStats) : '';
+      const changes = progress.current ? upgradeChanges(choice, this.gameManager.playerStats) : '';
       button.title = choice.description;
-      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art ${isCompanion ? 'companion-art' : ''}">${isCompanion ? `<img src="${portrait}" alt="${name}">` : icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC' : isCompanion ? 'COMPANION' : progress.current ? 'UPGRADE' : 'NEW'}</span><strong>${upgradeName(choice.id, this.gameManager.playerStats)}</strong>${progress.capped ? `<span class="upgrade-rank">Rank ${progress.current} &rarr; ${progress.next} / ${progress.maxRank}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>` : `<span class="upgrade-rank">Picks ${progress.current} &rarr; ${progress.next}</span>`}<span class="upgrade-description">${summary}</span>${changes ? `<span class="upgrade-changes">${changes}</span>` : ''}<span class="upgrade-select">Choose ${icon('arrow')}</span>`;
+      button.innerHTML = `<span class="upgrade-number">0${index + 1}</span><span class="upgrade-art">${icon(artIcon)}</span><span class="upgrade-category">${boss ? 'BOSS RELIC' : progress.current ? 'UPGRADE' : 'NEW'}</span><strong>${upgradeName(choice.id, this.gameManager.playerStats)}</strong>${progress.capped ? `<span class="upgrade-rank">Rank ${progress.current} &rarr; ${progress.next} / ${progress.maxRank}${isAbility(choice.id) && progress.next === MAX_ABILITY_RANK ? ' · ASCENSION' : isAbility(choice.id) && progress.next === 5 ? ' · AWAKENING' : ''}</span>` : `<span class="upgrade-rank">Picks ${progress.current} &rarr; ${progress.next}</span>`}<span class="upgrade-description">${summary}</span>${changes ? `<span class="upgrade-changes">${changes}</span>` : ''}<span class="upgrade-select">Choose ${icon('arrow')}</span>`;
       const select = () => {
         if (selected) return; selected = true;
         this.clearOverlay(); onChoose(choice); this.refreshBuild();

@@ -3,7 +3,7 @@ import { CosmeticGlow } from '../../market/CosmeticGlow';
 import { OvenBossSystem } from '../../systems/OvenBossSystem';
 import { OVEN } from '../../config/ovenBoss';
 import { StagBossSystem } from '../../systems/StagBossSystem';
-import { STAG } from '../../config/stagBoss';
+import { STAG, STAG_LOOK } from '../../config/stagBoss';
 import { KingBossSystem } from '../../systems/KingBossSystem';
 import { KING } from '../../config/kingBoss';
 import { RunEventSystem } from '../../systems/RunEventSystem';
@@ -155,7 +155,10 @@ export class GameScene extends Phaser.Scene {
     this.oven = new OvenBossSystem(this, this.gameManager, this.scenerySystem.navigation, summon);
     this.stag = new StagBossSystem(this, this.gameManager, this.scenerySystem.navigation,
       (damage, push, knockback) => this.knockPlayer(damage, push, knockback ?? STAG.chargeKnockback),
-      (lanes, count) => this.runEvents.launchStampede(this.bossArena?.center ?? this.player.position, lanes, count, this.gameManager.level));
+      (lanes, count) => this.runEvents.launchStampede(this.bossArena?.center ?? this.player.position, lanes, count, this.gameManager.level),
+      (origin, directions) => {
+        for (const d of directions) this.acorns.push(new Acorn(this, origin.x, origin.y - 40, { x: d.x * STAG.volleySpeed, y: d.y * STAG.volleySpeed }, STAG.volleyDamage, STAG_LOOK.velvet));
+      });
     this.king = new KingBossSystem(this, this.gameManager, this.scenerySystem.navigation,
       () => this.bossArena ? { center: this.bossArena.center, radius: BOSS_ARENA_RADIUS } : undefined,
       (damage, push) => this.knockPlayer(damage, push, KING.rollKnockback),
@@ -374,10 +377,6 @@ export class GameScene extends Phaser.Scene {
         const enemy = new EnemyController(this, 1600 + Math.cos(angle) * 130, 1600 + Math.sin(angle) * 130, 0, this.scenerySystem.navigation);
         enemy.health = 500; this.enemies.push(enemy);
       }
-      if (review === 'midnight-upgrade') {
-        this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u => ['midnight-mighty-swat', 'max-health', 'move-speed'].includes(u.id));
-        this.gameManager.level = 2; this.gameManager.state = 'LevelUpPaused';
-      }
       this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';
       this.reviewControls.innerHTML = '<span>COMPANION REVIEW</span><button type="button">Walk trail</button><button type="button">End run</button>';
       const buttons = this.reviewControls.querySelectorAll('button');
@@ -394,8 +393,6 @@ export class GameScene extends Phaser.Scene {
       const chosen = id && ABILITY_IDS.includes(id) ? [id] : ABILITY_IDS;
       if (review !== 'ability-baseline') {
         for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = rank;
-        if (chosen.includes('midnight-mighty-swat')) this.gameManager.playerStats.hasMidnightCompanion = true;
-        if (chosen.includes('mystery-double-pounce')) this.gameManager.playerStats.hasMysteryCompanion = true;
       }
       const crowded = review === 'ability-crowd' || review === 'ability-baseline';
       this.reviewKeepCrowdPickups = review === 'ability-crowd';
@@ -421,7 +418,7 @@ export class GameScene extends Phaser.Scene {
         this.gameManager.playerStats.level = this.gameManager.level;
         for (const ability of chosen) this.gameManager.playerStats.abilityRanks[ability] = (displayRank - 1) as AbilityRank;
         this.reviewChoices = this.upgradeSystem.getAvailable(this.gameManager.playerStats).filter(u =>
-          (id && ABILITY_IDS.includes(id)) ? u.id === id : ['ricochet-charm', 'firefly-orbit', 'mystery-double-pounce'].includes(u.id));
+          (id && ABILITY_IDS.includes(id)) ? u.id === id : ['ricochet-charm', 'firefly-orbit', 'bramble-snare'].includes(u.id));
         // Always render three real offers, including a requested ability if supplied.
         for (const offer of this.upgradeSystem.getAvailable(this.gameManager.playerStats)) {
           if (this.reviewChoices.length >= 3) break;

@@ -77,7 +77,8 @@ export class MidnightBehavior {
     this.move(target.position, deltaMs, b.midnightApproachRange - 2);
   }
 
-  get swatPower() { return midnightSwatPower(this.stats?.abilityRanks['midnight-mighty-swat'] ?? 0); }
+  /** Midnight's swat grows with her companion rank, which rises with the player's level. */
+  get swatPower() { return midnightSwatPower(this.stats?.companionRank ?? 0); }
 
   private followPoint(player: Vector2Like): Vector2Like {
     return clampToArena({ x: player.x + BALANCE.companion.midnightFollowDistance, y: player.y + BALANCE.companion.midnightFollowDistance * .55 }, 12);

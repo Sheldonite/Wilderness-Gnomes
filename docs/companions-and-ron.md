@@ -29,9 +29,11 @@ pages all stay consistent. Each rank adds 15% to the companion's power.
 The level-up panel announces each growth once, and the companion panel on the left of the HUD
 always shows the current rank and the level the next one arrives at.
 
-The two abilities that command a companion, Mystery's Double Pounce and Midnight's Mighty
-Swat, are now gated on the wanderer rather than on owning the companion. They mean the same
-thing, because only Nick has Mystery and only Hailey has Midnight.
+No companion is ever an upgrade card, for any wanderer. The skills that used to be cards now
+ride on the companion rank instead: Mystery starts chaining pounces at rank 1 (level 3), awakens
+into Feral Frenzy at rank 5 (level 15) and Bloodlust at rank 10 (level 30); Midnight's swat gains
+damage, reach and speed every rank, sweeps a wide arc from rank 5 and hits all around her at
+rank 10. Frankie's flock and Tobias's darts already grew this way.
 
 ## Ron, the Festive Bard
 

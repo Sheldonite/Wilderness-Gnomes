@@ -172,3 +172,100 @@ test('Wonky calls the herd once at each stampede threshold', () => {
   fight.update(16, boss, player, 18, .4, quiet); assert.equal(fight.pendingStampedes, 0);
   fight.update(16, boss, player, 18, .1, quiet); assert.equal(fight.pendingStampedes, 1);
 });
+
+/** Windup length at this health, for a fresh (not feinted) charge. */
+const windupFor = health => health <= STAG.rutFraction ? STAG.rutWindupMs : health <= STAG.enrageFraction ? STAG.enragedWindupMs : STAG.windupMs;
+
+/** Finish every charge in the current burst, leaving him stalking. Returns where he ended up. */
+function finishBurst(fight, from, health, target = { x: 0, y: 0 }) {
+  let pos = from;
+  for (let i = 0; i < 10 && fight.phase !== 'stalking'; i++) {
+    if (fight.phase === 'windup') fight.update(windupFor(health), pos, target, 18, health, quiet);
+    if (fight.phase === 'windup') fight.update(STAG.feintExtraMs, pos, target, 18, health, quiet);   // a feint runs longer
+    if (fight.phase === 'charging') pos = runCharge(fight, pos, target, 18, quiet, 16, health);
+    if (fight.phase === 'recovering') fight.update(health <= STAG.rutFraction ? STAG.rutRecoverMs : STAG.recoverMs, pos, target, 18, health, quiet);
+  }
+  assert.equal(fight.phase, 'stalking');
+  return pos;
+}
+
+test('his attacks run in order: charge, velvet volley, charge, bellow', () => {
+  const fight = ready();
+  assert.deepEqual([...STAG.attackOrder], ['charge', 'volley', 'charge', 'bellow']);
+  const end = finishBurst(fight, boss, 1);
+  assert.equal(fight.nextAttack, 'volley');
+  const far = { x: end.x - 400, y: end.y };
+  fight.update(STAG.cooldownMs, end, far, 18, 1, quiet);
+  assert.equal(fight.phase, 'volleyWindup'); assert.ok(fight.volleyAim.x < -.99, 'aimed at the player');
+  fight.update(STAG.volleyWindupMs, end, { x: end.x, y: end.y + 400 }, 18, 1, quiet);
+  assert.equal(fight.volley.directions.length, STAG.volleyShards);
+  assert.ok(fight.volley.directions[Math.floor(STAG.volleyShards / 2)].x < -.99, 'the fan stays where it was aimed');
+  assert.equal(fight.phase, 'stalking');
+  fight.update(STAG.volleyRestMs, end, far, 18, 1, quiet);
+  assert.equal(fight.phase, 'windup', 'then a charge');
+  const end2 = finishBurst(fight, end, 1);
+  assert.equal(fight.nextAttack, 'bellow');
+  fight.update(STAG.cooldownMs, end2, { x: end2.x - 250, y: end2.y }, 18, 1, quiet);
+  assert.equal(fight.phase, 'bellowWindup');
+});
+
+test('the bellow shakes a nearby player and flows straight into a charge; distance escapes it', () => {
+  for (const [gap, shaken] of [[250, true], [STAG.bellowRadius + 60, false]]) {
+    const fight = ready();
+    let end = finishBurst(fight, boss, 1);
+    fight.update(STAG.cooldownMs, end, { x: end.x - 400, y: end.y }, 18, 1, quiet);
+    fight.update(STAG.volleyWindupMs, end, { x: end.x - 400, y: end.y }, 18, 1, quiet);
+    fight.update(STAG.volleyRestMs, end, { x: end.x - 400, y: end.y }, 18, 1, quiet);
+    end = finishBurst(fight, end, 1);
+    const where = { x: end.x - gap, y: end.y };
+    fight.update(STAG.cooldownMs, end, where, 18, 1, quiet);
+    fight.update(STAG.bellowWindupMs - 1, end, where, 18, 1, quiet);
+    assert.ok(!fight.bellowed);
+    fight.update(1, end, where, 18, 1, quiet);
+    assert.ok(fight.bellowed); assert.equal(fight.bellowHit, shaken);
+    assert.equal(fight.phase, 'windup'); assert.ok(fight.lane.direction.x < -.99, 'charging at the shaken player');
+  }
+});
+
+test('enraged, every other fresh charge is a feint: the lane swings to the player after a pause', () => {
+  const fight = ready(.4);
+  let end = finishBurst(fight, boss, .4);           // an honest double charge
+  const far = { x: end.x - 400, y: end.y };
+  fight.update(STAG.enragedCooldownMs, end, far, 18, .4, quiet);
+  fight.update(STAG.volleyWindupMs, end, far, 18, .4, quiet);
+  fight.update(STAG.volleyRestMs, end, far, 18, .4, quiet);
+  assert.equal(fight.phase, 'windup'); assert.ok(fight.lane.direction.x < -.99);
+  const moved = { x: end.x, y: end.y + 400 };
+  fight.update(STAG.feintExtraMs - 1, end, moved, 18, .4, quiet);
+  assert.ok(!fight.lane.feinted, 'the first aim holds for a moment');
+  fight.update(1, end, moved, 18, .4, quiet);
+  assert.ok(fight.lane.feinted); assert.ok(fight.lane.direction.y > .99, 'then swings to where they went');
+  fight.update(STAG.enragedWindupMs - 1, end, moved, 18, .4, quiet);
+  assert.equal(fight.phase, 'windup', 'a full windup still follows the swing');
+  fight.update(1, end, moved, 18, .4, quiet);
+  assert.equal(fight.phase, 'charging');
+});
+
+test('in the rut he charges three times on quicker windups and flings a wider fan', () => {
+  const fight = ready(.2);
+  assert.ok(fight.rut);
+  let windups = 1, pos = boss;
+  for (let i = 0; i < 10 && fight.phase !== 'stalking'; i++) {
+    if (fight.phase === 'windup') {
+      fight.update(STAG.rutWindupMs - 1, pos, { x: 0, y: 0 }, 18, .2, quiet); assert.equal(fight.phase, 'windup');
+      fight.update(1, pos, { x: 0, y: 0 }, 18, .2, quiet);
+    }
+    pos = runCharge(fight, pos, { x: 0, y: 0 }, 18, quiet, 16, .2);
+    fight.update(STAG.rutRecoverMs, pos, { x: 0, y: 0 }, 18, .2, quiet);
+    if (fight.phase === 'windup') windups++;
+  }
+  assert.equal(windups, STAG.rutCharges);
+  fight.update(STAG.enragedCooldownMs, pos, { x: pos.x - 400, y: pos.y }, 18, .2, quiet);
+  fight.update(STAG.volleyWindupMs, pos, { x: pos.x - 400, y: pos.y }, 18, .2, quiet);
+  assert.equal(fight.volley.directions.length, STAG.rutVolleyShards);
+  const stunned = ready(.2); stunned.update(STAG.rutWindupMs, boss, player, 18, .2, quiet);
+  stunned.update(16, boss, player, 18, .2, quiet);
+  stunned.blocked(boss, { x: 0, y: 0 }, 18, quiet);
+  stunned.update(STAG.rutStunMs, boss, { x: 0, y: 0 }, 18, .2, quiet);
+  assert.equal(stunned.phase, 'stalking', 'his stuns are shorter in the rut');
+});

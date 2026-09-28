@@ -1,0 +1,275 @@
+/*
+ * Storybook theme: the game's UI dressed in the woodland's own materials. Loaded after the base
+ * stylesheets, it changes how things look (wood, parchment, ribbon, wax, bookish type) and leaves
+ * layout to them. Textures come from scripts/build_ui_textures.py, cut from the painted bridge.
+ */
+:root{
+  --display:"Palatino Linotype","Book Antiqua",Palatino,"URW Palladio L",Georgia,serif;
+  --body:Georgia,"Palatino Linotype","Book Antiqua",serif;
+  --ink:#3b2412;--ink-soft:#6e4b2a;--ink-faint:#9a7a52;
+  --cream:#fff1cf;--gold:#f2c865;--gold-deep:#b98424;--moss:#5f8f3e;
+  --board:url(../../assets/ui/board.png) 28 fill / 14px stretch;
+  --board-dark:url(../../assets/ui/board-dark.png) 28 fill / 14px stretch;
+  --parchment:url(../../assets/ui/parchment.png) 56 fill / 34px stretch;
+  --parchment-small:url(../../assets/ui/parchment.png) 56 fill / 22px stretch;
+  --ribbon:url(../../assets/ui/ribbon.png) 0 64 fill / 0 30px stretch;
+  --carved:0 2px 0 #2a1407,0 0 6px #0009;
+  font-family:var(--body);
+}
+
+/* ---------- Type: bookish, with small caps where the old UI used tiny spaced-out capitals ---------- */
+:is(.eyebrow,.xp-meta,.run-stats small,.upgrade-category,.result-stats span,.market-eyebrow,.title-eyebrow,
+  .wanderer-selection legend,.weapon-selection legend,.begin-hint,.chapter-label,.brand-mark,.overlay-hint,
+  .upgrade-select,.frankie-hud strong,.market-item-art>span,.upgrade-comparison small,.journal-ability small,
+  .upgrade-owned-list>strong,.title-gold-balance small,.market-purse span,.market-welcome>span,.run-location,
+  .market-item-benefits small,.gold-milestones){
+  font-family:var(--display);font-variant:small-caps;text-transform:lowercase;letter-spacing:1.2px;font-weight:600
+}
+kbd{font:600 10px var(--display);border:1px solid currentColor;border-radius:3px;background:#0000001a;box-shadow:0 1px 0 currentColor;opacity:.85}
+button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
+
+/* ---------- Materials ---------- */
+.dark-board,.run-stats,.pause-button,.frankie-hud,.rare-rock-hud,.build-strip,.boss-hud,.health-hud,.desktop-updates,
+.title-weapons-link,.market-purse,.market-directory>button,.market-interact button,.market-preview,.title-rock-balance{
+  border:2px solid transparent;border-image:var(--board-dark);border-radius:0;background:none;box-shadow:none;
+  filter:drop-shadow(0 4px 5px #0b0703a0);color:var(--cream)
+}
+.primary-button,.begin-button,.market-item button{
+  border:2px solid transparent;border-image:var(--board);border-radius:0;background:none;box-shadow:none;
+  color:var(--cream);font-family:var(--display);font-weight:700;letter-spacing:.6px;text-shadow:var(--carved);
+  filter:drop-shadow(0 4px 5px #1a0e05a0);transition:filter .18s,transform .18s
+}
+:is(.primary-button,.begin-button,.market-item button):hover:enabled,:is(.primary-button,.begin-button):hover{
+  background:none;filter:brightness(1.14) drop-shadow(0 6px 8px #1a0e05b0);transform:translateY(-2px)
+}
+:is(.primary-button,.begin-button) svg{filter:drop-shadow(0 2px 0 #2a1407)}
+
+/* ---------- Title screen ---------- */
+.title-screen{--title-panel:none;--title-panel-hover:none;--title-panel-border:transparent}
+.title-content h1{
+  font-family:var(--display);font-weight:700;letter-spacing:-2px;color:#ffd978;
+  background:linear-gradient(180deg,#fff6d2 0%,#ffe08a 42%,#e0a13f 70%,#b5741f 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:none;filter:drop-shadow(0 3px 0 #4a2a10) drop-shadow(0 0 1px #3a1f0b) drop-shadow(0 10px 18px #0e1a10aa)
+}
+.title-content h1 span{color:inherit}
+.title-eyebrow{display:inline-flex;padding:8px 54px;border:0;border-image:var(--ribbon);color:var(--cream);font-size:13px;text-shadow:0 1px 0 #102414}
+.title-eyebrow span{display:none}
+.title-intro{font-family:var(--display);font-style:italic;font-size:17px;color:#fff3d6;text-shadow:0 2px 3px #0d1a10,0 0 12px #0d1a10}
+.wanderer-selection legend,.weapon-selection legend{font-size:13px;color:#ffecb8;text-shadow:0 2px 2px #0d1a10,0 0 8px #0d1a10}
+.title-screen :is(.wanderer-card,.weapon-card,.title-market-link){
+  border:2px solid transparent;border-image:var(--parchment-small);border-radius:0;background:none;box-shadow:none;color:var(--ink);
+  filter:drop-shadow(0 5px 7px #0c1a0fa6);transition:transform .18s,filter .18s
+}
+.title-screen :is(.wanderer-card,.weapon-card,.title-market-link):hover{background:none;box-shadow:none;transform:translateY(-3px) rotate(-.4deg);filter:drop-shadow(0 8px 10px #0c1a0fb0) brightness(1.03)}
+.title-screen :is(.wanderer-card,.weapon-card).selected{background:none;box-shadow:none;border-color:transparent;
+  filter:drop-shadow(0 0 3px #fff2b0) drop-shadow(0 0 10px #ffc94d) drop-shadow(0 6px 8px #0c1a0fb0)}
+.title-screen .wanderer-copy strong{font-family:var(--display);color:var(--ink)}
+.title-screen .wanderer-copy small{color:var(--ink-soft);font-style:italic;font-family:var(--body)}
+.title-screen .choice-key{border-color:#6e4b2a66;color:var(--ink-soft);background:#fff5d980;font-family:var(--display)}
+.title-screen .selection-tick{width:26px;height:26px;top:4px;right:4px;background:url(../../assets/ui/seal.png) center/contain no-repeat;color:#ffe9c9;
+  font-size:12px;text-shadow:0 1px 0 #4a0808;box-shadow:none;border-radius:0}
+.title-gold-balance{border-right:1px dashed #6e4b2a80}
+.title-gold-balance strong,.title-market-invite strong{font-family:var(--display);color:var(--ink)}
+.title-gold-balance>svg{color:var(--gold-deep)}
+.title-market-invite small{color:var(--ink-soft);font-style:italic}
+.title-rock-balance{padding:6px 12px;color:#eadbff}
+.title-weapons-link{padding:10px 18px;font-family:var(--display);color:var(--cream);text-shadow:var(--carved)}
+.title-weapons-link:hover{background:none;filter:brightness(1.18) drop-shadow(0 4px 5px #0b0703a0)}
+.begin-button{font-size:22px}
+.begin-hint{font-size:11px;color:#fff1cf;text-shadow:0 1px 3px #0d1a10}
+.title-footer,.mystery-hint{text-shadow:0 1px 3px #0d1a10}
+.mystery-hint{font-family:var(--display)}
+.brand-mark{font-size:13px}.chapter-label{font-size:12px}
+
+/* ---------- In-run HUD ---------- */
+.health-hud{padding:9px 14px 10px 9px;gap:10px}
+.hud-portrait{width:54px;height:54px;border-radius:50%;border:3px solid #7a4d27;padding-top:4px;
+  background:radial-gradient(circle at 50% 35%,#6f8a55,#2d4a2f 75%);box-shadow:0 0 0 2px #2a1407,inset 0 0 10px #000a}
+.health-heading strong{font:700 18px var(--display);color:var(--gold);text-shadow:var(--carved)}
+.health-value{font-family:var(--display);font-size:11px;color:var(--cream);text-shadow:0 1px 0 #2a1407}
+:is(.health-track,.xp-track,.boss-track){background:#241307;border:2px solid #150a03;border-radius:8px;padding:1px;
+  box-shadow:inset 0 2px 4px #000c,0 1px 0 #b07a4280}
+.health-track{height:15px}
+.health-fill{border-radius:5px;background:linear-gradient(180deg,#ff9a80 0%,#d8433a 45%,#9b1f1c 100%);box-shadow:inset 0 2px 0 #ffc2b066}
+.low-health .health-track{box-shadow:inset 0 2px 4px #000c,0 0 12px #ff5a4a,0 0 3px #ff9a80}
+.run-stats{padding:9px 20px;gap:16px}
+.run-stats b{font:700 18px var(--display);color:var(--gold);text-shadow:var(--carved)}
+.run-stats small{font-size:11px;color:var(--cream)}
+.run-stats svg{color:var(--gold)}
+.run-stats i{background:#e9c07a55}
+.pause-button{padding:9px 16px;font:700 13px var(--display);color:var(--cream);text-shadow:var(--carved)}
+.pause-button:hover{background:none;filter:brightness(1.2) drop-shadow(0 4px 5px #0b0703a0)}
+.frankie-hud{padding:10px 12px}
+.frankie-hud strong{font-size:12px;color:var(--gold)}
+.frankie-hud b{font-family:var(--display);color:#ffe7ae}
+.frankie-hud small{color:#f1e2c0;font-style:italic}
+.rare-rock-hud{padding:9px 13px;color:#efe2ff}
+.rare-rock-hud strong{font-family:var(--display)}
+.rare-rock-hud>svg{color:#d6b8ff;filter:drop-shadow(0 0 4px #b98cff)}
+.xp-hud{padding-left:50px}
+.xp-meta{font-size:12px;color:var(--cream);text-shadow:0 1px 0 #1d1006,0 0 6px #0d1a10}
+.xp-track{height:12px}
+.xp-fill{border-radius:5px;background:repeating-linear-gradient(115deg,#0000 0 16px,#ffffff26 16px 19px),linear-gradient(180deg,#d7f39a 0%,#7fb24a 50%,#46752c 100%);box-shadow:inset 0 2px 0 #f2ffd066}
+.level-seal{left:-4px;bottom:-15px;width:46px;height:46px;clip-path:none;background:url(../../assets/ui/seal.png) center/contain no-repeat;
+  color:#ffe6c4;font:700 17px var(--display);text-shadow:0 1px 0 #4a0808,0 -1px 0 #d6655a;filter:drop-shadow(0 3px 3px #000a)}
+.run-location{font-size:12px;color:#fff1cfcc}
+.build-strip{padding:6px 12px;gap:8px}
+.build-item{color:var(--cream)}.build-item b{font-family:var(--display);color:var(--gold)}
+.build-item svg{color:#ffe7ae}
+.upgrade-receipt{border:2px solid transparent;border-image:var(--parchment-small);border-radius:0;background:none;color:var(--ink);padding:14px 22px;
+  filter:drop-shadow(0 6px 8px #0b0703a0)}
+.upgrade-receipt strong{font-family:var(--display)}.upgrade-receipt span{color:var(--ink-soft)}
+.boss-hud{padding:12px 20px 14px}
+.boss-hud strong{font:700 22px var(--display);color:var(--gold);text-shadow:var(--carved);letter-spacing:.5px}
+.boss-caption{font:italic 13px var(--display);color:var(--cream)}
+.boss-track{height:14px;margin-top:9px}
+.boss-track i{border-radius:5px;background:linear-gradient(180deg,#ffcf7a 0%,#e5652e 50%,#9e2d17 100%);box-shadow:inset 0 2px 0 #ffe0a066}
+.event-banner{padding:12px 60px;border:0;border-image:var(--ribbon);border-radius:0;background:none;box-shadow:none;
+  font:700 17px var(--display);color:var(--cream);text-shadow:0 2px 0 #102414;filter:drop-shadow(0 5px 6px #0b0703a0)}
+
+/* ---------- Storybook pages: menus, level ups, pause, results ---------- */
+.storybook-overlay{background:radial-gradient(ellipse at center,#1a0f0770,#0b0704d8);backdrop-filter:blur(2px)}
+.storybook-panel{border:2px solid transparent;border-image:var(--parchment);border-radius:0;background:none;box-shadow:none;
+  color:var(--ink);filter:drop-shadow(0 22px 40px #000c);padding:40px 44px 30px}
+.storybook-panel h2{font-family:var(--display);font-weight:700;color:var(--ink);letter-spacing:-.5px}
+.storybook-panel .eyebrow{display:inline-block;padding:7px 48px;border-image:var(--ribbon);color:var(--cream);font-size:12px;text-shadow:0 1px 0 #102414;margin-bottom:14px}
+.panel-emblem{color:var(--gold-deep)}
+.panel-intro,.pause-instruction{font-family:var(--display);font-style:italic;color:var(--ink-soft)}
+/* a leafy flourish under each page title */
+.storybook-panel h2::after{content:"";display:block;width:190px;height:14px;margin:8px auto 0;opacity:.75;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 14'%3E%3Cpath d='M4 7h72M114 7h72' stroke='%236e4b2a' stroke-width='1.3'/%3E%3Cpath d='M95 1c-6 3-9 6 0 12 9-6 6-9 0-12z' fill='%235f8f3e'/%3E%3Cpath d='M82 7c4-5 8-4 11 0-3 4-7 5-11 0zM108 7c-4-5-8-4-11 0 3 4 7 5 11 0z' fill='%23809f4f'/%3E%3C/svg%3E") center/contain no-repeat}
+.text-button{color:var(--ink-soft);font:italic 14px var(--display);border-bottom:1px dashed #6e4b2a99}
+.text-button:hover{color:var(--ink)}
+.overlay-hint{color:var(--ink-faint)!important;font-size:11px!important}
+.overlay-hint kbd{color:var(--ink-soft)}
+.upgrade-card{border:2px solid transparent;border-image:var(--parchment-small);border-radius:0;background:none;color:var(--ink);
+  filter:drop-shadow(0 6px 8px #2a17078a)}
+.upgrade-card:hover{border-color:transparent;box-shadow:none;transform:translateY(-5px) rotate(-.5deg);filter:drop-shadow(0 10px 12px #2a1707a0) brightness(1.03)}
+.upgrade-card.owned-upgrade{border:2px solid transparent;background:none}
+.upgrade-card::before{content:"";position:absolute;inset:12px;border-radius:10px;pointer-events:none}
+.upgrade-card.boss-relic{border:2px solid transparent;background:none;box-shadow:none;color:#5a3212;filter:drop-shadow(0 0 4px #ffd35a) drop-shadow(0 0 12px #e4a02a) drop-shadow(0 6px 8px #2a17078a)}
+.upgrade-card.boss-relic::before{background:radial-gradient(ellipse at top,#ffd56a55,#0000 70%)}
+.upgrade-card.epic-companion{border:2px solid transparent;background:none;box-shadow:none;filter:drop-shadow(0 0 4px #c992ff) drop-shadow(0 0 12px #8f4fd8) drop-shadow(0 6px 8px #2a17078a)}
+.upgrade-card.epic-companion::before{background:radial-gradient(ellipse at top,#c89cf04d,#0000 70%)}
+.upgrade-number{font:italic 700 14px var(--display);color:var(--ink-faint)}
+.upgrade-art{color:#5f7f3a;background:radial-gradient(#d9c68a88,#0000 70%)}
+.upgrade-category{font-size:11px;color:var(--ink-faint)}
+.upgrade-card strong{font-family:var(--display);font-weight:700}
+.upgrade-rank{font-family:var(--display);color:#8a5a1c}
+.upgrade-description{color:var(--ink-soft)}
+.upgrade-changes,.upgrade-comparison>span:last-child{background:#6e8f3e24;border:1px dashed #6e8f3e80;color:#2f4a1e}
+.boss-relic .upgrade-changes{background:#e4a02a26;border-color:#b9842480;color:#5a3212}
+.epic-companion .upgrade-changes{background:#a36ad624;border-color:#8f4fd880}
+.upgrade-select{font-size:12px;color:var(--ink-soft);border-top:1px dashed #6e4b2a66}
+.upgrade-owned-list>span{background:#6e4b2a1f;border:1px solid #6e4b2a33;color:var(--ink)}
+.upgrade-owned-list b{color:#8a5a1c}
+.companion-growth{background:#a36ad61f;border:1px dashed #8f4fd880;color:#4a2c63;font-family:var(--display)}
+.companion-journal{font-family:var(--display);color:var(--ink-soft)}
+.journal-ability{background:#fff6dc66;border:1px dashed #6e4b2a55;border-radius:6px}
+.journal-ability strong{font-family:var(--display)}
+.journal-icon{color:var(--gold-deep)}
+.journal-description{color:var(--ink-soft)}
+.result-stats{border-top:1px dashed #6e4b2a88;border-bottom:1px dashed #6e4b2a88}
+.result-stats span{font-size:11px;color:var(--ink-faint)}
+.result-stats b{font-family:var(--display);color:var(--ink)}
+.run-gold-reward{background:#f2c86533;border:1px dashed #b9842499}
+.run-gold-reward strong{font-family:var(--display);color:#6a4210}
+.run-gold-reward span,.gold-milestones{color:var(--ink-soft)}
+.loading-screen{background:radial-gradient(#3a2a18,#160d06)}
+.loading-screen h1{font-family:var(--display);color:var(--gold)}
+.loading-track{height:6px;border-radius:4px;background:#2a1407;box-shadow:inset 0 1px 2px #000}
+.loading-track span{border-radius:4px;background:linear-gradient(#ffe08a,#c98a2a)}
+
+/* ---------- Market day ---------- */
+.market-header,.market-footer{background:linear-gradient(#1a0e06b0,#1a0e06c8),url(../../assets/ui/plank-tile.png) center/auto 100% repeat-x;box-shadow:0 5px 16px #0b0703a0}
+.market-header{border-bottom:3px solid #2a1407}
+.market-footer{border-top:3px solid #2a1407}
+.market-header h1,.market-directory strong,.market-welcome p,.market-fieldnotes h2{font-family:var(--display);color:var(--cream);text-shadow:var(--carved)}
+.market-eyebrow{font-size:11px;color:var(--gold)}
+.market-back,.shop-close,.market-zoom{border:2px solid #2a1407;background:radial-gradient(circle at 40% 35%,#a4703e,#5b3718);color:var(--cream);box-shadow:0 2px 4px #0008}
+.market-back:hover,.shop-close:hover,.market-zoom:hover{background:radial-gradient(circle at 40% 35%,#c08a52,#6e4420)}
+.market-purse{padding:8px 16px}
+.market-purse strong{font-family:var(--display);color:var(--gold);text-shadow:var(--carved)}
+.market-directory>button{padding:9px 14px}
+.market-directory>button:hover{background:none;transform:translateY(-2px);filter:brightness(1.18) drop-shadow(0 4px 5px #0b0703a0)}
+.market-directory small{color:#e8d6b0;font-style:italic}
+.market-directory b{font-family:var(--display);text-shadow:0 1px 0 #1d1006}
+.vendor-symbol{background:#1a0e0666;border-radius:50%}
+.market-directions,.market-adventure{font-family:var(--display)}
+.market-adventure{color:var(--gold)}
+.market-interact button{padding:10px 18px;font-family:var(--display);color:var(--cream);text-shadow:var(--carved)}
+.market-toast{border:2px solid transparent;border-image:var(--parchment-small);border-radius:0;background:none;color:var(--ink);font-family:var(--display);filter:drop-shadow(0 5px 8px #0b0703a0)}
+.market-shop{border:2px solid transparent;border-image:var(--parchment);border-radius:0;background:none;box-shadow:none;color:var(--ink);filter:drop-shadow(0 22px 40px #000c);padding:36px 42px 24px}
+.market-shop h2,.market-item h3{font-family:var(--display);font-weight:700;color:var(--ink)}
+.shop-greeting{font-family:var(--display);color:var(--ink-soft)}
+.shop-summary{border-top:1px dashed #6e4b2a80;border-bottom:1px dashed #6e4b2a80;color:var(--ink-soft)}
+.shop-summary b{color:#6a4210}
+.market-item{background:#fff5da73;border:1px dashed #6e4b2a66;border-radius:8px}
+.market-item.fully-owned{background:#6e8f3e1f;border-color:#6e8f3e88}
+.market-item-story,.market-item-rule,.shop-note,.market-shortfall{font-family:var(--body);color:var(--ink-soft)}
+.market-item-benefits>span:last-child{background:#6e8f3e24;border:1px dashed #6e8f3e80}
+.market-item-benefits b{color:#2f4a1e}
+.market-item button{min-height:44px;font-size:14px}
+.market-item button span{font-family:var(--display)}
+.market-item button:disabled{border-image:var(--board-dark);color:#cdb996;text-shadow:none;filter:grayscale(.4) drop-shadow(0 3px 4px #1a0e0580);cursor:default}
+.market-item-art>svg{border:2px solid #6e4b2a55;background:radial-gradient(circle,#f2c86544,#0000)}
+.market-merchant-portrait{border:3px solid #7a4d27;box-shadow:0 0 0 2px #2a1407;background:radial-gradient(ellipse at bottom,#6f8a55,#2d4a2f)}
+.shop-feedback:not(:empty){background:#6e8f3e24;border:1px dashed #6e8f3e80}
+.desktop-updates{padding:8px 14px}
+.desktop-updates .desktop-update-action{border:2px solid transparent;border-image:var(--board);border-radius:0;background:none;color:var(--cream);text-shadow:var(--carved)}
+
+/* ---------- Details ---------- */
+.storybook-overlay{z-index:20}
+#ui-root:has(.storybook-overlay) .upgrade-receipt{display:none}
+.title-screen :is(.wanderer-card,.weapon-card).selected{transform:translateY(-4px)}
+*{scrollbar-width:thin;scrollbar-color:#8a5a2a #0000}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#a4703e,#6e4420);border:2px solid #0000;background-clip:padding-box;border-radius:6px}
+::-webkit-scrollbar-track{background:#0000}
+
+/* ---------- Compact in-run HUD: small plaques tucked into the corners, so the woods stay in view ---------- */
+.game-ui :is(.health-hud,.run-stats,.pause-button,.frankie-hud,.rare-rock-hud,.build-strip,.boss-hud){
+  border-image:url(../../assets/ui/board-dark.png) 28 fill / 10px stretch}
+.health-hud{top:10px;left:10px;padding:5px 10px 6px 6px;gap:8px}
+.hud-portrait{width:38px;height:38px;border-width:2px;padding-top:2px}
+.hud-portrait img{height:46px}
+.health-info{width:150px}
+.health-heading{margin-bottom:4px}
+.health-heading strong{font-size:14px}
+.health-value{font-size:10px}
+.health-track{height:10px}
+.run-stats{top:10px;padding:5px 12px;gap:10px}
+.run-stats b{font-size:14px}
+.run-stats small{font-size:9px}
+.run-stats svg{width:14px;height:14px}
+.pause-button{top:10px;right:10px;padding:5px 10px;font-size:11px;gap:6px}
+.pause-button svg{width:13px;height:13px}
+.pause-button kbd{display:none}
+.frankie-hud{top:66px;left:10px;width:auto;max-width:190px;padding:5px 9px;gap:7px}
+.frankie-hud img{width:24px;height:32px}
+.frankie-hud div{gap:2px}
+.frankie-hud strong{font-size:10px}
+.frankie-hud b{font-size:11px}
+.frankie-hud small{font-size:9px;line-height:1.25}
+.rare-rock-hud{top:44px;right:10px;padding:4px 9px;gap:6px}
+.rare-rock-hud>svg{width:16px;height:16px}
+.rare-rock-hud strong{font-size:11px}
+.rare-rock-hud small{display:none}
+.xp-hud{bottom:10px;left:14px;right:14px;padding-left:36px}
+.xp-meta{font-size:10px;margin-bottom:3px}
+.xp-track{height:8px}
+.level-seal{width:34px;height:34px;bottom:-11px;left:-2px;font-size:13px}
+.run-location{display:none}
+.build-strip{bottom:32px;padding:3px 8px;gap:4px}
+.build-item{font-size:10px;padding:1px}
+.build-item svg{width:16px;height:16px}
+.upgrade-receipt{bottom:62px;padding:9px 16px;font-size:12px}
+/* the boss plaque: name and hint on one line, a slim bar beneath */
+.boss-hud{top:49px;width:min(380px,calc(100% - 20px));padding:5px 14px 7px}
+.boss-hud>div:first-child{flex-direction:row;justify-content:space-between;align-items:baseline;gap:10px}
+.boss-hud strong{font-size:15px;flex-shrink:0}
+.boss-caption{font-size:11px;min-height:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.boss-track{height:8px;margin-top:4px}
+.event-banner{top:49px;padding:6px 44px;font-size:13px}
+@media(max-width:850px){.health-hud{top:8px;left:8px}.run-stats{top:8px}.pause-button{top:8px;right:8px}.frankie-hud{top:62px;left:8px}}
+@media(max-width:600px){.run-stats{top:8px;right:8px;left:auto;transform:none}.pause-button{top:44px}.rare-rock-hud{top:78px;right:8px}.boss-hud{top:108px}.event-banner{top:108px}}

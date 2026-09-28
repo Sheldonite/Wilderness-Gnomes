@@ -1,4 +1,6 @@
 import { BALANCE } from './balance';
+import { ABILITIES } from './abilities';
+import { midnightSwatPower } from './midnightSwat';
 import type { CompanionId, PlayerCharacterId, PlayerStats } from '../core/types';
 
 /**
@@ -53,10 +55,17 @@ export function describeCompanionRank(id: CompanionId, rank: number, stats?: Pla
   switch (id) {
     case 'mystery': {
       const damage = stats ? Number(stats.mysteryDamage.toFixed(0)) : Math.round(b.mysteryDamage * companionPower(rank));
-      return `${damage} damage per pounce${power ? ` · +${power}% from rank ${rank}` : ''}`;
+      const r = Math.max(0, Math.min(MAX_COMPANION_RANK, Math.floor(rank)));
+      const chain = r >= 10 ? ABILITIES.pounce.frenzy[1].maxChain : r >= 5 ? ABILITIES.pounce.frenzy[0].maxChain : r ? 1 : 0;
+      const pounces = chain ? ` · chains ${chain + 1} pounces` : '';
+      const frenzy = r >= 10 ? ' · Bloodlust' : r >= 5 ? ' · Feral Frenzy' : '';
+      return `${damage} damage per pounce${pounces}${frenzy}`;
     }
-    case 'midnight':
-      return `${Math.round(b.midnightDamage * companionPower(rank))} damage per swat${power ? ` · +${power}% from rank ${rank}` : ''}`;
+    case 'midnight': {
+      const swat = midnightSwatPower(rank);
+      const arc = rank >= 10 ? ' · hits all around her' : rank >= 5 ? ' · sweeping arc' : '';
+      return `${swat.damage} damage per swat · ${swat.range} reach${arc}`;
+    }
     case 'frankie': {
       const birds = frankieBirdsForRank(rank);
       return `${birds} of ${b.frankieMaxBirds} buzzard${birds === 1 ? '' : 's'} · ${Math.round(b.frankieDamage * companionPower(rank))} damage per stoop`;

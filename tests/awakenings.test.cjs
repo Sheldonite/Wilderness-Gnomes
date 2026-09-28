@@ -19,7 +19,7 @@ function simulation(id, rank = 5) {
 }
 const damage = (target, amount) => { target.takeDamage(amount); };
 const origin = { x: 0, y: 0 };
-const ABILITY_OWNER = { 'mystery-double-pounce': 'wizard', 'midnight-mighty-swat': 'hailey',
+const ABILITY_OWNER = {
   'ribbon-sweep': 'ron', 'inspiring-shout': 'ron', 'dizzying-flurry': 'ron' };
 const asOwnerOf = (stats, id) => { stats.characterId = ABILITY_OWNER[id] ?? 'wizard'; return stats; };
 

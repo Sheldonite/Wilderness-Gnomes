@@ -1,18 +1,15 @@
-import { describeMidnightSwat } from './midnightSwat';
 import type { AbilityId, AbilityRank, AbilityRanks, PlayerCharacterId, WeaponId } from '../core/types';
 
 export const ABILITY_IDS: AbilityId[] = ['ricochet-charm', 'firefly-orbit', 'bramble-snare', 'spore-trail',
-  'acorn-shower', 'barkskin-ward', 'woodland-magnet', 'mystery-double-pounce', 'midnight-mighty-swat',
+  'acorn-shower', 'barkskin-ward', 'woodland-magnet',
   'ribbon-sweep', 'inspiring-shout', 'dizzying-flurry'];
 
 /**
  * Abilities that belong to one wanderer alone. Everything not listed here is offered to all of
- * them. Nick and Hailey keep the skills that command their own companions, and Ron's three
- * performance skills are the reason to play the bard.
+ * them. Ron's three performance skills are the reason to play the bard. Companions are never
+ * upgrade cards: they grow with the player's level (see config/companions.ts).
  */
 export const CHARACTER_ONLY_ABILITIES: Partial<Record<AbilityId, PlayerCharacterId>> = {
-  'mystery-double-pounce': 'wizard',
-  'midnight-mighty-swat': 'hailey',
   'ribbon-sweep': 'ron',
   'inspiring-shout': 'ron',
   'dizzying-flurry': 'ron'
@@ -20,10 +17,9 @@ export const CHARACTER_ONLY_ABILITIES: Partial<Record<AbilityId, PlayerCharacter
 export const abilityAllowed = (id: AbilityId, characterId: PlayerCharacterId): boolean =>
   CHARACTER_ONLY_ABILITIES[id] === undefined || CHARACTER_ONLY_ABILITIES[id] === characterId;
 export const ABILITY_NAMES: Record<AbilityId, string> = {
-  'midnight-mighty-swat': 'Midnight’s Mighty Swat',
   'ricochet-charm': 'Ricochet Charm', 'firefly-orbit': 'Firefly Orbit', 'bramble-snare': 'Bramble Snare',
   'spore-trail': 'Spore Trail', 'acorn-shower': 'Acorn Shower', 'barkskin-ward': 'Barkskin Ward',
-  'woodland-magnet': 'Woodland Magnet', 'mystery-double-pounce': 'Mystery’s Double Pounce',
+  'woodland-magnet': 'Woodland Magnet',
   'ribbon-sweep': 'Ribbon Sweep', 'inspiring-shout': 'Inspiring Shout', 'dizzying-flurry': 'Dizzying Flurry'
 };
 
@@ -39,13 +35,13 @@ export const ASCENSION_PLAYER_LEVEL = 10;
 export const AWAKENING_NAMES: Record<AbilityId, string> = {
   'ricochet-charm': 'Chain Lightning', 'firefly-orbit': 'Firefly Swarm', 'bramble-snare': 'Thornwall',
   'spore-trail': 'Fungal Bloom', 'acorn-shower': 'Oak Fall', 'barkskin-ward': 'Living Bark',
-  'woodland-magnet': 'Harvest Wind', 'mystery-double-pounce': 'Feral Frenzy', 'midnight-mighty-swat': 'Sweeping Paw',
+  'woodland-magnet': 'Harvest Wind',
   'ribbon-sweep': 'Ribbon Cyclone', 'inspiring-shout': 'Rally Anthem', 'dizzying-flurry': 'Dizzying Vortex'
 };
 export const ASCENSION_NAMES: Record<AbilityId, string> = {
   'ricochet-charm': 'Storm Front', 'firefly-orbit': 'Firefly Inferno', 'bramble-snare': 'Thornheart',
   'spore-trail': 'Mycelium Tide', 'acorn-shower': 'Worldtree Fall', 'barkskin-ward': 'Heartwood',
-  'woodland-magnet': 'Gale Harvest', 'mystery-double-pounce': 'Bloodlust', 'midnight-mighty-swat': 'Midnight Maelstrom',
+  'woodland-magnet': 'Gale Harvest',
   'ribbon-sweep': 'Aurora Sweep', 'inspiring-shout': 'Grand Finale', 'dizzying-flurry': 'Carnival Maelstrom'
 };
 export const isAwakened = (rank: number): boolean => rank >= AWAKENING_RANK;
@@ -80,6 +76,7 @@ export const ABILITIES = {
   magnet: { cooldownMs: [0, 10000, 8000, 6000, 4500, 0, 0, 0, 0, 0, 0], range: [0, 450, 600, 750, 850, 1000, 1050, 1100, 1150, 1200, 1400], speed: 600,
     harvest: [{ bonusPerCrystal: .015, maxBonus: .4, durationMs: 12000, healPerCrystal: 0 },
               { bonusPerCrystal: .025, maxBonus: .75, durationMs: 15000, healPerCrystal: 1 }] },
+  /** Mystery's pounce chain, indexed by her companion rank (not an upgrade card). */
   pounce: { range: 180, damageScale: [0, .6, .8, 1, 1.1, 1.2, 1.25, 1.3, 1.35, 1.4, 1.5],
     frenzy: [{ maxChain: 8, cooldownScale: .4, healthFraction: .5 }, { maxChain: 12, cooldownScale: .35, healthFraction: 0 }] },
   /** Ron: a wide ribbon arc in the way he faces, throwing foes back. */
@@ -109,7 +106,6 @@ export function describeAwakening(id: AbilityId, rank: number, weaponId: WeaponI
   const t = awakeningTier(rank), name = tierName(id, rank);
   const c = ABILITIES, pct = (v: number) => Math.round(v * 100);
   switch (id) {
-    case 'midnight-mighty-swat': return `${name}: ${describeMidnightSwat(rank)}`;
     case 'ricochet-charm': {
       const ch = c.ricochet.chain[t];
       const again = ch.splitBounces ? ` Each split bolt bounces ${ch.splitBounces} more time.` : '';
@@ -127,8 +123,6 @@ export function describeAwakening(id: AbilityId, rank: number, weaponId: WeaponI
       return `${name}: the ward holds ${b.leaves} leaves, each blocking one hit, regrowing one every ${c.ward.rechargeMs[rank] / 1000}s. When the last leaf falls, a burst deals ${b.burstDamage} damage to every foe within ${b.burstRange} pixels, throws them back and roots them for ${b.rootMs / 1000}s.`; }
     case 'woodland-magnet': { const h = c.magnet.harvest[t];
       return `${name}: a constant wind draws every crystal within ${c.magnet.range[rank]} pixels to you. Each crystal adds ${h.bonusPerCrystal * 100}% projectile damage for ${h.durationMs / 1000}s, up to ${pct(h.maxBonus)}%${h.healPerCrystal ? `, and heals ${h.healPerCrystal}` : ''}.`; }
-    case 'mystery-double-pounce': { const f = c.pounce.frenzy[t];
-      return `${name}: Mystery keeps leaping from foe to foe at ${pct(c.pounce.damageScale[rank])}% damage, up to ${f.maxChain} in a row, and pounces ${Math.round(1 / f.cooldownScale * 10) / 10}x as often${f.healthFraction ? ' while you are above half health' : ', always'}.`; }
     case 'ribbon-sweep': { const y = c.ribbon.cyclone[t];
       return `${name}: the ribbon whirls the whole way around you, out to ${y.range} pixels for ${c.ribbon.damage[rank]} damage, hurling foes back ${c.ribbon.knockback[rank]} pixels. A trailing echo strikes again ${y.echoMs / 1000}s later for ${pct(y.echoDamage)}% damage.`; }
     case 'inspiring-shout': { const a = c.shout.anthem[t];
@@ -141,7 +135,6 @@ export function describeAwakening(id: AbilityId, rank: number, weaponId: WeaponI
 export function describeAbility(id: AbilityId, rank: AbilityRank, weaponId: WeaponId = 'spell'): string {
   if (isAwakened(rank)) return describeAwakening(id, rank, weaponId);
   switch (id) {
-    case 'midnight-mighty-swat': return describeMidnightSwat(rank);
     case 'ricochet-charm': {
       return `Shots bounce to ${rank} additional ${rank === 1 ? 'enemy' : 'enemies'}, retaining 70% damage each bounce. Crossbow shots also keep their built-in pierce.`;
     }
@@ -151,7 +144,6 @@ export function describeAbility(id: AbilityId, rank: AbilityRank, weaponId: Weap
     case 'acorn-shower': return `Every 4s, a falling acorn deals ${ABILITIES.acorn.damage[rank]} area damage within ${ABILITIES.acorn.radius[rank]} pixels.`;
     case 'barkskin-ward': return `Block a hit and gain 0.5s protection. The leafy shield recharges in ${ABILITIES.ward.rechargeMs[rank] / 1000}s.`;
     case 'woodland-magnet': return `Every ${ABILITIES.magnet.cooldownMs[rank] / 1000}s, draw XP crystals from ${ABILITIES.magnet.range[rank]} pixels away.`;
-    case 'mystery-double-pounce': return `Mystery leaps to a second nearby foe for ${Math.round(ABILITIES.pounce.damageScale[rank] * 100)}% pounce damage before returning.`;
     case 'ribbon-sweep': return `Every ${ABILITIES.ribbon.cooldownMs / 1000}s, sweep the ribbon staff through a wide arc ahead for ${ABILITIES.ribbon.damage[rank]} damage, throwing foes back ${ABILITIES.ribbon.knockback[rank]} pixels.`;
     case 'inspiring-shout': return `Every ${ABILITIES.shout.cooldownMs / 1000}s, call out for ${ABILITIES.shout.durationMs / 1000}s: attack ${Math.round(ABILITIES.shout.attackSpeed[rank] * 100)}% faster and move ${Math.round(ABILITIES.shout.moveSpeed[rank] * 100)}% faster.`;
     case 'dizzying-flurry': return `Every ${ABILITIES.flurry.cooldownMs / 1000}s, spin the staff for ${ABILITIES.flurry.durationMs / 1000}s, hitting everything within ${ABILITIES.flurry.radius[rank]} pixels for ${ABILITIES.flurry.damage[rank]} damage every ${ABILITIES.flurry.tickMs / 1000}s.`;

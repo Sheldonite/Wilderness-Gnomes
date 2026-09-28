@@ -10,7 +10,7 @@ export type UpgradeId =
   | 'projectile-count';
 
 export type AbilityId = 'ricochet-charm' | 'firefly-orbit' | 'bramble-snare' | 'spore-trail'
-  | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet' | 'mystery-double-pounce' | 'midnight-mighty-swat'
+  | 'acorn-shower' | 'barkskin-ward' | 'woodland-magnet'
   | 'ribbon-sweep' | 'inspiring-shout' | 'dizzying-flurry';
 
 /** Every wanderer, and the one companion bound to each of them. */
@@ -48,7 +48,10 @@ export interface PlayerStats {
   characterId: PlayerCharacterId;
   /** The companion bound to that wanderer. Always present, never chosen. */
   companionId: CompanionId;
-  /** Companion strength, raised automatically every few levels rather than by an upgrade card. */
+  /**
+   * Companion strength, raised automatically every few levels rather than by an upgrade card. It also
+   * drives each companion's own skill: Mystery's chained pounces, Midnight's swat, and their awakenings.
+   */
   companionRank: number;
   hasMysteryCompanion: boolean;
   hasMidnightCompanion: boolean;
@@ -63,6 +66,8 @@ export interface PlayerStats {
   /** Inspiring Shout: multipliers the shout is currently granting, refreshed each frame. */
   shoutAttackSpeedBonus: number;
   shoutMoveSpeedBonus: number;
+  /** Movement multiplier from being shaken (Wonky's bellow); 1 when unhindered. Refreshed each frame. */
+  moveSlow?: number;
 }
 
 export interface UpgradeDefinition {

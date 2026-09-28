@@ -58,6 +58,15 @@ test('Split Charm stops being offered after its pick limit', () => {
   for (let i = 0; i < 200; i++) assert.ok(!upgrades.getChoices(game.playerStats).some(u => u.id === 'projectile-count'));
 });
 
+test('a slow hinders movement for its duration, and the strongest slow wins', () => {
+  const game = new GameManager();
+  game.slowPlayer(1000, .5);
+  assert.equal(game.playerStats.moveSlow, .5); assert.ok(game.playerSlowed);
+  game.slowPlayer(200, .8);
+  game.update(999); assert.equal(game.playerStats.moveSlow, .5);
+  game.update(1); assert.equal(game.playerStats.moveSlow, 1); assert.ok(!game.playerSlowed);
+});
+
 test('a won run can be finished from the victory screen', () => {
   const game = new GameManager();
   game.victorious = true; game.pause(); game.finishRun();
