@@ -26,7 +26,8 @@ export function marketItemPreview(scene: Phaser.Scene, item: MarketItem, wearerI
   };
   if(item.kind==='character') {
     ellipse(70,99,26,5,'#172e3624');
-    person(item.id==='unlock-sheldon'?'sheldon':'hailey',70,101,97);
+    const charId=item.id==='unlock-sheldon'?'sheldon':item.id==='unlock-ron'?'ron':'hailey';
+    person(charId,70,101,97);
   } else if(item.id==='ups-buddy'||item.id==='jawa-buddy') {
     ellipse(70,100,31,6,'#172e3624');
     c.strokeStyle='#765134';c.lineWidth=4;c.lineCap='round';

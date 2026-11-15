@@ -6,7 +6,8 @@ const {
 } = require('../artifacts/ability-tests/game/core/MarketProgress.js');
 const { GameManager } = require('../artifacts/ability-tests/game/core/GameManager.js');
 const {
-  MARKET_ITEMS, MARKET_VENDORS, marketItemPrice, marketItemBenefit
+  MARKET_ITEMS, MARKET_VENDORS, COSMETIC_SLOTS, marketItemPrice, marketItemBenefit,
+  marketItemCurrency, getCosmeticSlot
 } = require('../artifacts/ability-tests/game/config/marketItems.js');
 
 function memoryStorage(profile) {
@@ -20,8 +21,16 @@ function memoryStorage(profile) {
 
 function fundedProfile(gold = 100) { return { ...emptyMarketProfile(), gold }; }
 
-test('run gold uses milestone totals and one gold for every level above 20', () => {
-  for (const [level, expected] of [[1, 0], [9, 0], [10, 5], [19, 5], [20, 10], [21, 11], [30, 20]]) {
+test('run gold uses early milestones and one gold for every level above 20', () => {
+  for (const [level, expected] of [
+    [1, 0], [2, 0],
+    [3, 1], [4, 1],
+    [5, 2], [7, 2],
+    [8, 3], [9, 3],
+    [10, 5], [14, 5],
+    [15, 7], [19, 7],
+    [20, 10], [21, 11], [30, 20]
+  ]) {
     assert.equal(goldForLevel(level), expected, `level ${level}`);
   }
   assert.equal(goldForLevel(20.9), 10);
@@ -36,12 +45,31 @@ test('settlement persists one receipt per run, including zero-gold runs', () => 
   });
   assert.equal(market.settleRun('first-run', 99).status, 'already-settled');
   assert.equal(market.profile.gold, 10);
-  assert.equal(market.settleRun('short-run', 3).goldEarned, 0);
+  assert.equal(market.settleRun('short-run', 2).goldEarned, 0);
+  assert.equal(market.settleRun('early-run', 3).goldEarned, 1);
+  assert.equal(market.profile.gold, 11);
   const reloaded = new MarketProgress(storage);
   assert.equal(reloaded.settleRun('short-run', 30).status, 'already-settled');
   assert.equal(reloaded.settleRun('first-run', 20).status, 'already-settled');
   assert.equal(reloaded.settleRun('next-run', 21).goldEarned, 11);
-  assert.equal(reloaded.profile.gold, 21);
+  assert.equal(reloaded.profile.gold, 22);
+});
+
+test('settlement adds optional bonusGold cleanly and guards duplicate or invalid bonuses', () => {
+  const storage = memoryStorage();
+  const market = new MarketProgress(storage);
+  assert.deepEqual(market.settleRun('bonus-run', 5, 4), {
+    status: 'awarded', goldEarned: 6, balance: 6, saved: true, storageStatus: 'ready'
+  });
+  assert.equal(market.settleRun('bonus-run', 5, 99).status, 'already-settled');
+  assert.equal(market.profile.gold, 6);
+  assert.deepEqual(market.settleRun('chest-only-run', 1, 3), {
+    status: 'awarded', goldEarned: 3, balance: 9, saved: true, storageStatus: 'ready'
+  });
+  assert.equal(market.settleRun('bad-bonus-negative', 3, -5).goldEarned, 1);
+  assert.equal(market.settleRun('bad-bonus-nan', 3, NaN).goldEarned, 1);
+  assert.equal(market.settleRun('bad-bonus-inf', 3, Infinity).goldEarned, 1);
+  assert.equal(market.settleRun('float-bonus', 3, 2.9).goldEarned, 3);
 });
 
 test('invalid run IDs and levels cannot create receipts or mint gold', () => {
@@ -215,15 +243,18 @@ test('temporary save failure can recover without losing session purchases or dup
 test('market has four distinct trades with priced and described inventory', () => {
   assert.equal(MARKET_VENDORS.length, 4);
   assert.equal(new Set(MARKET_VENDORS.map(vendor => vendor.id)).size, 4);
-  assert.equal(MARKET_ITEMS.length, 17);
-  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 17);
+  assert.equal(MARKET_ITEMS.length, 24);
+  assert.equal(new Set(MARKET_ITEMS.map(item => item.id)).size, 24);
   for (const vendor of MARKET_VENDORS) assert.ok(MARKET_ITEMS.some(item => item.vendorId === vendor.id));
   for (const item of MARKET_ITEMS) {
     assert.ok(item.name && item.description && item.effect && item.icon);
     assert.equal(item.prices.length, item.maxRank);
     assert.ok(item.maxRank >= 1 && item.maxRank <= 3);
+    const currency = marketItemCurrency(item);
+    assert.ok(currency === 'gold' || currency === 'rocks');
+    const minPrice = currency === 'rocks' ? 1 : 5;
     for (let rank = 0; rank < item.maxRank; rank++) {
-      assert.ok(Number.isSafeInteger(item.prices[rank]) && item.prices[rank] >= 5);
+      assert.ok(Number.isSafeInteger(item.prices[rank]) && item.prices[rank] >= minPrice, `${item.id} rank ${rank}`);
       assert.equal(marketItemPrice(item.id, rank), item.prices[rank]);
       // Wanderers are always owned, so their listing has no "after this purchase" state to differ.
       if (item.kind !== 'character') assert.notEqual(marketItemBenefit(item.id, rank), marketItemBenefit(item.id, rank + 1));
@@ -322,29 +353,77 @@ test('old saves retain their free roster, weapons, rocks, purchases and receipts
   assert.deepEqual(market.profile.settledRuns, ['run']);
 });
 
-test('cosmetics require ownership, equip one at a time, persist, and never change combat stats', () => {
-  const storage = memoryStorage(fundedProfile(20)), market = new MarketProgress(storage);
+test('cosmetics require ownership, equip per slot (aura + trail + buddy), persist, migrate legacy saves, and never change combat stats', () => {
+  const storage = memoryStorage(fundedProfile(40)), market = new MarketProgress(storage);
   const base = marketBonuses(market.profile);
+  assert.deepEqual(COSMETIC_SLOTS, ['aura', 'trail', 'buddy']);
+  assert.equal(getCosmeticSlot('honey-glow'), 'aura');
+  assert.equal(getCosmeticSlot('glitter-trail'), 'trail');
+  assert.equal(getCosmeticSlot('ups-buddy'), 'buddy');
   assert.equal(market.equipCosmetic('honey-glow'), false);
   assert.equal(market.equipCosmetic('trail-boots'), false);
-  market.purchase('honey-glow'); market.purchase('violet-glow');
+  assert.equal(market.equipCosmeticSlot('aura', 'glitter-trail'), false);
+
+  market.purchase('honey-glow');
+  market.purchase('violet-glow');
+  market.purchase('glitter-trail');
+  market.purchase('ups-buddy');
+  market.purchase('jawa-buddy');
+
   assert.equal(market.equipCosmetic('honey-glow'), true);
-  assert.equal(new MarketProgress(storage).profile.equippedCosmetic, 'honey-glow');
-  market.equipCosmetic('violet-glow');
-  assert.equal(new MarketProgress(storage).profile.equippedCosmetic, 'violet-glow');
+  assert.equal(market.equipCosmetic('glitter-trail'), true);
+  assert.equal(market.equipCosmetic('ups-buddy'), true);
+  let loaded = new MarketProgress(storage);
+  assert.deepEqual(loaded.equippedCosmetics, { aura: 'honey-glow', trail: 'glitter-trail', buddy: 'ups-buddy' });
+  assert.equal(loaded.equippedCosmetic, 'honey-glow');
+
+  // Switching aura or buddy keeps the other slots equipped.
+  assert.equal(market.equipCosmetic('violet-glow'), true);
+  assert.equal(market.equipCosmeticSlot('buddy', 'jawa-buddy'), true);
+  loaded = new MarketProgress(storage);
+  assert.deepEqual(loaded.equippedCosmetics, { aura: 'violet-glow', trail: 'glitter-trail', buddy: 'jawa-buddy' });
   assert.deepEqual(marketBonuses(market.profile), base);
-  market.equipCosmetic(null);
-  assert.equal(new MarketProgress(storage).profile.equippedCosmetic, null);
-  assert.equal(market.profile.gold, 10);
-  assert.equal(parseMarketProfile(JSON.stringify({...emptyMarketProfile(), equippedCosmetic:'violet-glow'})), null);
+
+  // Wrong-slot equip call fails without mutating.
+  assert.equal(market.equipCosmeticSlot('trail', 'jawa-buddy'), false);
+  assert.deepEqual(market.equippedCosmetics, { aura: 'violet-glow', trail: 'glitter-trail', buddy: 'jawa-buddy' });
+
+  // Clearing one slot preserves the remaining slots; equipCosmetic(null) clears all slots.
+  assert.equal(market.equipCosmeticSlot('trail', null), true);
+  assert.deepEqual(new MarketProgress(storage).equippedCosmetics, { aura: 'violet-glow', trail: null, buddy: 'jawa-buddy' });
+  assert.equal(market.equipCosmetic(null), true);
+  assert.deepEqual(new MarketProgress(storage).equippedCosmetics, { aura: null, trail: null, buddy: null });
+  assert.equal(new MarketProgress(storage).equippedCosmetic, null);
+  assert.equal(market.profile.gold, 15);
+
+  // Unowned legacy or slotted equipped cosmetics are rejected by parseMarketProfile.
+  assert.equal(parseMarketProfile(JSON.stringify({ ...emptyMarketProfile(), equippedCosmetic: 'violet-glow' })), null);
+  assert.equal(parseMarketProfile(JSON.stringify({
+    ...emptyMarketProfile(),
+    ranks: { 'glitter-trail': 1 },
+    equippedCosmetics: { aura: 'glitter-trail', trail: null, buddy: null }
+  })), null);
+
+  // Legacy saves carrying single equippedCosmetic migrate seamlessly into equippedCosmetics.
+  const migratedAura = parseMarketProfile(JSON.stringify({
+    version: 1, gold: 12, ranks: { 'violet-glow': 1 }, equippedCosmetic: 'violet-glow', settledRuns: []
+  }));
+  assert.deepEqual(migratedAura.equippedCosmetics, { aura: 'violet-glow', trail: null, buddy: null });
+  const migratedTrail = parseMarketProfile(JSON.stringify({
+    version: 1, gold: 12, ranks: { 'glitter-trail': 1 }, equippedCosmetic: 'glitter-trail', settledRuns: []
+  }));
+  assert.deepEqual(migratedTrail.equippedCosmetics, { aura: null, trail: 'glitter-trail', buddy: null });
 });
 
 test('booth categories match their actual goods and moving goods preserves old bonuses', () => {
-  assert.deepEqual(MARKET_VENDORS.map(v=>v.name), ['Weapons','Cosmetics','Upgrades','Staffing Company']);
-  assert.ok(MARKET_ITEMS.filter(i=>i.vendorId==='outfitter').every(i=>i.kind==='cosmetic'));
-  assert.ok(MARKET_ITEMS.filter(i=>i.vendorId==='curios').every(i=>i.kind==='character'));
-  assert.ok(MARKET_ITEMS.filter(i=>i.vendorId==='apothecary').every(i=>!i.kind));
-  assert.equal(marketBonuses({ranks:{'trail-boots':2}}).speedMultiplier, 1.1);
+  assert.deepEqual(MARKET_VENDORS.map(v => v.name), ['Weapons', 'Cosmetics', 'Upgrades', 'Curios & Charms']);
+  assert.ok(MARKET_ITEMS.filter(i => i.vendorId === 'outfitter').every(i => i.kind === 'cosmetic'));
+  const curiosActive = MARKET_ITEMS.filter(i => i.vendorId === 'curios' && i.kind !== 'character');
+  assert.deepEqual(curiosActive.map(i => i.id), [
+    'clover-charm', 'wayfinder-stone', 'mooncat-bell', 'midnight-collar', 'frankie-whistle', 'tobias-lure'
+  ]);
+  assert.ok(MARKET_ITEMS.filter(i => i.vendorId === 'apothecary').every(i => !i.kind));
+  assert.equal(marketBonuses({ ranks: { 'trail-boots': 2 } }).speedMultiplier, 1.1);
 });
 
 
@@ -429,4 +508,124 @@ test('Jawa Buddy is a permanent cosmetic purchase that does not change combat', 
   assert.equal(loaded.purchase('jawa-buddy').status,'max-rank');
   loaded.equipCosmetic(null);
   assert.equal(new MarketProgress(storage).equippedCosmetic,null);
+});
+
+test('rare rock charms spend Rare Rocks, keep pickup receipts, and leave gold untouched', () => {
+  const storage = memoryStorage(fundedProfile(15));
+  const market = new MarketProgress(storage);
+
+  const emptyTry = market.purchase('clover-charm');
+  assert.equal(emptyTry.status, 'insufficient-rocks');
+  assert.equal(emptyTry.currency, 'rocks');
+  assert.equal(emptyTry.cost, 1);
+  assert.equal(emptyTry.balance, 0);
+  assert.equal(emptyTry.rocksBalance, 0);
+
+  for (let i = 1; i <= 8; i++) market.collectRock(`rock-${i}`);
+  assert.equal(market.profile.rocks, 8);
+
+  const clover1 = market.purchase('clover-charm');
+  assert.equal(clover1.status, 'purchased');
+  assert.equal(clover1.currency, 'rocks');
+  assert.equal(clover1.cost, 1);
+  assert.equal(clover1.balance, 7);
+  assert.equal(clover1.rocksBalance, 7);
+  assert.equal(clover1.rank, 1);
+
+  assert.equal(market.purchase('clover-charm').balance, 5);
+  assert.equal(market.purchase('clover-charm').status, 'max-rank');
+
+  const wayfinder1 = market.purchase('wayfinder-stone');
+  assert.equal(wayfinder1.status, 'purchased');
+  assert.equal(wayfinder1.cost, 2);
+  assert.equal(wayfinder1.balance, 3);
+
+  const wayfinder2 = market.purchase('wayfinder-stone');
+  assert.equal(wayfinder2.status, 'purchased');
+  assert.equal(wayfinder2.cost, 3);
+  assert.equal(wayfinder2.balance, 0);
+  assert.equal(market.profile.gold, 15);
+
+  const reloaded = new MarketProgress(storage);
+  assert.equal(reloaded.profile.rocks, 0);
+  assert.equal(reloaded.profile.gold, 15);
+  assert.equal(reloaded.profile.ranks['clover-charm'], 2);
+  assert.equal(reloaded.profile.ranks['wayfinder-stone'], 2);
+  assert.equal(reloaded.profile.collectedRocks.length, 8);
+  assert.equal(reloaded.collectRock('rock-1').awarded, false);
+});
+
+test('Wren charms and rock curios compute bounded marketBonuses', () => {
+  const base = marketBonuses(emptyMarketProfile());
+  assert.equal(base.extraRerolls, 0);
+  assert.equal(base.magnetMultiplier, 1);
+  assert.equal(base.extraChestChance, 0);
+  assert.equal(base.midnightDamageMultiplier, 1);
+  assert.equal(base.frankieDamageMultiplier, 1);
+  assert.equal(base.tobiasDamageMultiplier, 1);
+  assert.equal(base.mysteryDamageMultiplier, 1);
+
+  const maxCurios = marketBonuses({
+    ranks: {
+      'clover-charm': 2,
+      'wayfinder-stone': 2,
+      'midnight-collar': 3,
+      'frankie-whistle': 2,
+      'tobias-lure': 3,
+      'mooncat-bell': 3
+    }
+  });
+  assert.equal(maxCurios.extraRerolls, 2);
+  assert.ok(Math.abs(maxCurios.magnetMultiplier - 1.4) < 1e-9);
+  assert.ok(Math.abs(maxCurios.extraChestChance - 0.1) < 1e-9);
+  assert.ok(Math.abs(maxCurios.midnightDamageMultiplier - 1.45) < 1e-9);
+  assert.ok(Math.abs(maxCurios.frankieDamageMultiplier - 1.3) < 1e-9);
+  assert.ok(Math.abs(maxCurios.tobiasDamageMultiplier - 1.45) < 1e-9);
+  assert.ok(Math.abs(maxCurios.mysteryDamageMultiplier - 1.45) < 1e-9);
+
+  // Over-rank or negative values are clamped safely.
+  const clamped = marketBonuses({
+    ranks: { 'clover-charm': 99, 'wayfinder-stone': -4, 'midnight-collar': 99 }
+  });
+  assert.equal(clamped.extraRerolls, 2);
+  assert.equal(clamped.magnetMultiplier, 1);
+  assert.equal(clamped.extraChestChance, 0);
+  assert.ok(Math.abs(clamped.midnightDamageMultiplier - 1.45) < 1e-9);
+});
+
+test('Forge unlocks boomerang and lantern cleanly while legacy saves keep only spell and crossbow', () => {
+  const storage = memoryStorage(fundedProfile(50));
+  const market = new MarketProgress(storage);
+  assert.equal(market.weaponUnlocked('spell'), true);
+  assert.equal(market.weaponUnlocked('boomerang'), false);
+  assert.equal(market.weaponUnlocked('lantern'), false);
+  assert.equal(market.equipWeapon('boomerang'), false);
+  assert.equal(market.equipWeapon('lantern'), false);
+
+  const boom = market.purchase('unlock-boomerang');
+  assert.equal(boom.status, 'purchased');
+  assert.equal(boom.cost, 20);
+  assert.equal(boom.balance, 30);
+  assert.equal(market.weaponUnlocked('boomerang'), true);
+  assert.equal(market.equipWeapon('boomerang'), true);
+
+  const lant = market.purchase('unlock-lantern');
+  assert.equal(lant.status, 'purchased');
+  assert.equal(lant.cost, 25);
+  assert.equal(lant.balance, 5);
+  assert.equal(market.weaponUnlocked('lantern'), true);
+  assert.equal(market.equipWeapon('lantern'), true);
+
+  const reloaded = new MarketProgress(storage);
+  assert.equal(reloaded.equippedWeapon, 'lantern');
+  assert.equal(reloaded.weaponUnlocked('boomerang'), true);
+  assert.equal(reloaded.weaponUnlocked('lantern'), true);
+
+  assert.equal(parseMarketProfile(JSON.stringify({ ...emptyMarketProfile(), equippedWeapon: 'boomerang' })), null);
+  assert.equal(parseMarketProfile(JSON.stringify({ ...emptyMarketProfile(), equippedWeapon: 'lantern' })), null);
+
+  const legacy = new MarketProgress(memoryStorage({ version: 1, gold: 10, ranks: {}, settledRuns: [] }));
+  assert.equal(legacy.weaponUnlocked('crossbow'), true);
+  assert.equal(legacy.weaponUnlocked('boomerang'), false);
+  assert.equal(legacy.weaponUnlocked('lantern'), false);
 });
