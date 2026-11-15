@@ -108,7 +108,11 @@ export class MysteryCompanion {
       this.hasHitThisPounce = true;
       this.chainHits.add(this.target.id);
       const rank = this.companionRank;
-      damage(this.target, this.stats.mysteryDamage * (this.isSecondPounce ? chainDamageScale(rank) : 1), 'companion');
+      const mysteryRank = (this.stats as { mysteryRank?: number }).mysteryRank;
+      const rankScale = mysteryRank !== undefined ? 1 + Math.max(0, mysteryRank - 1) * 0.14 : 1;
+      const charmMultiplier = (this.stats as { mysteryDamageMultiplier?: number }).mysteryDamageMultiplier ?? 1;
+      const baseDamage = (this.stats.mysteryDamage || BALANCE.companion.mysteryDamage) * rankScale * charmMultiplier;
+      damage(this.target, baseDamage * (this.isSecondPounce ? chainDamageScale(rank) : 1), 'companion');
       const next = nextPounceTarget(rank, this.chainHits, this.chained, this.position, playerPosition, this.stats.mysteryPounceRange, enemies);
       if (next) { this.chained++; this.beginPounce(next, true); return; }
       this.beginReturn();
