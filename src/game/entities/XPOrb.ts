@@ -40,8 +40,7 @@ export class XPOrb {
     if (!this.magnetized && distSq > magnetRangeSq) {
       const driftMs = Math.max(0, Math.min(deltaMs, this.ageMs - 100));
       if (driftMs <= 0) return;
-      const idleSpeed = (BALANCE.xp as { idleSpeed?: number }).idleSpeed || 42;
-      const drift = Math.min(dist, idleSpeed * (driftMs / 1000));
+      const drift = Math.min(dist, BALANCE.xp.idleSpeed * (driftMs / 1000));
       this.sprite.setPosition(
         this.sprite.x + direction.x * drift,
         this.sprite.y + direction.y * drift

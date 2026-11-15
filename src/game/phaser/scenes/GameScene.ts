@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { CosmeticGlow } from '../../market/CosmeticGlow';
 import { OvenBossSystem } from '../../systems/OvenBossSystem';
 import { OVEN } from '../../config/ovenBoss';
+import { SquirrelChiefSystem } from '../../systems/SquirrelChiefSystem';
+import { SQUIRREL_CHIEF } from '../../config/squirrelChief';
 import { StagBossSystem } from '../../systems/StagBossSystem';
 import { STAG, STAG_LOOK } from '../../config/stagBoss';
 import { KingBossSystem } from '../../systems/KingBossSystem';
@@ -51,7 +53,7 @@ import { ABILITY_IDS } from '../../config/abilities';
 import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
 import { MIDNIGHT_SPRITE_KEY } from '../../config/midnightSprite';
 import { FRANKIE_PORTRAIT_KEY } from '../../config/frankieSprite';
-import type { AbilityId, AbilityRank, UpgradeDefinition } from '../../core/types';
+import type { AbilityId, AbilityRank, DamageSourceId, UpgradeDefinition } from '../../core/types';
 
 export class GameScene extends Phaser.Scene {
   private cosmetic!: CosmeticGlow;
@@ -80,6 +82,7 @@ export class GameScene extends Phaser.Scene {
   private floatingNotices: { text: Phaser.GameObjects.Text; ageMs: number; lifeMs: number; startY: number }[] = [];
   private abilities!: AbilitySystem;
   private combat!: CombatResolver;
+  private squirrelChief!: SquirrelChiefSystem;
   private oven!: OvenBossSystem;
   private stag!: StagBossSystem;
   private buzzard!: BuzzardBossSystem;
@@ -235,6 +238,26 @@ export class GameScene extends Phaser.Scene {
     // Chests are earned, not gifted: every chest roll sends a golden elite carrying it.
     this.chestSystem.spawnCarrier = () => this.runEvents.spawnElite(this.gameManager.level, this.gameManager.getDifficultyMinutes(),
       this.player.position, this.cameras.main, this.enemies, this.enemySpawner);
+    this.squirrelChief = new SquirrelChiefSystem(
+      this,
+      this.gameManager,
+      this.scenerySystem.navigation,
+      (damage, push) => this.knockPlayer(damage, push, 96),
+      (origin, directions, speed) => {
+        for (const d of directions) {
+          this.acorns.push(
+            new Acorn(
+              this,
+              origin.x,
+              origin.y - 16,
+              { x: d.x * speed, y: d.y * speed },
+              SQUIRREL_CHIEF.contactDamage,
+              SQUIRREL_CHIEF.tint
+            )
+          );
+        }
+      }
+    );
     this.oven = new OvenBossSystem(this, this.gameManager, this.scenerySystem.navigation, summon);
     this.stag = new StagBossSystem(this, this.gameManager, this.scenerySystem.navigation,
       (damage, push, knockback) => this.knockPlayer(damage, push, knockback ?? STAG.chargeKnockback),
@@ -283,8 +306,22 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', this.handleEscape);
     this.input.on('pointerdown', this.handlePointerDown);
     if (import.meta.env.DEV && new URLSearchParams(location.search).get('review') === 'gameover') this.input.keyboard?.on('keydown-F10', this.finishReviewRun);
-    if (import.meta.env.DEV && !data.skipReview) this.setupReview();
+    if (import.meta.env.DEV && !data.skipReview) {
+      this.setupReview();
+      if (this.gameManager.level >= SQUIRREL_CHIEF.level || this.reviewNoEnemies) {
+        this.squirrelChief.encounter.spawned = true;
+      }
+    }
     this.cameras.main.centerOn(this.player.position.x, this.player.position.y);
+    if (!this.reviewNoEnemies) {
+      this.enemySpawner.spawnOpeningPack(
+        this.player.position,
+        this.cameras.main,
+        this.gameManager.getDifficultyMinutes(),
+        this.enemies,
+        BALANCE.spawner.openingPackCount
+      );
+    }
     this.presentation.update(0);
     this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
     this.scenerySystem.update(100, [this.player.position]);
@@ -662,6 +699,7 @@ export class GameScene extends Phaser.Scene {
     this.uiManager.setPauseButtonState(this.gameManager.state === 'Paused');
     const activeBossMusic = Boolean(
       this.bossArena ||
+      (this.squirrelChief.boss && !this.squirrelChief.boss.isDead) ||
       (this.oven.boss && !this.oven.boss.isDead) ||
       (this.stag.boss && !this.stag.boss.isDead) ||
       (this.buzzard.boss && !this.buzzard.boss.isDead) ||
@@ -698,6 +736,11 @@ export class GameScene extends Phaser.Scene {
     this.levelUpDisplayed = false;
     this.pausedDisplayed = false;
     this.gameManager.update(deltaMs);
+    if (this.gameManager.consumeWakingReward()) {
+      this.spawnFloatingNotice('Woods Awakened! +1 Reroll · +8 Gold', this.player.position);
+      audioSystem.play('shrine');
+      this.events.emit('presentation:level', this.player.position);
+    }
     this.updateAimNotice(deltaMs);
     this.updateFloatingNotices(deltaMs);
     if (import.meta.env.DEV && this.reviewWalking) {
@@ -733,6 +776,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const healthBefore = this.gameManager.playerStats.health;
+    this.squirrelChief.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.oven.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.stag.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.buzzard.update(deltaMs, this.player.position, this.player.radius, this.enemies);
@@ -772,8 +816,11 @@ export class GameScene extends Phaser.Scene {
     if (this.weaponSystem.consumeShot()) this.player.kickArm();
     this.player.presentArm(deltaMs);
 
-    this.abilities.update(deltaMs, this.player.position, this.enemies, this.xpOrbs, this.combat.damage);
-    this.bossPowers.update(deltaMs, this.gameManager, this.player.position, this.enemies, this.combat.damage);
+    const comboDamageMultiplier = this.gameManager.getComboDamageMultiplier();
+    const dealPlayerDamage = (target: CombatTarget, amount: number, source?: DamageSourceId) =>
+      this.combat.damage(target, amount * comboDamageMultiplier, source);
+    this.abilities.update(deltaMs, this.player.position, this.enemies, this.xpOrbs, dealPlayerDamage);
+    this.bossPowers.update(deltaMs, this.gameManager, this.player.position, this.enemies, dealPlayerDamage);
     for (const enemy of this.enemies) {
       enemy.update(deltaMs, this.player.position, difficulty);
       const throwVelocity = enemy.tryThrow(this.player.position);
@@ -863,7 +910,13 @@ export class GameScene extends Phaser.Scene {
   private killEnemy(enemy: CombatTarget): void {
     this.events.emit('presentation:defeat', enemy.position);
     this.abilities.simulation.noteKill(enemy.position);
-    this.gameManager.addKill();
+    this.gameManager.recordKill();
+    const isSquirrelChief = enemy === this.squirrelChief?.boss;
+    if (isSquirrelChief) {
+      this.squirrelChief.defeated();
+      this.chestSystem.dropChest(enemy.position);
+      this.gameManager.bonusGold += 3;
+    }
     const bossId: BossId | undefined = enemy === this.oven.boss ? 'oven' : enemy === this.stag.boss ? 'stag'
       : enemy === this.buzzard.boss ? 'buzzard' : enemy === this.king.boss ? 'king' : undefined;
     if (bossId === 'oven') this.oven.defeated();
@@ -893,8 +946,8 @@ export class GameScene extends Phaser.Scene {
     }
     const creature = enemy instanceof EnemyController ? enemy : undefined;
     if (creature?.elite) this.chestSystem.dropChest(enemy.position);
-    if (bossId || creature?.elite || this.xpOrbs.length < BALANCE.xp.maxOrbs) {
-      const xp = bossId === 'oven' ? OVEN.xp : bossId === 'stag' ? STAG.xp : bossId === 'buzzard' ? BUZZARD.xp : bossId === 'king' ? KING.xp : creature?.xpValue ?? BALANCE.enemy.xpValue;
+    if (bossId || isSquirrelChief || creature?.elite || this.xpOrbs.length < BALANCE.xp.maxOrbs) {
+      const xp = bossId === 'oven' ? OVEN.xp : bossId === 'stag' ? STAG.xp : bossId === 'buzzard' ? BUZZARD.xp : bossId === 'king' ? KING.xp : isSquirrelChief ? SQUIRREL_CHIEF.xp : creature?.xpValue ?? BALANCE.enemy.xpValue;
       this.xpOrbs.push(new XPOrb(this, enemy.position.x, enemy.position.y, xp));
     }
   }
@@ -1387,6 +1440,7 @@ export class GameScene extends Phaser.Scene {
     this.bossPowers?.destroy();
     this.bossBoundary?.destroy(); this.bossArena = undefined;
     this.abilities?.destroy();
+    this.squirrelChief?.destroy();
     this.oven?.destroy();
     this.stag?.destroy();
     this.buzzard?.destroy();

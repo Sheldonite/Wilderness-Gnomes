@@ -65,9 +65,10 @@ test('the normal spawn pipeline unlocks armadillos at level 20 and initializes w
   run.update(BALANCE.spawner.initialSpawnIntervalMs - 1, 19);
   assert.equal(run.enemies.length, 0);
   run.update(1, 19);
-  assert.notEqual(run.enemies[0].variant, 'armadillo');
+  assert.equal(run.enemies.length, run.spawnBatch(0));
+  for (const e of run.enemies) assert.notEqual(e.variant, 'armadillo');
   run.update();
-  const enemy = run.enemies[1];
+  const enemy = run.enemies[run.spawnBatch(0)];
   assert.equal(enemy.variant, 'armadillo');
   assert.equal(enemy.sprite.texture.key, 'enemy-armadillo');
   assert.equal(enemy.health, BALANCE.armadillo.health);
@@ -91,8 +92,8 @@ test('armadillos spawn outside the camera at every arena corner regardless of in
   for (const left of [0, 1920]) for (const top of [0, 2480]) for (let side = 0; side < 4; side++) {
     const run = harness({ side, view: { left, right: left + 1280, top, bottom: top + 720 } });
     run.update();
-    assert.equal(run.enemies.length, 1);
-    assertOutside(run.enemies[0], run.camera.worldView);
+    assert.equal(run.enemies.length, run.spawnBatch(0));
+    for (const enemy of run.enemies) assertOutside(enemy, run.camera.worldView);
   }
 });
 
@@ -102,8 +103,8 @@ test('a navigation correction into the camera is rejected before constructing a 
   navigation.nearest = (p, radius) => p.y < 1240 ? { x: 1600, y: 1300 } : nearest(p, radius);
   const run = harness({ navigation });
   run.update();
-  assert.equal(run.enemies.length, 1);
-  assertOutside(run.enemies[0], run.camera.worldView);
+  assert.equal(run.enemies.length, run.spawnBatch(0));
+  for (const enemy of run.enemies) assertOutside(enemy, run.camera.worldView);
 });
 
 test('no off-screen space skips a spawn without crashing or adding a phantom enemy', () => {
@@ -112,7 +113,7 @@ test('no off-screen space skips a spawn without crashing or adding a phantom ene
   assert.equal(run.enemies.length, 0);
   run.camera.worldView = { left: 960, right: 2240, top: 1240, bottom: 1960 };
   run.update();
-  assert.equal(run.enemies.length, 1, 'spawning resumes when space is available');
+  assert.equal(run.enemies.length, run.spawnBatch(0), 'spawning resumes when space is available');
 });
 
 test('level 20 retains the deer mix and respects the enemy cap', () => {
@@ -126,7 +127,7 @@ test('level 20 retains the deer mix and respects the enemy cap', () => {
 
 test('late spawn ticks bring small groups, still within the cap', () => {
   const run = harness({ level: 3 });
-  assert.equal(run.spawnBatch(0), 1); assert.equal(run.spawnBatch(BALANCE.spawner.batchFromMinute), 2);
+  assert.equal(run.spawnBatch(BALANCE.spawner.batchFromMinute - 1), 1); assert.equal(run.spawnBatch(BALANCE.spawner.batchFromMinute), 2);
   assert.equal(run.spawnBatch(1000), BALANCE.spawner.maxBatch);
   run.update(BALANCE.spawner.initialSpawnIntervalMs, 3, BALANCE.spawner.batchFromMinute);
   assert.equal(run.enemies.length, 2);

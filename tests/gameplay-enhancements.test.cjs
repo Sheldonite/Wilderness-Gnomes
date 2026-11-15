@@ -591,10 +591,10 @@ test('BossPowerSystem and AbilitySimulation attribute exact source ids', () => {
 
 test('Woodland Shrines spawn every ~2.5 min and RunEventSystem delivers choice-free cozy reward', () => {
   const schedule = new RunEvents();
-  const before = schedule.update(149999, 2);
-  assert.equal(before.length, 0);
+  const before = schedule.update(BALANCE.events.shrineFirstMs - 1, 1.5);
+  assert.equal(before.length, 2);
   assert.equal(schedule.consumeShrineDue(), false);
-  schedule.update(1, 2.5);
+  schedule.update(1, 1.5);
   assert.equal(schedule.consumeShrineDue(), true);
   assert.equal(schedule.consumeShrineDue(), false);
 

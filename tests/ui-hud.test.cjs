@@ -379,8 +379,17 @@ test('UIManager constructor and update stay backward-compatible without options 
     const game = new GameManager('spell', undefined, 'wizard');
     let pausedCalls = 0;
     const ui = new UIManager(game, () => { pausedCalls++; }, CHARACTER, 'p.png', 'c.png');
-    // Omit optional nextBossLevel/nextBossName added by gameplay-depth to verify legacy bare-snapshot compatibility.
-    const { nextBossLevel: _lvl, nextBossName: _name, ...bareSnap } = game.getHudSnapshot();
+    // Omit optional nextBossLevel/nextBossName/waking fields to verify legacy bare-snapshot compatibility.
+    const {
+      nextBossLevel: _lvl,
+      nextBossName: _name,
+      wakingProgress: _wp,
+      wakingRemainingMs: _wr,
+      wakingKills: _wk,
+      wakingGoal: _wg,
+      wakingCompleted: _wc,
+      ...bareSnap
+    } = game.getHudSnapshot();
     ui.update(bareSnap);
 
     assert.equal(dom.uiRoot.querySelector('.health-value').textContent, '100 / 100');
@@ -702,7 +711,14 @@ test('Woods are Waking meter and Kill-Streak Combo badge render, update, complet
     const ui = new UIManager(game, () => {}, CHARACTER, 'p.png', 'c.png');
 
     // Omitted fields -> both pills remain hidden
-    const baseSnap = game.getHudSnapshot();
+    const {
+      wakingProgress: _wp,
+      wakingRemainingMs: _wr,
+      wakingKills: _wk,
+      wakingGoal: _wg,
+      wakingCompleted: _wc,
+      ...baseSnap
+    } = game.getHudSnapshot();
     ui.update(baseSnap);
     const wakingPill = dom.uiRoot.querySelector('.waking-pill');
     const comboPill = dom.uiRoot.querySelector('.combo-pill');

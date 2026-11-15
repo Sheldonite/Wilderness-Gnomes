@@ -47,7 +47,7 @@ export class EnemySpawner {
     this.spawnTimerMs = 0;
     const batch = Math.min(spawnBatch(difficultyMinutes), maxEnemies - enemies.length);
     for (let i = 0; i < batch; i++) {
-      const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel) as EnemyVariant, playerLevel);
+      const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel), playerLevel);
       if (enemy) enemies.push(enemy);
     }
   }

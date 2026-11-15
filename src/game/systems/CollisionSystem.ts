@@ -26,7 +26,10 @@ export class CollisionSystem {
     if (gameManager.state !== 'Playing') return;
     this.handleAcornHits(player, gameManager, acorns);
     if (gameManager.state !== 'Playing') return;
-    this.handleProjectileEnemyHits(enemies, projectiles, damage);
+    const comboMultiplier = typeof gameManager.getComboDamageMultiplier === 'function'
+      ? gameManager.getComboDamageMultiplier()
+      : 1;
+    this.handleProjectileEnemyHits(enemies, projectiles, damage, comboMultiplier);
     this.handleXpCollection(player, gameManager, xpOrbs);
   }
 
@@ -67,7 +70,8 @@ export class CollisionSystem {
   private handleProjectileEnemyHits(
     enemies: EnemyController[],
     projectiles: Projectile[],
-    damage: DealDamage
+    damage: DealDamage,
+    comboMultiplier = 1
   ): void {
     for (const projectile of projectiles) {
       if (projectile.isDead) {
@@ -88,7 +92,7 @@ export class CollisionSystem {
           continue;
         }
 
-        damage(enemy, projectile.damage, projectile.source);
+        damage(enemy, projectile.damage * comboMultiplier, projectile.source);
         projectile.markHit(enemy.id, enemies);
         projectile.spawnSplits(projectiles);
         if (projectile.isDead) break;

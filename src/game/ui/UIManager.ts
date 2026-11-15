@@ -30,26 +30,6 @@ export interface DamageBreakdownItem {
   damage: number;
 }
 
-interface ExtendedHudSnapshot extends HudSnapshot {
-  rerollsRemaining?: number;
-  dashCooldownRatio?: number;
-  wardStatus?: 'locked' | 'ready' | 'protecting' | 'recharging';
-  wardLeaves?: number;
-  wardMaxLeaves?: number;
-  shoutRemainingMs?: number;
-  harvestBonus?: number;
-  nextBossLevel?: number;
-  nextBossName?: string;
-  wakingProgress?: number;
-  wakingRemainingMs?: number;
-  wakingKills?: number;
-  wakingGoal?: number;
-  wakingCompleted?: boolean;
-  comboCount?: number;
-  comboMultiplier?: number;
-  comboTimerRatio?: number;
-}
-
 const TOUCH_DEADZONE_PX = 4;
 
 export class UIManager {
@@ -672,7 +652,7 @@ export class UIManager {
 
   private updateStatusStrip(snapshot: HudSnapshot): void {
     if (!this.statusStrip) return;
-    const ext = snapshot as ExtendedHudSnapshot;
+    const ext = snapshot;
     const dashRatio = typeof ext.dashCooldownRatio === 'number' && Number.isFinite(ext.dashCooldownRatio)
       ? Math.max(0, Math.min(1, ext.dashCooldownRatio))
       : undefined;
