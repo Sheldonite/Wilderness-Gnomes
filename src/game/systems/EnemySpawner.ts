@@ -13,6 +13,24 @@ export function spawnBatch(difficultyMinutes: number): number {
   return Math.min(s.maxBatch, 2 + Math.floor((difficultyMinutes - s.batchFromMinute) / s.batchEveryMinutes));
 }
 
+function cameraViewBounds(
+  playerPosition: Vector2Like,
+  camera: Phaser.Cameras.Scene2D.Camera
+): { left: number; right: number; top: number; bottom: number } {
+  const raw = camera?.worldView;
+  if (raw && raw.right > raw.left && raw.bottom > raw.top) {
+    return raw;
+  }
+  const halfW = ((camera as { width?: number } | undefined)?.width || 1280) / 2;
+  const halfH = ((camera as { height?: number } | undefined)?.height || 720) / 2;
+  return {
+    left: playerPosition.x - halfW,
+    right: playerPosition.x + halfW,
+    top: playerPosition.y - halfH,
+    bottom: playerPosition.y + halfH
+  };
+}
+
 export class EnemySpawner {
   private spawnTimerMs = 0;
 
@@ -63,7 +81,7 @@ export class EnemySpawner {
     enemies: EnemyController[],
     count = 7
   ): EnemyController[] {
-    const view = camera.worldView;
+    const view = cameraViewBounds(playerPosition, camera);
     const padding = BALANCE.spawner.spawnOutsideViewPadding;
     const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius, BALANCE.armadillo.radius);
     const targetCount = Math.max(1, count);
@@ -110,9 +128,9 @@ export class EnemySpawner {
     camera: Phaser.Cameras.Scene2D.Camera,
     difficultyMinutes: number,
     variant: EnemyVariant,
-    _playerLevel = 1
+    playerLevel = 1
   ): EnemyController | undefined {
-    const view = camera.worldView;
+    const view = cameraViewBounds(playerPosition, camera);
     const padding = BALANCE.spawner.spawnOutsideViewPadding;
     const firstSide = Phaser.Math.Between(0, 3);
     const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius, BALANCE.armadillo.radius);
@@ -144,7 +162,7 @@ export class EnemySpawner {
         spawn.y <= view.top - padding || spawn.y >= view.bottom + padding;
       if (!outside || this.navigation?.blocked(spawn, margin)) continue;
 
-      return new EnemyController(this.scene, spawn.x, spawn.y, difficultyMinutes, this.navigation, undefined, variant);
+      return new EnemyController(this.scene, spawn.x, spawn.y, difficultyMinutes, this.navigation, undefined, variant, playerLevel);
     }
     return undefined;
   }

@@ -588,3 +588,51 @@ test('Stage 2 Level 3 guaranteed chest roll queues an elite carrier via ChestSys
   assert.equal(carriersSpawned, 1, 'reaching level 3 dispatches a guaranteed chest carrier');
   assert.equal(chestSystem.drops.pending, 0);
 });
+
+test('Stage 2 EnemySpawner and RunEventSystem forward playerLevel contact-damage scaling and handle frame-0 camera.worldView', () => {
+  const { scene, load } = loadTsWithPhaserMock();
+  scene.add.sprite = (x, y, texture) => ({
+    x,
+    y,
+    scene,
+    texture: { key: texture },
+    displayHeight: 36,
+    originY: 0.5,
+    anims: { isPaused: false, pause() { this.isPaused = true; }, resume() { this.isPaused = false; }, stop() { this.isPaused = true; } },
+    data: {},
+    setData(k, v) { this.data[k] = v; return this; },
+    getData(k) { return this.data[k]; },
+    setTint(c) { this.tint = c; return this; },
+    setDepth() { return this; },
+    setScale() { return this; },
+    setPosition(nx, ny) { this.x = nx; this.y = ny; return this; },
+    play() { return this; },
+    destroy: () => undefined
+  });
+  const phaserMod = load('src/game/systems/EnemySpawner.ts');
+  const { EnemySpawner } = phaserMod;
+  const { RunEventSystem } = load('src/game/systems/RunEventSystem.ts');
+
+  const nav = new SceneryNavigation(false);
+  const spawner = new EnemySpawner(scene, nav);
+  const player = { x: 1600, y: 1600 };
+
+  // Frame-0 camera with zeroed worldView spawns opening pack flanking both sides around x=1600
+  const zeroViewCamera = { width: 1280, height: 720, worldView: { left: 0, right: 0, top: 0, bottom: 0 } };
+  const opening = [];
+  spawner.spawnOpeningPack(player, zeroViewCamera, 0, opening, 7);
+  assert.equal(opening.length, 7);
+  assert.ok(opening.filter(e => e.position.x < player.x - 600).length >= 3);
+  assert.ok(opening.filter(e => e.position.x > player.x + 600).length >= 3);
+
+  // RunEventSystem.trigger('ring') forwards level so ring enemies scale contactDamage with playerLevel
+  const runEvents = new RunEventSystem(scene, nav);
+  const lv1Ring = [];
+  const lv10Ring = [];
+  runEvents.trigger({ kind: 'ring', count: 4 }, 1, 0, player, zeroViewCamera, lv1Ring, spawner);
+  runEvents.trigger({ kind: 'ring', count: 4 }, 10, 0, player, zeroViewCamera, lv10Ring, spawner);
+  assert.equal(lv1Ring[0].contactDamage, BALANCE.enemy.contactDamage);
+  // At level 10, ring spawns 'fawn' (base 6) scaled by 1 + 9 * 0.03 = 1.27 -> Math.round(6 * 1.27) = 8 > 6
+  assert.equal(lv10Ring[0].contactDamage, Math.round(BALANCE.deer.fawn.contactDamage * (1 + 9 * BALANCE.enemy.damagePerLevel)));
+  runEvents.destroy();
+});

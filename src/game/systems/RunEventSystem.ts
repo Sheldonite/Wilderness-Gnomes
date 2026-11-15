@@ -10,7 +10,7 @@ import { EnemyController, type EnemyVariant } from '../entities/EnemyController'
 import { clampToArena, distanceSq } from '../utils/math';
 import type { EnemySpawner } from './EnemySpawner';
 
-interface PendingStampede { lane: StampedeLane; warnMs: number; count: number; variants: EnemyVariant[] }
+interface PendingStampede { lane: StampedeLane; warnMs: number; count: number; variants: EnemyVariant[]; level: number }
 export interface WoodlandShrine { position: Vector2Like; spawnedAtMs: number; collected: boolean }
 
 const VARIANT_NAMES: Record<EnemyVariant, string> = {
@@ -113,7 +113,7 @@ export class RunEventSystem {
   /** A golden elite carrying a chest, just off screen. Returns false if no spawn point was found. */
   spawnElite(level: number, minutes: number, player: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner): boolean {
-    const enemy = spawner.spawnEnemy(player, camera, minutes, rollSpawnVariant(level));
+    const enemy = spawner.spawnEnemy(player, camera, minutes, rollSpawnVariant(level), level);
     if (!enemy) return false;
     enemy.makeElite(); enemies.push(enemy);
     this.announce(`A golden ${VARIANT_NAMES[enemy.variant]} prowls the woods. It carries a chest!`);
@@ -126,7 +126,7 @@ export class RunEventSystem {
     if (event.kind === 'elite') {
       this.spawnElite(level, minutes, player, camera, enemies, spawner);
     } else if (event.kind === 'ring') {
-      this.spawnRing(event.count, level >= BALANCE.deer.unlockLevel ? 'fawn' : 'brown', minutes, player, enemies);
+      this.spawnRing(event.count, level >= BALANCE.deer.unlockLevel ? 'fawn' : 'brown', minutes, player, enemies, level);
       this.announce('Surrounded! Break through the ring!');
     } else {
       this.launchStampede(player, event.lanes, BALANCE.events.stampedeCount, level);
@@ -144,7 +144,7 @@ export class RunEventSystem {
       const through = { x: center.x + (Math.random() - .5) * 160, y: center.y + (Math.random() - .5) * 160 };
       const variants = Array.from({ length: count }, (): EnemyVariant =>
         level >= BALANCE.deer.unlockLevel && Math.random() >= .4 ? 'doe' : 'fawn');
-      this.pending.push({ lane: stampedeLane(through, angle, e.stampedeLength), warnMs: e.stampedeWarnMs + i * 250, count, variants });
+      this.pending.push({ lane: stampedeLane(through, angle, e.stampedeLength), warnMs: e.stampedeWarnMs + i * 250, count, variants, level });
     }
   }
 
@@ -154,13 +154,13 @@ export class RunEventSystem {
       if (enemies.length >= BALANCE.spawner.maxEnemiesCap + e.capAllowance) return;
       const spot = this.navigation.nearest(clampToArena(start, 30), 30);
       if (this.navigation.blocked(spot, 22)) return;
-      const deer = new EnemyController(this.scene, spot.x, spot.y, minutes, this.navigation, undefined, p.variants[i]);
+      const deer = new EnemyController(this.scene, spot.x, spot.y, minutes, this.navigation, undefined, p.variants[i], p.level);
       deer.stampede(p.lane.direction, p.lane.length + i * e.stampedeSpacing, e.stampedeSpeed);
       enemies.push(deer);
     });
   }
 
-  private spawnRing(count: number, variant: EnemyVariant, minutes: number, player: Vector2Like, enemies: EnemyController[]): void {
+  private spawnRing(count: number, variant: EnemyVariant, minutes: number, player: Vector2Like, enemies: EnemyController[], level = 1): void {
     const cap = BALANCE.spawner.maxEnemiesCap + BALANCE.events.capAllowance;
     for (const point of ringPositions(player, count, BALANCE.events.ringRadius, Math.random() * Math.PI)) {
       if (enemies.length >= cap) break;
@@ -168,7 +168,7 @@ export class RunEventSystem {
       const inside = { x: Phaser.Math.Clamp(point.x, edge, GAME_CONFIG.arena.width - edge), y: Phaser.Math.Clamp(point.y, edge, GAME_CONFIG.arena.height - edge) };
       const spot = this.navigation.nearest(inside, edge);
       if (this.navigation.blocked(spot, edge)) continue;
-      enemies.push(new EnemyController(this.scene, spot.x, spot.y, minutes, this.navigation, undefined, variant));
+      enemies.push(new EnemyController(this.scene, spot.x, spot.y, minutes, this.navigation, undefined, variant, level));
     }
   }
 

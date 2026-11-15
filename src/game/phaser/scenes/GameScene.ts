@@ -313,6 +313,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.cameras.main.centerOn(this.player.position.x, this.player.position.y);
+    (this.cameras.main as unknown as { preRender?: () => void }).preRender?.();
     if (!this.reviewNoEnemies) {
       this.enemySpawner.spawnOpeningPack(
         this.player.position,
@@ -974,7 +975,7 @@ export class GameScene extends Phaser.Scene {
       const a = offset + i * Math.PI * 2 / count;
       const spot = this.scenerySystem.navigation.nearest(clampToArena({ x: center.x + Math.cos(a) * radius, y: center.y + Math.sin(a) * radius }, 30), 24);
       if (this.scenerySystem.navigation.blocked(spot, 20)) continue;
-      const add = new EnemyController(this, spot.x, spot.y, minutes, this.scenerySystem.navigation, undefined, variant);
+      const add = new EnemyController(this, spot.x, spot.y, minutes, this.scenerySystem.navigation, undefined, variant, this.gameManager.level);
       if (tint !== undefined) add.setBaseTint(tint);
       this.enemies.push(add);
     }

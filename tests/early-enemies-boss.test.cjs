@@ -301,6 +301,20 @@ test('EnemySpawner.spawnOpeningPack spawns 6-8 brown squirrels on opposite flank
     if (e.position.x >= camera.worldView.right) rightFlank++;
   }
   assert.ok(leftFlank >= 3 && rightFlank >= 3, 'pack spawns across both opposite flanks');
+
+  // Frame-0 unpopulated camera.worldView ({ left: 0, right: 0, top: 0, bottom: 0 }) still flanks player
+  const unreadyCamera = { width: 1280, height: 720, worldView: { left: 0, right: 0, top: 0, bottom: 0 } };
+  const frame0Enemies = [];
+  const frame0Pack = spawner.spawnOpeningPack(player, unreadyCamera, 0, frame0Enemies, 7);
+  assert.equal(frame0Pack.length, 7);
+  let frame0Left = 0;
+  let frame0Right = 0;
+  for (const e of frame0Pack) {
+    if (e.position.x <= player.x - 640) frame0Left++;
+    if (e.position.x >= player.x + 640) frame0Right++;
+    assert.ok(Math.abs(e.position.x - player.x) < 900, `expected spawn near camera edge around player, got x=${e.position.x}`);
+  }
+  assert.ok(frame0Left >= 3 && frame0Right >= 3, 'frame-0 unpopulated worldView still flanks both sides of player');
 });
 
 test('XPOrb drifts slowly outside magnet range, Mystery scales with mysteryRank, and pre-Lv10 stampedes use fawns', () => {

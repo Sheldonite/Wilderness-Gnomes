@@ -73,7 +73,8 @@ test('the normal spawn pipeline unlocks armadillos at level 20 and initializes w
   assert.equal(enemy.sprite.texture.key, 'enemy-armadillo');
   assert.equal(enemy.health, BALANCE.armadillo.health);
   assert.equal(enemy.radius, BALANCE.armadillo.radius);
-  assert.equal(enemy.contactDamage, BALANCE.armadillo.walkDamage);
+  const level20Scale = 1 + (20 - 1) * BALANCE.enemy.damagePerLevel;
+  assert.equal(enemy.contactDamage, Math.round(BALANCE.armadillo.walkDamage * level20Scale));
   assertOutside(enemy, run.camera.worldView);
   const start = enemy.position;
   enemy.update(100, run.player, 0);
@@ -82,7 +83,7 @@ test('the normal spawn pipeline unlocks armadillos at level 20 and initializes w
   enemy.update(16, run.player, 0);
   assert.equal(enemy.sprite.texture.key, 'enemy-armadillo-roll');
   enemy.update(BALANCE.armadillo.curlMs, run.player, 0);
-  assert.equal(enemy.contactDamage, BALANCE.armadillo.rollDamage);
+  assert.equal(enemy.contactDamage, Math.round(BALANCE.armadillo.rollDamage * level20Scale));
   const rollStart = enemy.position.y;
   enemy.update(50, run.player, 0);
   assert.ok(enemy.position.y > rollStart);
@@ -181,16 +182,19 @@ test('after King Frankie, the spawner sends buzzards that fly, swoop harder, and
   const run = harness({ level: BALANCE.buzzard.unlockLevel, roll: 0 });
   run.update();
   const bird = run.enemies[0];
+  const levelScale = 1 + (BALANCE.buzzard.unlockLevel - 1) * BALANCE.enemy.damagePerLevel;
+  const expectedContact = Math.round(BALANCE.buzzard.contactDamage * levelScale);
+  const expectedSwoop = Math.round(BALANCE.buzzard.swoopDamage * levelScale);
   assert.equal(bird.variant, 'buzzard');
   assert.equal(bird.sprite.texture.key, 'companion-frankie');
   assert.equal(bird.health, BALANCE.buzzard.health);
   assert.equal(bird.xpValue, BALANCE.enemyXp.buzzard);
-  assert.equal(bird.contactDamage, BALANCE.buzzard.contactDamage);
+  assert.equal(bird.contactDamage, expectedContact);
   assert.equal(bird.sprite.tint, BALANCE.buzzard.tint);
   // bring it close, let its first swoop come ready, and watch it wind up then dive
   bird.sprite.setPosition(run.player.x - 200, run.player.y);
-  for (let i = 0; i < 400 && bird.contactDamage === BALANCE.buzzard.contactDamage; i++) bird.update(16, run.player, 0);
-  assert.equal(bird.contactDamage, BALANCE.buzzard.swoopDamage, 'a swoop hits harder');
+  for (let i = 0; i < 400 && bird.contactDamage === expectedContact; i++) bird.update(16, run.player, 0);
+  assert.equal(bird.contactDamage, expectedSwoop, 'a swoop hits harder');
 });
 
 test('a stampeding deer gallops its lane, then hunts like any other', () => {
