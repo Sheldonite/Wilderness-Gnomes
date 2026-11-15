@@ -232,6 +232,9 @@ export class GameScene extends Phaser.Scene {
     this.bossBoundary = this.add.graphics().setDepth(3);
     const summon = (variant: EnemyVariant, count: number, tint?: number) => this.summonAdds(variant, count, tint);
     this.runEvents = new RunEventSystem(this, this.scenerySystem.navigation);
+    // Chests are earned, not gifted: every chest roll sends a golden elite carrying it.
+    this.chestSystem.spawnCarrier = () => this.runEvents.spawnElite(this.gameManager.level, this.gameManager.getDifficultyMinutes(),
+      this.player.position, this.cameras.main, this.enemies, this.enemySpawner);
     this.oven = new OvenBossSystem(this, this.gameManager, this.scenerySystem.navigation, summon);
     this.stag = new StagBossSystem(this, this.gameManager, this.scenerySystem.navigation,
       (damage, push, knockback) => this.knockPlayer(damage, push, knockback ?? STAG.chargeKnockback),
@@ -344,6 +347,7 @@ export class GameScene extends Phaser.Scene {
     if (review === 'chests') {
       this.reviewNoEnemies = true;
       // Keep the real placement, pickup and reward flow; guarantee one preview chest.
+      this.chestSystem.spawnCarrier = undefined;
       this.chestSystem.drops.advanceToLevel(1);
       this.chestSystem.drops.pending = 1;
       this.reviewControls = document.createElement('div'); this.reviewControls.className = 'ability-review-controls';

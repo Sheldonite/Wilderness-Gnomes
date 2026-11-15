@@ -109,15 +109,21 @@ export class RunEventSystem {
     return shrine;
   }
 
+  /** A golden elite carrying a chest, just off screen. Returns false if no spawn point was found. */
+  spawnElite(level: number, minutes: number, player: Vector2Like,
+    camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner): boolean {
+    const enemy = spawner.spawnEnemy(player, camera, minutes, rollSpawnVariant(level));
+    if (!enemy) return false;
+    enemy.makeElite(); enemies.push(enemy);
+    this.announce(`A golden ${VARIANT_NAMES[enemy.variant]} prowls the woods. It carries a chest!`);
+    return true;
+  }
+
   /** Run one set piece now (the schedule, or a review page). */
   trigger(event: RunEvent, level: number, minutes: number, player: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner): void {
     if (event.kind === 'elite') {
-      const enemy = spawner.spawnEnemy(player, camera, minutes, rollSpawnVariant(level));
-      if (enemy) {
-        enemy.makeElite(); enemies.push(enemy);
-        this.announce(`A golden ${VARIANT_NAMES[enemy.variant]} prowls the woods. It carries a chest!`);
-      }
+      this.spawnElite(level, minutes, player, camera, enemies, spawner);
     } else if (event.kind === 'ring') {
       this.spawnRing(event.count, level >= BALANCE.deer.unlockLevel ? 'fawn' : 'brown', minutes, player, enemies);
       this.announce('Surrounded! Break through the ring!');

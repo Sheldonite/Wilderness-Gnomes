@@ -12,6 +12,12 @@ export class ChestSystem {
   private retryMs = 0;
   private readonly ground = new SceneryNavigation();
 
+  /**
+   * When set, earned chests are never handed out for free: each one arrives carried by a golden
+   * elite that must be hunted down. Returns true once the carrier is in the woods.
+   */
+  spawnCarrier?: () => boolean;
+
   constructor(private readonly scene: Phaser.Scene, navigation: SceneryNavigation) {
     // Water is walkable scenery in the current game, but treasure should still sit on dry land.
     this.drops = new ChestDrops({
@@ -27,8 +33,12 @@ export class ChestSystem {
     this.retryMs -= deltaMs;
     if (this.retryMs <= 0 && this.drops.pending) {
       this.retryMs = 500;
-      const chest = this.drops.spawnNear(player);
-      if (chest) this.createView(chest.id, chest.position);
+      if (this.spawnCarrier) {
+        if (this.spawnCarrier()) this.drops.pending--;
+      } else {
+        const chest = this.drops.spawnNear(player);
+        if (chest) this.createView(chest.id, chest.position);
+      }
     }
     for (const [id, view] of this.views) {
       const pulse = reducedMotion() ? .5 : (Math.sin(game.elapsedMs / 420 + id) + 1) / 2;

@@ -377,3 +377,25 @@ test('Stage 2 weapon shots, chests, and rare rocks emit audio:play SFX events', 
   rocks.update(16, dropped.position, true);
   assert.ok(emittedEvents.some(e => e.event === 'audio:play' && e.args[0] === 'rock'));
 });
+
+test('earned chests are never free: each roll sends a golden elite carrier instead, retrying until one spawns', () => {
+  const { scene, load } = loadTsWithPhaserMock();
+  const { ChestSystem } = load('src/game/systems/ChestSystem.ts');
+  const chestSystem = new ChestSystem(scene, new SceneryNavigation(false));
+  const gm = new GameManager('spell', undefined, 'wizard');
+  let carriers = 0, canSpawn = false;
+  chestSystem.spawnCarrier = () => { if (!canSpawn) return false; carriers++; return true; };
+  chestSystem.drops.advanceToLevel(gm.level);   // settle this level's own roll first
+  chestSystem.drops.pending = 2;
+
+  chestSystem.update(16, { x: 500, y: 500 }, gm);
+  assert.equal(carriers, 0); assert.equal(chestSystem.drops.pending, 2, 'a failed spawn keeps the chest owed');
+  assert.equal(chestSystem.drops.chests.length, 0, 'no free chest is placed');
+
+  canSpawn = true;
+  chestSystem.update(500, { x: 500, y: 500 }, gm);
+  assert.equal(carriers, 1); assert.equal(chestSystem.drops.pending, 1);
+  chestSystem.update(500, { x: 500, y: 500 }, gm);
+  assert.equal(carriers, 2); assert.equal(chestSystem.drops.pending, 0);
+  assert.equal(chestSystem.drops.chests.length, 0, 'chests only appear when the elite falls');
+});
