@@ -11,7 +11,9 @@ export class PresentationSystem {
   private readonly particles: Mote[] = [];
   private readonly actors = new Map<Phaser.GameObjects.Sprite, Actor>();
   private readonly pollen: Phaser.GameObjects.Image[] = [];
+  private readonly hurtVignette: Phaser.GameObjects.Graphics;
   private elapsed = 0;
+  private hurtPulse = 0;
   private readonly register = (sprite: Phaser.GameObjects.Sprite, options?: ActorShadow) => {
     const shadow = this.scene.add.image(sprite.x, sprite.y, LOOK.texture.shadow).setDepth(LOOK.depth.shadow);
     shadow.setDisplaySize(options?.width ?? sprite.displayWidth * .65, options?.height ?? sprite.displayHeight * .19).setAlpha(options?.alpha ?? .85);
@@ -23,14 +25,40 @@ export class PresentationSystem {
     const actor = this.actors.get(sprite); if (actor) { actor.flash = 90; sprite.setTintFill(0xffefd0); }
     this.burst(sprite, LOOK.color.cream, 4);
   };
+  private readonly playerHit = () => this.pulseHurtVignette();
+  private readonly dash = (point: Vector2Like) => {
+    this.burst(point, LOOK.ability.ward, 5);
+    this.burst(point, LOOK.color.cream, 4);
+  };
   private readonly defeat = (point: Vector2Like) => this.burst(point, LOOK.color.gold, 9);
   private readonly collect = (point: Vector2Like) => this.burst(point, LOOK.color.xp, 4);
   private readonly trail = (point: Vector2Like, color: number = LOOK.color.spell) => this.burst(point, color, 1, true);
   private readonly level = (point: Vector2Like) => this.burst(point, LOOK.color.gold, 24);
+  private readonly redrawHurtVignette = () => {
+    const width = this.scene.scale.width;
+    const height = this.scene.scale.height;
+    this.hurtVignette.clear();
+    if (width <= 0 || height <= 0) return;
+    const edge = Math.max(18, Math.round(Math.min(width, height) * .085));
+    const alphas = [.38, .26, .16, .09, .04];
+    const step = edge / alphas.length;
+    for (let i = 0; i < alphas.length; i++) {
+      const offset = i * step;
+      const spanW = Math.max(0, width - offset * 2);
+      const innerH = Math.max(0, height - (offset + step) * 2);
+      this.hurtVignette.fillStyle(0xa8241c, alphas[i]);
+      this.hurtVignette.fillRect(offset, offset, spanW, step);
+      this.hurtVignette.fillRect(offset, height - offset - step, spanW, step);
+      this.hurtVignette.fillRect(offset, offset + step, step, innerH);
+      this.hurtVignette.fillRect(width - offset - step, offset + step, step, innerH);
+    }
+  };
 
   constructor(private readonly scene: Phaser.Scene) {
     scene.events.on('presentation:actor', this.register);
     scene.events.on('presentation:hit', this.hit);
+    scene.events.on('presentation:player-hit', this.playerHit);
+    scene.events.on('presentation:dash', this.dash);
     scene.events.on('presentation:defeat', this.defeat);
     scene.events.on('presentation:collect', this.collect);
     scene.events.on('presentation:trail', this.trail);
@@ -43,11 +71,37 @@ export class PresentationSystem {
       const mote = scene.add.image(0, 0, LOOK.texture.spark).setScrollFactor(0).setDepth(LOOK.depth.atmosphere).setAlpha(.3).setDisplaySize(7, 7);
       this.pollen.push(mote);
     }
+    this.hurtVignette = scene.add.graphics().setScrollFactor(0).setDepth(LOOK.depth.atmosphere).setAlpha(0).setVisible(false);
+    this.redrawHurtVignette();
+    scene.scale.on?.('resize', this.redrawHurtVignette);
+  }
+
+  pulseHurtVignette(intensity = 1): void {
+    this.hurtPulse = Math.max(this.hurtPulse, Math.min(1, Math.max(0, intensity)));
+    if (this.hurtPulse > 0) {
+      this.hurtVignette.setVisible(true).setAlpha((reducedMotion() ? .55 : .85) * this.hurtPulse);
+    }
+  }
+
+  fadeHurtVignette(deltaMs: number): void {
+    if (this.hurtPulse <= 0) return;
+    this.hurtPulse = Math.max(0, this.hurtPulse - Math.max(0, deltaMs) / 380);
+    if (this.hurtPulse <= 0) {
+      this.clearHurtVignette();
+      return;
+    }
+    this.hurtVignette.setVisible(true).setAlpha((reducedMotion() ? .55 : .85) * this.hurtPulse);
+  }
+
+  clearHurtVignette(): void {
+    this.hurtPulse = 0;
+    this.hurtVignette.setAlpha(0).setVisible(false);
   }
 
   update(deltaMs: number): void {
     const calm = reducedMotion();
     this.elapsed += deltaMs;
+    this.fadeHurtVignette(deltaMs);
     const dt = deltaMs / 1000;
     for (const [sprite, actor] of this.actors) {
       actor.shadow.setPosition(sprite.x + 3, sprite.y + actor.foot);
@@ -71,8 +125,10 @@ export class PresentationSystem {
   }
 
   destroy(): void {
-    for (const [event, handler] of [['actor', this.register], ['hit', this.hit], ['defeat', this.defeat], ['collect', this.collect], ['trail', this.trail], ['level', this.level]] as const) this.scene.events.off(`presentation:${event}`, handler);
+    for (const [event, handler] of [['actor', this.register], ['hit', this.hit], ['player-hit', this.playerHit], ['dash', this.dash], ['defeat', this.defeat], ['collect', this.collect], ['trail', this.trail], ['level', this.level]] as const) this.scene.events.off(`presentation:${event}`, handler);
+    this.scene.scale.off?.('resize', this.redrawHurtVignette);
     this.particles.forEach(p => p.image.destroy()); this.pollen.forEach(p => p.destroy());
+    this.hurtVignette.destroy();
     this.actors.forEach(actor => { actor.shadow.destroy(); actor.contact?.destroy(); }); this.actors.clear();
   }
 

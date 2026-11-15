@@ -41,7 +41,41 @@
 .title-rock-balance svg{width:17px;height:17px}.title-rock-balance small{font-size:10px;color:#d7c1f0}
 @media(max-width:700px){.title-wallet{width:100%;max-width:430px}.title-rock-balance{align-self:center}}
 
-.title-weapons-link{display:flex;align-items:center;justify-content:center;gap:9px;margin:18px auto 0;padding:10px 16px;border:1px solid #e5c67c80;border-radius:8px;background:#263d2de8;color:#f3dda5;font:14px Georgia,serif}.title-weapons-link svg{width:17px;height:17px}.title-weapons-link:hover{background:#405337}.title-weapons-link:focus-visible{outline:2px solid #ffe5a4;outline-offset:3px}
+.title-brand-group{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.title-sound-toggle{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border:1px solid #e5c67c80;border-radius:8px;background:#263d2de8;color:#f6edd4;font:12px Georgia,serif;transition:background .18s,filter .18s}
+.title-sound-toggle svg{width:16px;height:16px;color:#f2c865}
+.title-sound-toggle:hover{background:#405337}
+.title-sound-toggle.is-muted{opacity:.85;border-color:#c8b68a55}
+.title-sound-toggle.is-muted svg{color:#cbbba0}
+
+.title-loadout{display:flex;align-items:stretch;justify-content:center;flex-wrap:wrap;gap:10px;margin:16px auto 0;max-width:calc(100vw - 36px)}
+.title-weapons-link{display:flex;align-items:center;justify-content:center;gap:10px;margin:0;padding:10px 16px;border:1px solid #e5c67c80;border-radius:8px;background:#263d2de8;color:#f3dda5;font:14px Georgia,serif;text-align:left}.title-weapons-link svg{width:17px;height:17px}.title-weapons-link:hover{background:#405337}.title-weapons-link:focus-visible{outline:2px solid #ffe5a4;outline-offset:3px}
+.title-loadout .title-weapons-link>span:not(.title-loadout-action),.title-cosmetics-badge>span{display:flex;flex-direction:column;gap:2px;line-height:1.2}
+.title-loadout small{font-size:9px;letter-spacing:1.4px;color:#d8c694;font-weight:700}
+.title-loadout strong{font:14px Georgia,serif;color:#fff1cf}
+.title-loadout-action{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding-left:10px;border-left:1px solid #e5c67c44;font-size:12px;color:#ebd28f}
+.title-cosmetics-badge{display:flex;align-items:center;gap:9px;padding:10px 16px;border:1px solid #c3a0ed80;border-radius:8px;background:#29253edb;color:#eadbff;text-align:left;font:14px Georgia,serif;transition:background .18s,filter .18s}
+.title-cosmetics-badge svg{width:17px;height:17px;color:#d8bdff}
+.title-cosmetics-badge small{color:#cbb5e8}
+.title-cosmetics-badge:hover{background:#393257}
+.title-cosmetics-badge:focus-visible,.title-sound-toggle:focus-visible{outline:2px solid #ffe5a4;outline-offset:3px}
+
+.market-balances{display:flex;align-items:center;gap:10px;margin-left:14px}
+.market-balances .market-purse{margin-left:0}
+.market-purse.market-purse-rocks strong{color:#eadbff}
+.market-purse.market-purse-rocks svg{color:#d8bdff}
+.shop-currencies{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.shop-rock-balance{color:#5b3b7d!important}
+.shop-rock-balance svg{color:#7a52a8!important}
+.outfitter-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.outfitter-slots>span{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px dashed #6e4b2a55;border-radius:6px;background:#fff8e688;font-size:11px}
+.outfitter-slots>span.slot-active{border-color:#6e8f3e99;background:#6e8f3e1c}
+.outfitter-slots strong{font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:#748259}
+.outfitter-slots small{font-size:12px;color:#2e4433;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.market-item.rock-curio:not(.fully-owned){border-color:#9b77c799;background:#f4ecff88}
+.market-item.rock-curio .market-item-art>span{color:#674796}
+@media(max-width:1050px){.market-balances{margin-left:auto}}
+@media(max-width:650px){.market-balances{gap:6px}.outfitter-slots{grid-template-columns:1fr}}
 
 .market-item-art>.market-item-preview{width:112px;height:88px;object-fit:contain;flex-shrink:0;border:1px solid #d8cba6;border-radius:12px;background:radial-gradient(ellipse at bottom,#3e5359,#22353d);box-shadow:inset 0 0 15px #11212b44;image-rendering:auto}
 @media(max-width:650px){.market-item-art>.market-item-preview{width:100%;max-width:112px;height:88px}}

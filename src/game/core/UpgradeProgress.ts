@@ -1,7 +1,7 @@
 import { ABILITIES, ABILITY_IDS, ABILITY_NAMES, MAX_ABILITY_RANK, awakeningTier, isAscended, isAwakened, tierName } from '../config/abilities';
 import { BALANCE } from '../config/balance';
 import { BOSS_ABILITY_IDS, BOSS_ABILITY_NAMES, MAX_BOSS_RANK, bossPower, isBossAbility } from '../config/bossAbilities';
-import { CROSSBOW_STAT_UPGRADES } from '../config/weapons';
+import { WEAPON_STAT_UPGRADES } from '../config/weapons';
 import type { AbilityId, PlayerStats, UpgradeDefinition, UpgradeId } from './types';
 
 const STAT_NAMES: Partial<Record<UpgradeId, string>> = {
@@ -18,7 +18,7 @@ export function upgradeRank(id: UpgradeId, stats: PlayerStats): number {
 }
 export function upgradeName(id: UpgradeId, stats: PlayerStats): string {
   if (isBossAbility(id)) return BOSS_ABILITY_NAMES[id];
-  return isAbility(id) ? ABILITY_NAMES[id] : (stats.weaponId === 'crossbow' ? CROSSBOW_STAT_UPGRADES[id]?.title : undefined) ?? STAT_NAMES[id]!;
+  return isAbility(id) ? ABILITY_NAMES[id] : WEAPON_STAT_UPGRADES[stats.weaponId]?.[id]?.title ?? STAT_NAMES[id]!;
 }
 export function upgradeBenefit(id: UpgradeId, stats: PlayerStats): string {
   const rank = upgradeRank(id, stats);

@@ -111,4 +111,56 @@ export function createStorybookTextures(scene: Phaser.Scene): void {
     c.beginPath(); c.moveTo(16, 4); c.lineTo(24, 16); c.lineTo(16, 28); c.lineTo(8, 16); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = '#caffdf'; c.beginPath(); c.moveTo(16, 5); c.lineTo(16, 25); c.lineTo(9, 16); c.closePath(); c.fill();
   });
+  texture('boomerang-blade', 48, (c) => {
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.shadowColor = 'rgba(42, 24, 10, 0.35)';
+    c.shadowBlur = 4;
+    // Outer silhouette stroke
+    c.strokeStyle = '#4a2b13';
+    c.lineWidth = 10;
+    c.beginPath();
+    c.moveTo(11, 10);
+    c.quadraticCurveTo(37, 22, 13, 39);
+    c.stroke();
+    // Carved timber body
+    c.shadowBlur = 0;
+    c.strokeStyle = '#b9773b';
+    c.lineWidth = 7;
+    c.beginPath();
+    c.moveTo(11, 10);
+    c.quadraticCurveTo(37, 22, 13, 39);
+    c.stroke();
+    // Sunlit bevel highlight
+    c.strokeStyle = '#eac281';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(12, 11);
+    c.quadraticCurveTo(34, 21, 15, 36);
+    c.stroke();
+    // Brass binding at the elbow
+    c.fillStyle = '#e5be64';
+    c.beginPath();
+    c.arc(27, 24, 3.2, 0, Math.PI * 2);
+    c.fill();
+  });
+  texture('lantern-orb', 48, (c) => {
+    const aura = c.createRadialGradient(24, 24, 2, 24, 24, 22);
+    aura.addColorStop(0, '#fffce2');
+    aura.addColorStop(0.28, '#ffd26a');
+    aura.addColorStop(0.62, 'rgba(245, 138, 42, 0.6)');
+    aura.addColorStop(1, 'rgba(245, 110, 30, 0)');
+    c.fillStyle = aura;
+    c.fillRect(0, 0, 48, 48);
+    // Warm ember core and dancing sparks
+    c.fillStyle = '#fff9d6';
+    c.beginPath();
+    c.arc(24, 24, 6.5, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#ffd782';
+    c.beginPath();
+    c.arc(16, 17, 2, 0, Math.PI * 2);
+    c.arc(33, 29, 1.8, 0, Math.PI * 2);
+    c.fill();
+  });
 }

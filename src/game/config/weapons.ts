@@ -1,6 +1,7 @@
 import type { WeaponId } from '../core/types';
 
 export type ExtraTargetMode = 'bounce' | 'pierce';
+export type WeaponBehavior = 'direct' | 'boomerang' | 'lantern';
 
 export interface WeaponDefinition {
   id: WeaponId;
@@ -12,6 +13,10 @@ export interface WeaponDefinition {
   extraTargetMode: ExtraTargetMode;
   extraTargetRetention: number;
   baseExtraTargets: number;
+  behavior?: WeaponBehavior;
+  boomerangRange?: number;
+  splashRadius?: number;
+  splashDamageRatio?: number;
   cooldownMs: number;
   projectileSpeed: number;
   projectileDamage: number;
@@ -30,7 +35,7 @@ export interface WeaponDefinition {
   muzzleOffset?: number;
 }
 
-export const WEAPON_IDS: WeaponId[] = ['spell', 'crossbow'];
+export const WEAPON_IDS: WeaponId[] = ['spell', 'crossbow', 'boomerang', 'lantern'];
 
 export const WEAPONS: Record<WeaponId, WeaponDefinition> = {
   spell: {
@@ -80,15 +85,79 @@ export const WEAPONS: Record<WeaponId, WeaponDefinition> = {
     overlayWidth: 46,
     orbitRadius: 36,
     muzzleOffset: 64
+  },
+  boomerang: {
+    id: 'boomerang',
+    name: 'Timber Boomerang',
+    description: 'Carved alder that arcs out and slices back home.',
+    shortTrait: 'returning arc',
+    key: '5',
+    icon: 'boomerang',
+    extraTargetMode: 'pierce',
+    extraTargetRetention: 0.9,
+    baseExtraTargets: 4,
+    behavior: 'boomerang',
+    boomerangRange: 270,
+    cooldownMs: 1050,
+    projectileSpeed: 540,
+    projectileDamage: 22,
+    projectileLifetimeMs: 1850,
+    projectileRadius: 13,
+    projectileCount: 1,
+    spreadRadians: 0.28,
+    texture: 'boomerang-blade',
+    displaySize: 34,
+    trailColor: 0xd9a05b
+  },
+  lantern: {
+    id: 'lantern',
+    name: "Will-o'-Wisp Lantern",
+    description: 'Looses amber wisps that burst into warm ember clouds.',
+    shortTrait: 'ember splash',
+    key: '6',
+    icon: 'lantern',
+    extraTargetMode: 'bounce',
+    extraTargetRetention: 0.75,
+    baseExtraTargets: 0,
+    behavior: 'lantern',
+    splashRadius: 84,
+    splashDamageRatio: 0.75,
+    cooldownMs: 1200,
+    projectileSpeed: 420,
+    projectileDamage: 24,
+    projectileLifetimeMs: 1050,
+    projectileRadius: 10,
+    projectileCount: 1,
+    spreadRadians: 0.24,
+    texture: 'lantern-orb',
+    displaySize: 32,
+    trailColor: 0xffb347
   }
 };
 
 export function getWeapon(id?: string): WeaponDefinition {
-  return id === 'crossbow' ? WEAPONS.crossbow : WEAPONS.spell;
+  if (id && Object.prototype.hasOwnProperty.call(WEAPONS, id)) {
+    return WEAPONS[id as WeaponId];
+  }
+  return WEAPONS.spell;
 }
 
 export const CROSSBOW_STAT_UPGRADES: Partial<Record<string, { title: string; description: string; icon: string }>> = {
   'projectile-damage': { title: 'Honed Quarrels', description: '+8 quarrel damage', icon: 'bolt' },
   'fire-rate': { title: 'Swift String', description: 'Loose 15% faster', icon: 'clock' },
   'projectile-count': { title: 'Twin Quarrels', description: '+1 quarrel per volley (up to 4 picks)', icon: 'split' }
+};
+
+export const WEAPON_STAT_UPGRADES: Partial<Record<WeaponId, Partial<Record<string, { title: string; description: string; icon: string }>>>> = {
+  crossbow: CROSSBOW_STAT_UPGRADES,
+  boomerang: {
+    'projectile-damage': { title: 'Seasoned Edge', description: '+8 boomerang damage', icon: 'bolt' },
+    'fire-rate': { title: 'Quick Wrist', description: 'Throw 15% faster', icon: 'clock' },
+    'projectile-count': { title: 'Twin Arcs', description: '+1 boomerang per cast (up to 4 picks)', icon: 'split' }
+  },
+  lantern: {
+    'projectile-damage': { title: 'Brighter Wicks', description: '+8 wisp & splash damage', icon: 'bolt' },
+    'fire-rate': { title: 'Fanned Flame', description: 'Cast 15% faster', icon: 'clock' },
+    'projectile-count': { title: 'Lantern Swarm', description: '+1 wisp per cast (up to 4 picks)', icon: 'split' }
+  }
 };

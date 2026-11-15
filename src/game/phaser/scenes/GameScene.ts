@@ -7,7 +7,7 @@ import { STAG, STAG_LOOK } from '../../config/stagBoss';
 import { KingBossSystem } from '../../systems/KingBossSystem';
 import { BuzzardBossSystem } from '../../systems/BuzzardBossSystem';
 import { BUZZARD, BUZZARD_LOOK } from '../../config/buzzardBoss';
-import { LOOK } from '../../config/presentation';
+import { LOOK, reducedMotion } from '../../config/presentation';
 import { KING } from '../../config/kingBoss';
 import { RunEventSystem } from '../../systems/RunEventSystem';
 import { ringCount, type RunEvent } from '../../core/RunEvents';
@@ -19,7 +19,7 @@ import { getWeapon } from '../../config/weapons';
 import type { WeaponId } from '../../core/types';
 import { GameManager, xpThreshold } from '../../core/GameManager';
 import { EnemyController, type EnemyVariant } from '../../entities/EnemyController';
-import { PlayerController } from '../../entities/PlayerController';
+import { PlayerController, type PlayerMoveInput } from '../../entities/PlayerController';
 import { Projectile } from '../../entities/Projectile';
 import { XPOrb } from '../../entities/XPOrb';
 import { Acorn } from '../../entities/Acorn';
@@ -42,6 +42,8 @@ import { WeaponSystem } from '../../systems/WeaponSystem';
 import { DebugSpriteSheetMenu } from '../../ui/DebugSpriteSheetMenu';
 import { UIManager } from '../../ui/UIManager';
 import { PresentationSystem } from '../../systems/PresentationSystem';
+import { DamageNumberSystem } from '../../systems/DamageNumberSystem';
+import { CompassSystem, type CompassTarget } from '../../systems/CompassSystem';
 import { AbilitySystem } from '../../systems/AbilitySystem';
 import { CombatResolver, type CombatTarget } from '../../core/CombatResolver';
 import { ABILITY_IDS } from '../../config/abilities';
@@ -69,6 +71,11 @@ export class GameScene extends Phaser.Scene {
   private uiManager!: UIManager;
   private debugSpriteSheetMenu?: DebugSpriteSheetMenu;
   private presentation!: PresentationSystem;
+  private damageNumbers!: DamageNumberSystem;
+  private compass!: CompassSystem;
+  private aimReticle!: Phaser.GameObjects.Graphics;
+  private aimNotice?: Phaser.GameObjects.Text;
+  private aimNoticeMs = 0;
   private abilities!: AbilitySystem;
   private combat!: CombatResolver;
   private oven!: OvenBossSystem;
@@ -80,7 +87,12 @@ export class GameScene extends Phaser.Scene {
   private victoryInMs = 0;
   private visualsPaused = false;
   private reviewChoices?: UpgradeDefinition[];
-  private keys!: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
+  private keys!: Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right' | 'space' | 'shift', Phaser.Input.Keyboard.Key>;
+  private manualAimEnabled = false;
+  private manualAimAngle = 0;
+  private manualAimWorldPoint?: Vector2Like;
+  private gamepadDashHeld = false;
+  private finishingReviewRun = false;
   private enemies: EnemyController[] = [];
   private projectiles: Projectile[] = [];
   private xpOrbs: XPOrb[] = [];
@@ -89,7 +101,24 @@ export class GameScene extends Phaser.Scene {
   private pausedDisplayed = false;
   private gameOverDisplayed = false;
   private readonly handleEscape = () => this.handleEscapePressed();
-  private readonly finishReviewRun = () => this.gameManager.damagePlayer(this.gameManager.playerStats.health);
+  private readonly handleToggleManualAim = () => {
+    if (this.gameManager.state === 'Playing' && !this.debugSpriteSheetMenu?.isOpen) {
+      this.toggleManualAim();
+    }
+  };
+  private readonly handlePointerDown = (pointer: Phaser.Input.Pointer) => {
+    if (pointer.rightButtonDown() && this.gameManager.state === 'Playing' && !this.debugSpriteSheetMenu?.isOpen) {
+      this.toggleManualAim();
+    }
+  };
+  private readonly finishReviewRun = () => {
+    this.finishingReviewRun = true;
+    try {
+      this.gameManager.damagePlayer(this.gameManager.playerStats.health);
+    } finally {
+      this.finishingReviewRun = false;
+    }
+  };
   private selectedCharacter!: PlayerCharacterDefinition;
   private selectedWeaponId: WeaponId = 'spell';
   private reviewControls?: HTMLElement;
@@ -115,6 +144,12 @@ export class GameScene extends Phaser.Scene {
     this.reviewPathMs = 0;
     this.reviewKeepCrowdPickups = false;
     this.reviewNoEnemies = false;
+    this.manualAimEnabled = false;
+    this.manualAimAngle = 0;
+    this.manualAimWorldPoint = undefined;
+    this.aimNoticeMs = 0;
+    this.gamepadDashHeld = false;
+    this.finishingReviewRun = false;
     this.anims.resumeAll();
     document.getElementById('game-root')?.classList.add('in-run');
     this.selectedCharacter = getPlayerCharacter(data.characterId);
@@ -125,6 +160,14 @@ export class GameScene extends Phaser.Scene {
     this.practiceRun = import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review');
     this.cosmetic = new CosmeticGlow(this);
     this.gameManager = new GameManager(this.selectedWeaponId, this.practiceRun ? emptyMarketProfile() : marketProgress.refresh(), this.selectedCharacter.id);
+    const rawDamagePlayer = this.gameManager.damagePlayer.bind(this.gameManager);
+    this.gameManager.damagePlayer = (amount: number, source: 'contact' | 'direct' = 'direct') => {
+      if (!this.finishingReviewRun) {
+        if (this.player?.isDashing) return;
+        if (source === 'contact' && this.player?.isHitInvulnerable) return;
+      }
+      rawDamagePlayer(amount, source);
+    };
     this.scenerySystem = new ScenerySystem(this);
     this.enemySpawner = new EnemySpawner(this, this.scenerySystem.navigation);
     this.companionSystem = new CompanionSystem(this, this.gameManager.playerStats, this.scenerySystem.navigation);
@@ -142,6 +185,22 @@ export class GameScene extends Phaser.Scene {
       this.textures.getBase64(this.selectedCharacter.textureKey, 0), companionPortrait);
     this.debugSpriteSheetMenu = import.meta.env.DEV ? new DebugSpriteSheetMenu(this) : undefined;
     this.presentation = new PresentationSystem(this);
+    this.damageNumbers = new DamageNumberSystem(this);
+    this.compass = new CompassSystem(this);
+    this.aimReticle = this.createAimReticle();
+    this.aimNotice = this.add
+      .text(this.scale.width * 0.5, 92, '', {
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#fff3d1',
+        stroke: '#231409',
+        strokeThickness: 4
+      })
+      .setScrollFactor(0)
+      .setDepth(35)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
     this.abilities = new AbilitySystem(this, this.gameManager.playerStats);
     this.combat = new CombatResolver(enemy => this.killEnemy(enemy));
 
@@ -186,11 +245,20 @@ export class GameScene extends Phaser.Scene {
       w: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       a: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       s: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      d: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+      d: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+      up: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+      down: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+      left: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+      right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+      space: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+      shift: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
     };
 
+    this.input.mouse?.disableContextMenu();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyRunObjects());
     this.input.keyboard?.on('keydown-ESC', this.handleEscape);
+    this.input.keyboard?.on('keydown-F', this.handleToggleManualAim);
+    this.input.on('pointerdown', this.handlePointerDown);
     if (import.meta.env.DEV && new URLSearchParams(location.search).get('review') === 'gameover') this.input.keyboard?.on('keydown-F10', this.finishReviewRun);
     if (import.meta.env.DEV && !data.skipReview) this.setupReview();
     this.cameras.main.centerOn(this.player.position.x, this.player.position.y);
@@ -572,16 +640,22 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.gameManager.state === 'GameOver') {
+      this.presentation.fadeHurtVignette(deltaMs);
+      this.aimReticle.setVisible(false);
       this.showGameOverOnce();
       return;
     }
 
     if (this.gameManager.state === 'Paused') {
+      this.presentation.fadeHurtVignette(deltaMs);
+      this.aimReticle.setVisible(false);
       this.showPausedOnce();
       return;
     }
 
     if (this.gameManager.state === 'LevelUpPaused') {
+      this.presentation.fadeHurtVignette(deltaMs);
+      this.aimReticle.setVisible(false);
       this.showLevelUpOnce();
       return;
     }
@@ -589,6 +663,7 @@ export class GameScene extends Phaser.Scene {
     this.levelUpDisplayed = false;
     this.pausedDisplayed = false;
     this.gameManager.update(deltaMs);
+    this.updateAimNotice(deltaMs);
     if (import.meta.env.DEV && this.reviewWalking) {
       this.reviewPathMs += deltaMs;
       const direction = Math.floor(this.reviewPathMs / 850) % 4;
@@ -597,7 +672,7 @@ export class GameScene extends Phaser.Scene {
       for (const key of Object.values(this.keys)) key.isDown = false;
       this.reviewPathMs = 0;
     }
-    this.player.update(deltaMs, this.keys);
+    this.player.update(deltaMs, this.readPlayerMoveInput());
     this.cosmetic.update(deltaMs, this.player.position, this.practiceRun ? null : marketProgress.equippedCosmetic);
     const requiredBoss = this.gameManager.bossGate.required(this.gameManager.level);
     if (requiredBoss && !this.bossArena) this.beginBossArena(requiredBoss);
@@ -609,10 +684,12 @@ export class GameScene extends Phaser.Scene {
       this.showLevelUpOnce();
       return;
     }
+    const healthBefore = this.gameManager.playerStats.health;
     this.oven.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.stag.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.buzzard.update(deltaMs, this.player.position, this.player.radius, this.enemies);
     this.king.update(deltaMs, this.player.position, this.player.radius, this.enemies);
+    if (this.gameManager.playerStats.health < healthBefore) this.notifyPlayerHit();
     if (this.gameManager.state !== 'Playing') return;
     if (this.victoryInMs > 0) {
       this.victoryInMs -= deltaMs;
@@ -630,7 +707,8 @@ export class GameScene extends Phaser.Scene {
       this.enemies,
       this.projectiles
     );
-    this.player.setAim(this.weaponSystem.aimAngle);
+    this.updateManualAim();
+    this.player.setAim(this.manualAimEnabled ? this.manualAimAngle : this.weaponSystem.aimAngle);
     if (this.weaponSystem.consumeShot()) this.player.kickArm();
     this.player.presentArm(deltaMs);
 
@@ -664,7 +742,7 @@ export class GameScene extends Phaser.Scene {
       orb.update(deltaMs, this.player.position);
     }
 
-    const healthBefore = this.gameManager.playerStats.health;
+    const healthBeforeCollision = this.gameManager.playerStats.health;
     this.collisionSystem.update(
       this.gameManager.elapsedMs,
       this.player,
@@ -675,7 +753,7 @@ export class GameScene extends Phaser.Scene {
       this.combat.damage,
       this.acorns
     );
-    if (this.gameManager.playerStats.health < healthBefore) this.events.emit('presentation:hit', this.player.sprite);
+    if (this.gameManager.playerStats.health < healthBeforeCollision) this.notifyPlayerHit();
     this.abilities.simulation.noteCollected(this.xpOrbs.filter(orb => orb.isCollected).length);
     if (this.abilities.simulation.pendingHeal > 0) {
       const stats = this.gameManager.playerStats;
@@ -685,6 +763,8 @@ export class GameScene extends Phaser.Scene {
     if (this.gameManager.consumeBarkBurst()) this.livingBarkBurst();
     this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
     this.presentation.update(deltaMs);
+    this.damageNumbers.update(deltaMs);
+    this.compass.update(deltaMs, this.cameras.main, this.collectCompassTargets());
     const subjects = [this.player.position, ...this.enemies.map(e => e.position), ...this.xpOrbs.map(o => o.position)];
     subjects.push(...this.companionSystem.positions);
     subjects.push(...this.chestSystem.positions);
@@ -752,6 +832,7 @@ export class GameScene extends Phaser.Scene {
 
   /** A boss blow: damage, then thrown back along it, but never into scenery or out of the world. */
   private knockPlayer(damage: number, push: Vector2Like, distance: number): void {
+    if (this.player.isDashing) return;
     this.gameManager.damagePlayer(damage);
     const thrown = clampToArena({ x: this.player.position.x + push.x * distance, y: this.player.position.y + push.y * distance }, this.player.radius);
     const safe = this.scenerySystem.navigation.move(this.player.position, thrown, this.player.radius);
@@ -823,6 +904,13 @@ export class GameScene extends Phaser.Scene {
   private beginBossArena(id: BossId): void {
     const center = { ...this.player.position };
     this.bossArena = { id, center };
+    if (id === 'stag' || id === 'king') {
+      this.scenerySystem.ensureArenaTrees(center, BOSS_ARENA_RADIUS, 3, [
+        this.player.position,
+        { x: center.x - STAG.spawnDistance, y: center.y },
+        { x: center.x + KING.spawnDistance, y: center.y }
+      ]);
+    }
     // Clear the crowd without awarding kills or XP: this encounter is a duel.
     const bosses: (EnemyController | undefined)[] = [this.oven.boss, this.stag.boss, this.buzzard.boss, this.king.boss];
     this.runEvents.clear();
@@ -923,11 +1011,202 @@ export class GameScene extends Phaser.Scene {
     this.xpOrbs = this.xpOrbs.filter((orb) => !orb.isCollected);
   }
 
+  get dashCooldownRatio(): number {
+    return this.player?.dashCooldownRatio ?? 0;
+  }
+
+  get isDashing(): boolean {
+    return this.player?.isDashing ?? false;
+  }
+
+  get isManualAim(): boolean {
+    return this.manualAimEnabled;
+  }
+
+  getManualAimWorldPoint(): Vector2Like | undefined {
+    return this.manualAimEnabled && this.manualAimWorldPoint
+      ? { ...this.manualAimWorldPoint }
+      : undefined;
+  }
+
+  getManualAimAngle(): number | undefined {
+    return this.manualAimEnabled ? this.manualAimAngle : undefined;
+  }
+
+  triggerDash(): boolean {
+    if (this.gameManager.state !== 'Playing' || this.debugSpriteSheetMenu?.isOpen) return false;
+    const move = this.readDirectionVector();
+    return this.player.tryDash(move.x !== 0 || move.y !== 0 ? move : undefined);
+  }
+
+  toggleManualAim(): boolean {
+    this.manualAimEnabled = !this.manualAimEnabled;
+    this.updateManualAim();
+    this.aimNoticeMs = 1300;
+    this.aimNotice
+      ?.setText(this.manualAimEnabled ? 'Manual Aim: ON' : 'Auto Aim')
+      .setPosition(this.scale.width * 0.5, 92)
+      .setAlpha(1)
+      .setVisible(true);
+    return this.manualAimEnabled;
+  }
+
+  private readDirectionVector(): Vector2Like {
+    const pad = this.readGamepadInput();
+    const kx = Number(this.keys.d.isDown || this.keys.right.isDown)
+      - Number(this.keys.a.isDown || this.keys.left.isDown);
+    const ky = Number(this.keys.s.isDown || this.keys.down.isDown)
+      - Number(this.keys.w.isDown || this.keys.up.isDown);
+    const kMag = Math.hypot(kx, ky);
+    const keyX = kMag > 0 ? kx / kMag : 0;
+    const keyY = kMag > 0 ? ky / kMag : 0;
+    const x = keyX + pad.x;
+    const y = keyY + pad.y;
+    const total = Math.hypot(x, y);
+    return total > 1 ? { x: x / total, y: y / total } : { x, y };
+  }
+
+  private readPlayerMoveInput(): PlayerMoveInput {
+    const pad = this.readGamepadInput();
+    const padDashJustPressed = pad.dashDown && !this.gamepadDashHeld;
+    this.gamepadDashHeld = pad.dashDown;
+    const keyDashJustPressed =
+      Phaser.Input.Keyboard.JustDown(this.keys.space) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.shift);
+    const dir = this.readDirectionVector();
+    return {
+      x: dir.x,
+      y: dir.y,
+      dash: keyDashJustPressed || padDashJustPressed
+    };
+  }
+
+  private readGamepadInput(): { x: number; y: number; dashDown: boolean } {
+    let rawX = 0;
+    let rawY = 0;
+    let dashDown = false;
+
+    const phaserPads = this.input.gamepad?.gamepads ?? [];
+    for (const pad of phaserPads) {
+      if (!pad || !pad.connected) continue;
+      rawX += pad.leftStick.x + Number(pad.right) - Number(pad.left);
+      rawY += pad.leftStick.y + Number(pad.down) - Number(pad.up);
+      if (pad.A || pad.B || pad.isButtonDown(0) || pad.isButtonDown(1)) dashDown = true;
+    }
+
+    if (
+      rawX === 0 &&
+      rawY === 0 &&
+      !dashDown &&
+      typeof navigator !== 'undefined' &&
+      typeof navigator.getGamepads === 'function'
+    ) {
+      const browserPads = navigator.getGamepads();
+      for (const pad of browserPads) {
+        if (!pad || !pad.connected) continue;
+        const ax = pad.axes[0] ?? 0;
+        const ay = pad.axes[1] ?? 0;
+        const dpadX = Number(Boolean(pad.buttons[15]?.pressed)) - Number(Boolean(pad.buttons[14]?.pressed));
+        const dpadY = Number(Boolean(pad.buttons[13]?.pressed)) - Number(Boolean(pad.buttons[12]?.pressed));
+        rawX += ax + dpadX;
+        rawY += ay + dpadY;
+        if (pad.buttons[0]?.pressed || pad.buttons[1]?.pressed) dashDown = true;
+      }
+    }
+
+    const mag = Math.hypot(rawX, rawY);
+    if (mag < 0.2) return { x: 0, y: 0, dashDown };
+    const scaled = Math.min(1, (mag - 0.2) / 0.8);
+    return { x: (rawX / mag) * scaled, y: (rawY / mag) * scaled, dashDown };
+  }
+
+  private updateManualAim(): void {
+    if (!this.manualAimEnabled) {
+      this.aimReticle.setVisible(false);
+      this.manualAimWorldPoint = undefined;
+      return;
+    }
+
+    const pointer = this.input.activePointer;
+    const camera = this.cameras.main;
+    const sx = pointer ? pointer.x : camera.width * 0.5;
+    const sy = pointer ? pointer.y : camera.height * 0.5;
+    const world = camera.getWorldPoint(sx, sy);
+    this.manualAimWorldPoint = { x: world.x, y: world.y };
+    const dx = world.x - this.player.position.x;
+    const dy = world.y - this.player.position.y;
+    if (dx !== 0 || dy !== 0) {
+      this.manualAimAngle = Math.atan2(dy, dx);
+    }
+    this.aimReticle
+      .setPosition(world.x, world.y)
+      .setRotation(reducedMotion() ? 0 : this.gameManager.elapsedMs * 0.0008)
+      .setVisible(this.gameManager.state === 'Playing');
+  }
+
+  private updateAimNotice(deltaMs: number): void {
+    if (!this.aimNotice || this.aimNoticeMs <= 0) return;
+    this.aimNoticeMs = Math.max(0, this.aimNoticeMs - deltaMs);
+    if (this.aimNoticeMs <= 0) {
+      this.aimNotice.setVisible(false);
+      return;
+    }
+    this.aimNotice
+      .setPosition(this.scale.width * 0.5, 92)
+      .setAlpha(this.aimNoticeMs < 350 ? this.aimNoticeMs / 350 : 1)
+      .setVisible(true);
+  }
+
+  private notifyPlayerHit(): void {
+    this.events.emit('presentation:hit', this.player.sprite);
+    this.events.emit('presentation:player-hit');
+    this.player.triggerHitBlink(BALANCE.player.contactInvulnerabilityMs);
+  }
+
+  private collectCompassTargets(): CompassTarget[] {
+    const targets: CompassTarget[] = [];
+    for (const chest of this.chestSystem.drops.chests) {
+      targets.push({
+        x: chest.position.x,
+        y: chest.position.y,
+        kind: chest.kind === 'boss' ? 'relic' : 'chest'
+      });
+    }
+    for (const rock of this.rareRocks.positions) {
+      targets.push({ x: rock.x, y: rock.y, kind: 'rock' });
+    }
+    for (const enemy of this.enemies) {
+      if (!enemy.isDead && enemy.elite) {
+        targets.push({ x: enemy.position.x, y: enemy.position.y, kind: 'elite' });
+      }
+    }
+    return targets;
+  }
+
+  private createAimReticle(): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics().setDepth(33).setVisible(false);
+    g.lineStyle(3.5, 0x231409, 0.85).strokeCircle(0, 0, 12);
+    g.lineStyle(1.75, 0xf6e6b8, 0.95).strokeCircle(0, 0, 12);
+    for (const [x1, y1, x2, y2] of [
+      [-17, 0, -9, 0],
+      [9, 0, 17, 0],
+      [0, -17, 0, -9],
+      [0, 9, 0, 17]
+    ]) {
+      g.lineStyle(3.5, 0x231409, 0.85).lineBetween(x1, y1, x2, y2);
+      g.lineStyle(1.75, 0xf6e6b8, 0.95).lineBetween(x1, y1, x2, y2);
+    }
+    g.fillStyle(0xf6e6b8, 0.95).fillCircle(0, 0, 2.2);
+    return g;
+  }
+
   private destroyRunObjects(): void {
     this.reviewControls?.remove(); this.reviewControls = undefined;
     this.anims.resumeAll();
     this.input.keyboard?.off('keydown-ESC', this.handleEscape);
     this.input.keyboard?.off('keydown-F10', this.finishReviewRun);
+    this.input.keyboard?.off('keydown-F', this.handleToggleManualAim);
+    this.input.off('pointerdown', this.handlePointerDown);
     this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
     this.companionSystem?.destroy();
@@ -942,6 +1221,8 @@ export class GameScene extends Phaser.Scene {
     this.king?.destroy();
     this.runEvents?.destroy();
     this.player?.destroy();
+    this.aimReticle?.destroy();
+    this.aimNotice?.destroy();
     for (const enemy of this.enemies) {
       enemy.destroy();
     }
@@ -958,6 +1239,8 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = [];
     this.xpOrbs = [];
     this.acorns = [];
+    this.damageNumbers?.destroy();
+    this.compass?.destroy();
     this.presentation?.destroy();
   }
 }

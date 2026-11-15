@@ -27,17 +27,18 @@ export class CompanionSystem {
     enemies: EnemyController[],
     damage: DealDamage
   ): void {
+    const companionDamage: DealDamage = (target, amount, source = 'companion') => damage(target, amount, source);
     if (this.stats.hasMysteryCompanion && !this.mystery) {
       this.mystery = new MysteryCompanion(this.scene, this.stats, playerPosition, this.navigation);
     }
 
-    this.mystery?.update(deltaMs, playerPosition, playerMovementDirection, enemies, damage);
+    this.mystery?.update(deltaMs, playerPosition, playerMovementDirection, enemies, companionDamage);
     if (this.stats.hasMidnightCompanion && !this.midnight) this.midnight = new MidnightCompanion(this.scene, playerPosition, this.navigation, this.stats);
-    this.midnight?.update(deltaMs, playerPosition, enemies, damage);
+    this.midnight?.update(deltaMs, playerPosition, enemies, companionDamage);
     if (this.stats.hasFrankieCompanion && !this.frankie) this.frankie = new FrankieCompanion(this.scene, this.stats, playerPosition);
-    this.frankie?.update(deltaMs, playerPosition, enemies, damage);
+    this.frankie?.update(deltaMs, playerPosition, enemies, companionDamage);
     if (this.stats.hasTobiasCompanion && !this.tobias) this.tobias = new TobiasCompanion(this.scene, this.stats, playerPosition);
-    this.tobias?.update(deltaMs, playerPosition, enemies, damage);
+    this.tobias?.update(deltaMs, playerPosition, enemies, companionDamage);
   }
 
   destroy(): void {

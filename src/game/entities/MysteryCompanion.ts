@@ -108,7 +108,7 @@ export class MysteryCompanion {
       this.hasHitThisPounce = true;
       this.chainHits.add(this.target.id);
       const rank = this.companionRank;
-      damage(this.target, this.stats.mysteryDamage * (this.isSecondPounce ? chainDamageScale(rank) : 1));
+      damage(this.target, this.stats.mysteryDamage * (this.isSecondPounce ? chainDamageScale(rank) : 1), 'companion');
       const next = nextPounceTarget(rank, this.chainHits, this.chained, this.position, playerPosition, this.stats.mysteryPounceRange, enemies);
       if (next) { this.chained++; this.beginPounce(next, true); return; }
       this.beginReturn();

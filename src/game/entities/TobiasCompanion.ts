@@ -59,6 +59,14 @@ export class TobiasCompanion {
       if (life < 0 || life > 1) continue;
       this.drawWake(g, wake, life);
     }
+    for (const ring of this.swim.splashRings) {
+      const life = (this.swim.elapsedMs - ring.bornAt) / (ring.expiresAt - ring.bornAt);
+      if (life < 0 || life > 1) continue;
+      const fade = (1 - life) * 0.5;
+      const radius = ring.radius * (0.3 + 0.7 * life);
+      g.lineStyle(4, 0x8de0f7, fade).strokeCircle(ring.position.x, ring.position.y, radius);
+      g.fillStyle(0x6ac8e8, fade * 0.18).fillCircle(ring.position.x, ring.position.y, radius);
+    }
   }
 
   private drawWake(g: Phaser.GameObjects.Graphics, wake: AirWake, life: number): void {

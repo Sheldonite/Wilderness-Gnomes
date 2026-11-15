@@ -3,11 +3,35 @@ import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
-import { reducedMotion } from '../config/presentation';
+import { LOOK, reducedMotion } from '../config/presentation';
 import { WEAPONS } from '../config/weapons';
 import type { PlayerStats, Vector2Like } from '../core/types';
 import { clampToArena, lerpAngle, normalize } from '../utils/math';
 import { PlayerAura } from './PlayerAura';
+
+export const WOODLAND_DASH = {
+  durationMs: 175,
+  speedMultiplier: 2.9,
+  cooldownMs: 2400,
+  trailIntervalMs: 36
+} as const;
+
+export interface MovementKeys {
+  w: { isDown: boolean };
+  a: { isDown: boolean };
+  s: { isDown: boolean };
+  d: { isDown: boolean };
+  up?: { isDown: boolean };
+  down?: { isDown: boolean };
+  left?: { isDown: boolean };
+  right?: { isDown: boolean };
+}
+
+export interface PlayerMoveInput {
+  x: number;
+  y: number;
+  dash?: boolean;
+}
 
 export class PlayerController {
   readonly sprite: Phaser.GameObjects.Sprite;
@@ -23,6 +47,12 @@ export class PlayerController {
   private aimAngle = 0;
   private displayedAim = 0;
   private recoil = 0;
+  private dashRemainingMs = 0;
+  private dashCooldownMs = 0;
+  private dashDirection: Vector2Like = { x: 0, y: 1 };
+  private dashTrailMs = 0;
+  private hitBlinkRemainingMs = 0;
+  private hitBlinkElapsedMs = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -55,6 +85,41 @@ export class PlayerController {
     }
   }
 
+  get isDashing(): boolean {
+    return this.dashRemainingMs > 0;
+  }
+
+  get isHitInvulnerable(): boolean {
+    return this.hitBlinkRemainingMs > 0;
+  }
+
+  /** Remaining dash cooldown as a ratio in `[0, 1]`, where `0` means ready to dash. */
+  get dashCooldownRatio(): number {
+    return this.dashCooldownMs <= 0 ? 0 : Math.min(1, this.dashCooldownMs / WOODLAND_DASH.cooldownMs);
+  }
+
+  tryDash(direction?: Vector2Like): boolean {
+    if (this.dashCooldownMs > 0 || this.dashRemainingMs > 0) return false;
+    const candidate = direction && (direction.x !== 0 || direction.y !== 0)
+      ? direction
+      : (this.movementDirection.x !== 0 || this.movementDirection.y !== 0)
+        ? this.movementDirection
+        : this.facingDirection;
+    const dir = normalize(candidate.x, candidate.y);
+    this.dashDirection = dir.x === 0 && dir.y === 0 ? { x: 0, y: 1 } : dir;
+    this.dashRemainingMs = WOODLAND_DASH.durationMs;
+    this.dashCooldownMs = WOODLAND_DASH.cooldownMs;
+    this.dashTrailMs = 0;
+    this.scene.events.emit('presentation:dash', this.position);
+    this.scene.events.emit('audio:play', 'dash');
+    return true;
+  }
+
+  triggerHitBlink(durationMs: number = BALANCE.player.contactInvulnerabilityMs): void {
+    this.hitBlinkRemainingMs = Math.max(this.hitBlinkRemainingMs, durationMs);
+    this.hitBlinkElapsedMs = 0;
+  }
+
   setAim(angle: number): void {
     this.aimAngle = angle;
   }
@@ -63,17 +128,52 @@ export class PlayerController {
     this.recoil = 1;
   }
 
-  update(deltaMs: number, keys: Record<'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>): void {
-    const horizontal = Number(keys.d.isDown) - Number(keys.a.isDown);
-    const vertical = Number(keys.s.isDown) - Number(keys.w.isDown);
-    const direction = normalize(horizontal, vertical);
-    this.movementDirection = direction;
-    const dt = deltaMs / 1000;
+  update(deltaMs: number, input: MovementKeys | PlayerMoveInput): void {
+    if (this.dashCooldownMs > 0) {
+      this.dashCooldownMs = Math.max(0, this.dashCooldownMs - deltaMs);
+    }
 
+    this.updateHitBlink(deltaMs);
+
+    let rawDirection: Vector2Like;
+    if ('w' in input) {
+      const horizontal = Number(input.d.isDown || Boolean(input.right?.isDown))
+        - Number(input.a.isDown || Boolean(input.left?.isDown));
+      const vertical = Number(input.s.isDown || Boolean(input.down?.isDown))
+        - Number(input.w.isDown || Boolean(input.up?.isDown));
+      rawDirection = normalize(horizontal, vertical);
+    } else {
+      const mag = Math.hypot(input.x, input.y);
+      rawDirection = mag > 1
+        ? { x: input.x / mag, y: input.y / mag }
+        : mag > 0
+          ? { x: input.x, y: input.y }
+          : { x: 0, y: 0 };
+      if (input.dash) {
+        this.tryDash(rawDirection);
+      }
+    }
+
+    let moveVector = rawDirection;
+    let moveSpeed = this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * (this.stats.moveSlow ?? 1);
+
+    if (this.dashRemainingMs > 0) {
+      this.dashRemainingMs = Math.max(0, this.dashRemainingMs - deltaMs);
+      this.dashTrailMs -= deltaMs;
+      while (this.dashTrailMs <= 0 && this.dashRemainingMs > 0) {
+        this.dashTrailMs += WOODLAND_DASH.trailIntervalMs;
+        this.scene.events.emit('presentation:trail', this.position, LOOK.color.cream);
+        this.scene.events.emit('presentation:trail', this.position, LOOK.ability.ward);
+      }
+      moveVector = this.dashDirection;
+      moveSpeed = this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * WOODLAND_DASH.speedMultiplier;
+    }
+
+    const dt = deltaMs / 1000;
     const next = clampToArena(
       {
-        x: this.sprite.x + direction.x * this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * (this.stats.moveSlow ?? 1) * dt,
-        y: this.sprite.y + direction.y * this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * (this.stats.moveSlow ?? 1) * dt
+        x: this.sprite.x + moveVector.x * moveSpeed * dt,
+        y: this.sprite.y + moveVector.y * moveSpeed * dt
       },
       this.radius
     );
@@ -84,6 +184,24 @@ export class PlayerController {
     this.updateAnimation(this.movementDirection);
     this.updateSecondaryMotion(deltaMs, this.movementDirection);
     this.aura?.update(deltaMs, this.position);
+  }
+
+  private updateHitBlink(deltaMs: number): void {
+    if (this.hitBlinkRemainingMs <= 0) return;
+    this.hitBlinkRemainingMs = Math.max(0, this.hitBlinkRemainingMs - deltaMs);
+    this.hitBlinkElapsedMs += deltaMs;
+    if (this.hitBlinkRemainingMs <= 0) {
+      this.sprite.setAlpha(1);
+      this.arm?.setAlpha(1);
+      return;
+    }
+    const alpha = reducedMotion()
+      ? 0.72
+      : Math.floor(this.hitBlinkElapsedMs / 65) % 2 === 0
+        ? 0.35
+        : 1;
+    this.sprite.setAlpha(alpha);
+    this.arm?.setAlpha(alpha);
   }
 
   presentArm(deltaMs: number): void {
@@ -112,7 +230,11 @@ export class PlayerController {
 
     if (moving) {
       this.idleTime = 0;
-      this.sprite.setRotation(direction.x * 0.04).setScale(baseScale);
+      if (this.isDashing) {
+        this.sprite.setRotation(direction.x * 0.12).setScale(baseScale * 1.07, baseScale * 0.94);
+      } else {
+        this.sprite.setRotation(direction.x * 0.04).setScale(baseScale);
+      }
       return;
     }
 

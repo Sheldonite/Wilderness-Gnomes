@@ -1,6 +1,6 @@
 import { BALANCE } from '../config/balance';
 import { ABILITY_IDS, ABILITY_NAMES, ASCENSION_RANK, AWAKENING_RANK, MAX_ABILITY_RANK, abilityAllowed, describeAbility, rankUnlocked, tierName } from '../config/abilities';
-import { CROSSBOW_STAT_UPGRADES } from '../config/weapons';
+import { WEAPON_STAT_UPGRADES } from '../config/weapons';
 import { BOSS_ABILITY_IDS, BOSS_ABILITY_NAMES, MAX_BOSS_RANK, describeBossAbility, isBossAbility } from '../config/bossAbilities';
 import type { GameManager } from '../core/GameManager';
 import type { AbilityId, AbilityRank, PlayerStats, UpgradeDefinition } from '../core/types';
@@ -58,7 +58,8 @@ export class UpgradeSystem {
     const pool = this.getAvailable(stats);
     const choices: UpgradeDefinition[] = [];
     const choose = (candidates: UpgradeDefinition[]) => {
-      if (candidates.length) choices.push(candidates[Math.floor(this.random() * candidates.length)]);
+      const picked = this.pickWeighted(candidates, stats);
+      if (picked) choices.push(picked);
     };
     choose(pool.filter(u => u.rank === 1));
     choose(pool.filter(u => u.rank !== undefined && u.rank > 1));
@@ -72,6 +73,26 @@ export class UpgradeSystem {
       [choices[i], choices[j]] = [choices[j], choices[i]];
     }
     return choices;
+  }
+
+  private pickWeighted(candidates: UpgradeDefinition[], stats: PlayerStats): UpgradeDefinition | undefined {
+    if (!candidates.length) return undefined;
+    if (candidates.length === 1) return candidates[0];
+    const weights = candidates.map(u => {
+      if (u.rank === undefined) return 1;
+      if (u.rank > 1) {
+        const currentRank = Math.max(1, stats.abilityRanks[u.id as AbilityId] ?? (u.rank - 1));
+        return 1.8 + currentRank * 0.25;
+      }
+      return 1;
+    });
+    const total = weights.reduce((sum, w) => sum + w, 0);
+    let roll = this.random() * total;
+    for (let i = 0; i < candidates.length; i++) {
+      roll -= weights[i];
+      if (roll <= 0) return candidates[i];
+    }
+    return candidates[candidates.length - 1];
   }
 
   applyUpgrade(upgrade: UpgradeDefinition, stats: PlayerStats): void {
@@ -119,8 +140,7 @@ export class UpgradeSystem {
   }
 
   private flavor(upgrade: UpgradeDefinition, stats: PlayerStats): UpgradeDefinition {
-    if (stats.weaponId !== 'crossbow') return upgrade;
-    const copy = CROSSBOW_STAT_UPGRADES[upgrade.id];
+    const copy = WEAPON_STAT_UPGRADES[stats.weaponId]?.[upgrade.id];
     return copy ? { ...upgrade, title: copy.title, description: copy.description } : upgrade;
   }
 

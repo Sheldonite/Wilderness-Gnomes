@@ -2,15 +2,16 @@ import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { reducedMotion } from '../config/presentation';
-import { RunEvents, ringPositions, stampedeLane, stampedeStarts, type RunEvent, type StampedeLane } from '../core/RunEvents';
+import { RunEvents, WOODLAND_SHRINE_REWARD, ringPositions, stampedeLane, stampedeStarts, type RunEvent, type ShrineReward, type StampedeLane } from '../core/RunEvents';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import { rollSpawnVariant } from '../core/SquirrelBehavior';
 import type { Vector2Like } from '../core/types';
 import { EnemyController, type EnemyVariant } from '../entities/EnemyController';
-import { clampToArena } from '../utils/math';
+import { clampToArena, distanceSq } from '../utils/math';
 import type { EnemySpawner } from './EnemySpawner';
 
 interface PendingStampede { lane: StampedeLane; warnMs: number; count: number; variants: EnemyVariant[] }
+export interface WoodlandShrine { position: Vector2Like; spawnedAtMs: number; collected: boolean }
 
 const VARIANT_NAMES: Record<EnemyVariant, string> = {
   brown: 'squirrel', grey: 'acorn-thrower', doe: 'doe', fawn: 'fawn', buck: 'buck', armadillo: 'armadillo', buzzard: 'buzzard'
@@ -26,6 +27,10 @@ export class RunEventSystem {
   private readonly banner: HTMLElement;
   private bannerMs = 0;
   private pending: PendingStampede[] = [];
+  private shrines: WoodlandShrine[] = [];
+  private pendingShrineRewards: ShrineReward[] = [];
+  private shrineBursts: { position: Vector2Like; age: number }[] = [];
+  private shrinePulseMs = 0;
 
   constructor(private readonly scene: Phaser.Scene, private readonly navigation: SceneryNavigation) {
     this.graphics = scene.add.graphics().setDepth(4);
@@ -40,17 +45,68 @@ export class RunEventSystem {
    * (including Wonky's herd) still run.
    */
   update(deltaMs: number, open: boolean, level: number, minutes: number, player: Vector2Like,
-    camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner): void {
-    if (open) for (const event of this.schedule.update(deltaMs, minutes)) this.trigger(event, level, minutes, player, camera, enemies, spawner);
+    camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner,
+    onShrineCollect?: (reward: ShrineReward, position: Vector2Like) => void): void {
+    this.shrinePulseMs += Math.max(0, deltaMs);
+    if (open) {
+      for (const event of this.schedule.update(deltaMs, minutes)) this.trigger(event, level, minutes, player, camera, enemies, spawner);
+      if (this.schedule.consumeShrineDue()) this.spawnShrine(player);
+    }
     this.pending = this.pending.filter(p => {
       p.warnMs -= deltaMs;
       if (p.warnMs > 0) return true;
       this.spawnRunners(p, minutes, enemies);
       return false;
     });
+    const collectSq = BALANCE.events.shrineCollectRange ** 2;
+    for (const shrine of this.shrines) {
+      if (shrine.collected || distanceSq(shrine.position, player) > collectSq) continue;
+      shrine.collected = true;
+      this.pendingShrineRewards.push(WOODLAND_SHRINE_REWARD);
+      this.shrineBursts.push({ position: { ...shrine.position }, age: 0 });
+      this.announce('Woodland Campfire! Warmth heals +25 HP, hastens strides, and grants +2 Gold!');
+      this.scene.events.emit('shrine:collected', WOODLAND_SHRINE_REWARD, { ...shrine.position });
+      this.scene.events.emit('audio:play', 'shrine');
+      onShrineCollect?.(WOODLAND_SHRINE_REWARD, { ...shrine.position });
+    }
+    this.shrines = this.shrines.filter(s => !s.collected);
+    this.shrineBursts = this.shrineBursts.filter(b => (b.age += deltaMs) < 700);
     this.bannerMs = Math.max(0, this.bannerMs - deltaMs);
     if (!this.bannerMs) this.banner.hidden = true;
     this.draw();
+  }
+
+  get activeShrines(): readonly WoodlandShrine[] {
+    return this.shrines;
+  }
+
+  consumeShrineRewards(): ShrineReward[] {
+    if (!this.pendingShrineRewards.length) return [];
+    const out = this.pendingShrineRewards.slice();
+    this.pendingShrineRewards.length = 0;
+    return out;
+  }
+
+  /** Spawns a cozy Woodland Campfire shrine in open woods near `player`. */
+  spawnShrine(player: Vector2Like): WoodlandShrine {
+    let chosen: Vector2Like | undefined;
+    const baseAngle = Math.random() * Math.PI * 2;
+    for (let i = 0; i < 16; i++) {
+      const a = baseAngle + (i / 16) * Math.PI * 2;
+      const dist = 220 + (i % 3) * 45;
+      const candidate = clampToArena({ x: player.x + Math.cos(a) * dist, y: player.y + Math.sin(a) * dist }, 48);
+      const spot = this.navigation.nearest(candidate, 28);
+      if (!this.navigation.blocked(spot, 24)) {
+        chosen = spot;
+        break;
+      }
+    }
+    const position = chosen ?? this.navigation.nearest(clampToArena({ x: player.x + 220, y: player.y }, 48), 28);
+    const shrine: WoodlandShrine = { position, spawnedAtMs: this.shrinePulseMs, collected: false };
+    this.shrines.push(shrine);
+    this.announce('A cozy Woodland Campfire glows nearby!');
+    this.scene.events.emit('shrine:spawned', { ...position });
+    return shrine;
   }
 
   /** Run one set piece now (the schedule, or a review page). */
@@ -137,7 +193,32 @@ export class RunEventSystem {
           .lineBetween(c.x - direction.x * 18 - nx * 16, c.y - direction.y * 18 - ny * 16, c.x, c.y);
       }
     }
+    for (const shrine of this.shrines) {
+      const { x, y } = shrine.position;
+      const pulse = reducedMotion() ? 0.5 : (Math.sin(this.shrinePulseMs / 240) + 1) / 2;
+      g.fillStyle(0xffb347, 0.14 + pulse * 0.08).fillCircle(x, y, 42 + pulse * 6);
+      g.lineStyle(2.5, 0xffe29a, 0.5 + pulse * 0.35).strokeCircle(x, y, 36 + pulse * 8);
+      g.fillStyle(0x6b5b52, 0.95);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        g.fillCircle(x + Math.cos(a) * 14, y + Math.sin(a) * 10 + 4, 4.5);
+      }
+      g.lineStyle(4, 0x6f4324, 1).lineBetween(x - 10, y + 6, x + 10, y - 1).lineBetween(x - 10, y - 1, x + 10, y + 6);
+      g.fillStyle(0xf27d24, 0.95).fillTriangle(x - 8, y + 3, x, y - 15 - pulse * 3, x + 8, y + 3);
+      g.fillStyle(0xffdc6b, 0.98).fillTriangle(x - 4, y + 2, x, y - 10 - pulse * 2, x + 4, y + 2);
+    }
+    for (const burst of this.shrineBursts) {
+      const life = Math.min(1, burst.age / 700);
+      g.lineStyle(3, 0xffe59c, (1 - life) * 0.7).strokeCircle(burst.position.x, burst.position.y, 24 + life * 56);
+    }
   }
 
-  destroy(): void { this.pending = []; this.graphics.destroy(); this.banner.remove(); }
+  destroy(): void {
+    this.pending = [];
+    this.shrines = [];
+    this.pendingShrineRewards = [];
+    this.shrineBursts = [];
+    this.graphics.destroy();
+    this.banner.remove();
+  }
 }

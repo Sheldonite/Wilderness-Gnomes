@@ -1,18 +1,48 @@
 import Phaser from 'phaser';
 import { marketItemPreview } from '../../market/MarketItemPreview';
-import { WEAPONS } from '../../config/weapons';
+import { WEAPONS, type WeaponDefinition } from '../../config/weapons';
 import { CosmeticGlow } from '../../market/CosmeticGlow';
-import type { CosmeticId } from '../../config/marketItems';
+import {
+  COSMETIC_SLOTS,
+  COSMETIC_SLOT_LABELS,
+  MARKET_ITEMS,
+  MARKET_VENDORS,
+  getCosmeticSlot,
+  marketItemBenefit,
+  marketItemCurrency,
+  marketItemPrice,
+  type CosmeticId,
+  type CosmeticSlot,
+  type MarketItemId,
+  type MarketVendorId
+} from '../../config/marketItems';
 import squareUrl from '../../../assets/storybook/newnan-market-square.png';
 import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config/playerCharacters';
-import { MARKET_ITEMS, MARKET_VENDORS, marketItemBenefit, marketItemPrice, type MarketVendorId } from '../../config/marketItems';
-import { MarketProgress, marketProgress } from '../../core/MarketProgress';
-import type { Vector2Like, WeaponId } from '../../core/types';
+import { MarketProgress, marketProgress, type AnyWeaponId } from '../../core/MarketProgress';
+import type { Vector2Like } from '../../core/types';
 import { MarketWorld } from '../../market/MarketWorld';
 import { marketItemIcon } from '../../ui/marketIcons';
 import { icon } from '../../ui/icons';
 
 const WIDTH = 1536, HEIGHT = 1024;
+
+const WEAPON_BY_MARKET_ITEM: Partial<Record<MarketItemId, AnyWeaponId>> = {
+  'unlock-crossbow': 'crossbow',
+  'unlock-boomerang': 'boomerang',
+  'unlock-lantern': 'lantern'
+};
+
+const FALLBACK_WEAPON_NAMES: Record<AnyWeaponId, string> = {
+  spell: 'Spell Charm',
+  crossbow: 'Heartwood Crossbow',
+  boomerang: 'Timber Boomerang',
+  lantern: "Will-o'-Wisp Lantern"
+};
+
+function weaponLabel(id: AnyWeaponId): string {
+  const weapon = (WEAPONS as Record<string, WeaponDefinition | undefined>)[id];
+  return weapon?.name ?? FALLBACK_WEAPON_NAMES[id] ?? id;
+}
 
 /** A separate peaceful scene: no combat systems, spawners, XP or run clock. */
 export class MarketScene extends Phaser.Scene {
@@ -22,7 +52,7 @@ export class MarketScene extends Phaser.Scene {
   private root!: HTMLElement;
   private progress!: MarketProgress;
   private character!: PlayerCharacterDefinition;
-  private weaponId: WeaponId = 'spell';
+  private weaponId: AnyWeaponId = 'spell';
   private keys!: Record<'w'|'a'|'s'|'d'|'up'|'down'|'left'|'right', Phaser.Input.Keyboard.Key>;
   private path: Vector2Like[] = [];
   private visiting?: MarketVendorId;
@@ -56,15 +86,19 @@ export class MarketScene extends Phaser.Scene {
     if (!this.textures.exists('newnan-market-square')) this.load.image('newnan-market-square', squareUrl);
   }
 
-  create(data: {characterId?: string; weaponId?: WeaponId; review?: boolean; vendorId?: MarketVendorId} = {}): void {
+  create(data: { characterId?: string; weaponId?: AnyWeaponId; review?: boolean; vendorId?: MarketVendorId } = {}): void {
     this.path = []; this.visiting = undefined; this.shop = undefined; this.nearestVendor = undefined;
     this.facing = { x: 0, y: 1 };
     this.status = ''; this.zoomed = true; this.leaving = false;
     this.preview = import.meta.env.DEV && Boolean(data.review);
     this.progress = this.preview ? new MarketProgress(null) : marketProgress;
-    if (this.preview) this.progress.settleRun('market-preview-purse', 90);
+    if (this.preview) {
+      this.progress.settleRun('market-preview-purse', 90);
+      for (let i = 0; i < 6; i++) this.progress.collectRock(`market-preview-rock-${i}`);
+    }
     this.progress.refresh();
-    this.character = getPlayerCharacter(data.characterId); this.weaponId = this.preview ? data.weaponId ?? 'spell' : this.progress.equippedWeapon;
+    this.character = getPlayerCharacter(data.characterId);
+    this.weaponId = this.preview ? data.weaponId ?? 'spell' : this.progress.equippedWeapon;
     this.anims.resumeAll();
     document.getElementById('game-root')?.classList.remove('in-run');
     this.cameras.main.setBackgroundColor('#223b31');
@@ -79,12 +113,23 @@ export class MarketScene extends Phaser.Scene {
     this.root = document.getElementById('ui-root')!;
     this.root.classList.remove('run-frozen', 'low-health');
     this.root.innerHTML = `<div class="market-ui">
-      <header class="market-header"><button class="market-back" aria-label="Return to title">${icon('arrow')}</button><div><span class="market-eyebrow">NEWNAN, GEORGIA · THE TOWN SQUARE</span><h1>Market Day</h1></div><span class="market-peace">${icon('leaf')} A little peace between adventures</span><div class="market-purse" aria-label="Gold balance">${icon('gold')}<strong data-gold>${this.progress.profile.gold}</strong><span>GOLD</span></div></header>
+      <header class="market-header">
+        <button class="market-back" aria-label="Return to title">${icon('arrow')}</button>
+        <div><span class="market-eyebrow">NEWNAN, GEORGIA · THE TOWN SQUARE</span><h1>Market Day</h1></div>
+        <span class="market-peace">${icon('leaf')} A little peace between adventures</span>
+        <div class="market-balances">
+          <div class="market-purse" aria-label="Gold balance">${icon('gold')}<strong data-gold>${this.progress.profile.gold}</strong><span>GOLD</span></div>
+          <div class="market-purse market-purse-rocks" aria-label="Rare rocks balance">${icon('rock')}<strong data-rocks>${this.progress.profile.rocks}</strong><span>ROCKS</span></div>
+        </div>
+      </header>
       <div class="market-welcome"><span>THE WOODS CAN WAIT</span><p>Good company.<br>Useful little treasures.</p><i></i><small>A golden afternoon on the square. Meet the neighbors, browse their stalls, and bring a little luck into the woods.</small></div>
-      <aside class="market-fieldnotes"><span class="market-eyebrow">A LITTLE GOES A LONG WAY</span><h2>From the woods,<br>for the journey.</h2><p>Reach level 10 to bring your first gold back to town.</p><dl><div><dt>Level 10</dt><dd>5 gold</dd></div><div><dt>Level 20</dt><dd>10 gold</dd></div><div><dt>Each level after 20</dt><dd>+1 gold</dd></div></dl><small>Everything you buy stays with you for future adventures.</small></aside>
+      <aside class="market-fieldnotes"><span class="market-eyebrow">A LITTLE GOES A LONG WAY</span><h2>From the woods,<br>for the journey.</h2><p>Gold begins flowing at level 3, and rare rocks drop along the trail.</p><dl><div><dt>Level 3–9</dt><dd>1–3 gold</dd></div><div><dt>Level 10 / 15</dt><dd>5 / 7 gold</dd></div><div><dt>Level 20+</dt><dd>10 + 1 / lv</dd></div></dl><small>Everything you buy stays with you for future adventures.</small></aside>
       <div class="market-map-tools"><button class="market-zoom" aria-label="Look closer at the square">+</button></div>
       <div class="market-interact" hidden><button type="button"></button></div>
-      <footer class="market-footer"><div class="market-directions"><span><kbd>WASD</kbd> / <kbd>↑ ↓ ← →</kbd> to wander · click the square to stroll · <kbd>E</kbd> to shop</span><button class="market-adventure">Back to the woods ${icon('arrow')}</button></div><nav class="market-directory" aria-label="Market vendors">${MARKET_VENDORS.map(v => `<button data-vendor="${v.id}" style="--vendor-color:#${v.accent.toString(16)}"><span class="vendor-symbol">${marketItemIcon(MARKET_ITEMS.find(item => item.vendorId === v.id)!.icon)}</span><span><strong>${v.name}</strong><small>${v.keeper} · ${v.tagline}</small></span><b>↗</b></button>`).join('')}</nav></footer>
+      <footer class="market-footer"><div class="market-directions"><span><kbd>WASD</kbd> / <kbd>↑ ↓ ← →</kbd> to wander · click the square to stroll · <kbd>E</kbd> to shop</span><button class="market-adventure">Back to the woods ${icon('arrow')}</button></div><nav class="market-directory" aria-label="Market vendors">${MARKET_VENDORS.map(v => {
+        const emblem = MARKET_ITEMS.find(item => item.vendorId === v.id && item.kind !== 'character')!;
+        return `<button data-vendor="${v.id}" style="--vendor-color:#${v.accent.toString(16)}"><span class="vendor-symbol">${marketItemIcon(emblem.icon)}</span><span><strong>${v.name}</strong><small>${v.keeper} · ${v.tagline}</small></span><b>↗</b></button>`;
+      }).join('')}</nav></footer>
       <div class="market-toast" role="status" aria-live="polite" hidden></div>
       ${this.preview ? '<div class="market-preview">Preview purse · purchases stay in this preview</div>' : ''}
     </div>`;
@@ -137,7 +182,7 @@ export class MarketScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (!this.world || this.leaving) return;
     const dt = Math.min(delta, 50); this.world.update(dt);
-    if (this.shop) { this.cosmetic.update(dt, this.player, this.progress.equippedCosmetic); return; }
+    if (this.shop) { this.cosmetic.update(dt, this.player, this.progress.equippedCosmetics); return; }
     let dx = Number(this.keys.d.isDown || this.keys.right.isDown) - Number(this.keys.a.isDown || this.keys.left.isDown);
     let dy = Number(this.keys.s.isDown || this.keys.down.isDown) - Number(this.keys.w.isDown || this.keys.up.isDown);
     if (dx || dy) { this.path = []; this.visiting = undefined; this.destination.clear(); }
@@ -150,7 +195,7 @@ export class MarketScene extends Phaser.Scene {
     const length = Math.hypot(dx, dy), before = {x:this.player.x,y:this.player.y};
     const safe = length ? this.world.move(before, {x:before.x + dx/length*travel,y:before.y + dy/length*travel},18) : before;
     this.player.setPosition(safe.x,safe.y).setDepth(safe.y);
-    this.cosmetic.update(dt, this.player, this.progress.equippedCosmetic);
+    this.cosmetic.update(dt, this.player, this.progress.equippedCosmetics);
     const moving = Math.hypot(safe.x-before.x,safe.y-before.y) > .01;
     if (moving) this.facing = { x: (safe.x-before.x)/travel, y: (safe.y-before.y)/travel };
     const animation = moving ? this.character.animationForDirection(this.facing) : this.character.idleForDirection?.(this.facing) ?? this.character.idleAnimation;
@@ -164,13 +209,21 @@ export class MarketScene extends Phaser.Scene {
     if (this.visiting && this.nearestVendor === this.visiting) this.openShop(this.visiting);
   }
 
+  private refreshHeaderBalances(): void {
+    const profile = this.progress.profile;
+    const goldEl = this.root.querySelector('[data-gold]');
+    const rocksEl = this.root.querySelector('[data-rocks]');
+    if (goldEl) goldEl.textContent = String(profile.gold);
+    if (rocksEl) rocksEl.textContent = String(profile.rocks);
+  }
+
   private openShop(id: MarketVendorId): void {
     this.path = []; this.visiting = undefined; this.destination.clear(); this.shop = id;
     const idle = this.character.idleForDirection?.(this.facing) ?? this.character.idleAnimation;
     this.player.play(idle.key,true).setFlipX(Boolean(idle.flipX));
     this.root.querySelector<HTMLElement>('.market-interact')!.hidden = true;
     this.progress.refresh();
-    this.root.querySelector('[data-gold]')!.textContent = String(this.progress.profile.gold);
+    this.refreshHeaderBalances();
     this.root.querySelector('.market-ui')?.setAttribute('inert', '');
     this.renderShop();
   }
@@ -180,19 +233,49 @@ export class MarketScene extends Phaser.Scene {
     if (!this.shop) return;
     const vendor = MARKET_VENDORS.find(v=>v.id===this.shop)!;
     const profile = this.progress.profile;
+    const stock = MARKET_ITEMS.filter(item => item.vendorId === this.shop && item.kind !== 'character');
+    const outfitterSlots = this.shop === 'outfitter'
+      ? `<div class="outfitter-slots" aria-label="Equipped cosmetic slots">${COSMETIC_SLOTS.map(slot => {
+        const equippedId = profile.equippedCosmetics[slot];
+        const equippedName = equippedId ? (MARKET_ITEMS.find(item => item.id === equippedId)?.name ?? equippedId) : 'Empty';
+        return `<span class="${equippedId ? 'slot-active' : ''}"><strong>${COSMETIC_SLOT_LABELS[slot]}</strong><small>${equippedName}</small></span>`;
+      }).join('')}</div>`
+      : '';
     const panel = document.createElement('div'); panel.className='market-shop-overlay';
-    panel.innerHTML = `<section class="market-shop" role="dialog" aria-modal="true" aria-labelledby="shop-title" aria-describedby="shop-greeting" style="--shop-color:#${vendor.accent.toString(16)}"><button class="shop-close" aria-label="Close shop">${icon('cross')}</button><p class="market-eyebrow">MARKET DAY · ${vendor.keeper.toUpperCase()}'S STALL</p><h2 id="shop-title">${vendor.name}</h2><p id="shop-greeting" class="shop-greeting">“${vendor.greeting}”</p><div class="shop-summary"><span>${icon('leaf')} Yours for every future adventure</span><b>${icon('gold')} ${profile.gold} gold</b></div><div class="market-items">${this.shop==='forge'?`<article class="market-item fully-owned"><div class="market-item-art">${marketItemIcon('charm')}<span>${this.weaponId==='spell'?'✓ EQUIPPED':'✓ OWNED'}</span></div><h3>${WEAPONS.spell.name}</h3><p class="market-item-story">${WEAPONS.spell.description}</p><p class="market-item-rule">Your starting weapon. Always available.</p><button data-weapon="spell" ${this.weaponId==='spell'?'disabled':''}>${this.weaponId==='spell'?'Equipped':'Equip'}</button></article>`:''}${MARKET_ITEMS.filter(item=>item.vendorId===this.shop).map(item=>{
+    panel.innerHTML = `<section class="market-shop" role="dialog" aria-modal="true" aria-labelledby="shop-title" aria-describedby="shop-greeting" style="--shop-color:#${vendor.accent.toString(16)}"><button class="shop-close" aria-label="Close shop">${icon('cross')}</button><p class="market-eyebrow">MARKET DAY · ${vendor.keeper.toUpperCase()}'S STALL</p><h2 id="shop-title">${vendor.name}</h2><p id="shop-greeting" class="shop-greeting">“${vendor.greeting}”</p><div class="shop-summary"><span>${icon('leaf')} Yours for every future adventure</span><div class="shop-currencies"><b>${icon('gold')} ${profile.gold} gold</b><b class="shop-rock-balance">${icon('rock')} ${profile.rocks} rocks</b></div></div>${outfitterSlots}<div class="market-items">${this.shop==='forge'?`<article class="market-item fully-owned"><div class="market-item-art">${marketItemIcon('charm')}<span>${this.weaponId==='spell'?'✓ EQUIPPED':'✓ OWNED'}</span></div><h3>${WEAPONS.spell.name}</h3><p class="market-item-story">${WEAPONS.spell.description}</p><p class="market-item-rule">Your starting weapon. Always available.</p><button data-weapon="spell" ${this.weaponId==='spell'?'disabled':''}>${this.weaponId==='spell'?'Equipped':'Equip'}</button></article>`:''}${stock.map(item=>{
       const preview=marketItemPreview(this,item,this.character.id);
       const artwork=preview?`<img class="market-item-preview" src="${preview}" alt="${item.name} preview">`:marketItemIcon(item.icon);
-      const rank=profile.ranks[item.id]??0,price=marketItemPrice(item.id,rank),full=price===null,affordable=!full&&profile.gold>=price;
-      const cosmetic=item.kind==='cosmetic', equipped=cosmetic ? profile.equippedCosmetic===item.id : item.kind==='weapon' && this.weaponId==='crossbow';
-      const action=item.kind==='weapon'&&full
-        ? `<button data-weapon="crossbow" ${equipped?'disabled':''}>${equipped?'Equipped':'Equip'}</button>`
-        : cosmetic&&full
-        ? `<button data-equip="${equipped?'none':item.id}">${equipped?'Unequip':'Equip'}</button>`
-        : `<button data-buy="${item.id}" ${!affordable?'disabled':''}>${full?(item.kind?'Unlocked':'Fully upgraded'):`${icon('gold')} ${price} gold <span>${item.kind==='character'?'Hire':item.kind==='weapon'?'Unlock':rank?'Improve':'Buy'}</span>`}</button>`;
-      return `<article class="market-item ${full?'fully-owned':''}"><div class="market-item-art" style="--item-color:#${item.accent.toString(16)}">${artwork}<span>${equipped?'✓ EQUIPPED':full?'✓ OWNED':rank?`RANK ${rank} / ${item.maxRank}`:item.kind==='cosmetic'?'COSMETIC':item.kind?'PERMANENT UNLOCK':'PERMANENT UPGRADE'}</span></div><h3>${item.name}</h3><p class="market-item-story">${item.description}</p><div class="market-item-benefits"><span><small>YOU HAVE</small>${rank?marketItemBenefit(item.id,rank):'Not owned yet'}</span>${!full?`<span><small>AFTER THIS PURCHASE</small><b>${marketItemBenefit(item.id,rank+1)}</b></span>`:''}</div><p class="market-item-rule">${item.effect}</p>${action}${!full&&!affordable?`<small class="market-shortfall">${price-profile.gold} more gold needed</small>`:!item.kind?`<small class="market-shortfall">${rank} / ${item.maxRank} ranks owned</small>`:''}</article>`;
-    }).join('')}</div><p class="shop-note">Gold is earned when a run ends. Level 10 earns 5; level 20 earns 10; every level after 20 adds 1.</p><div class="shop-feedback" role="status">${this.status}</div></section>`;
+      const rank=profile.ranks[item.id]??0,price=marketItemPrice(item.id,rank),full=price===null;
+      const currency=marketItemCurrency(item);
+      const wallet=currency==='rocks'?profile.rocks:profile.gold;
+      const affordable=!full&&wallet>=price;
+      const cosmetic=item.kind==='cosmetic';
+      const slot=cosmetic?(item.cosmeticSlot??getCosmeticSlot(item.id)):null;
+      const weaponTarget=item.kind==='weapon'?WEAPON_BY_MARKET_ITEM[item.id]:undefined;
+      const equipped=slot?profile.equippedCosmetics[slot]===item.id:Boolean(weaponTarget&&this.weaponId===weaponTarget);
+      const currencyIcon=icon(currency==='rocks'?'rock':'gold');
+      const unitLabel=currency==='rocks'?(price===1?'rock':'rocks'):'gold';
+      const shortfallUnit=currency==='rocks'?(price!==null&&price-wallet===1?'rare rock':'rare rocks'):'gold';
+      const badgeText=equipped
+        ?(slot?`${COSMETIC_SLOT_LABELS[slot].toUpperCase()} · ✓ EQUIPPED`:'✓ EQUIPPED')
+        :full
+        ?(slot?`${COSMETIC_SLOT_LABELS[slot].toUpperCase()} · ✓ OWNED`:'✓ OWNED')
+        :rank
+        ?`RANK ${rank} / ${item.maxRank}`
+        :slot
+        ?`${COSMETIC_SLOT_LABELS[slot].toUpperCase()} · COSMETIC`
+        :item.kind
+        ?'PERMANENT UNLOCK'
+        :currency==='rocks'
+        ?'RARE ROCK CURIO'
+        :'PERMANENT UPGRADE';
+      const action=item.kind==='weapon'&&full&&weaponTarget
+        ? `<button data-weapon="${weaponTarget}" ${equipped?'disabled':''}>${equipped?'Equipped':'Equip'}</button>`
+        : cosmetic&&full&&slot
+        ? `<button data-equip="${item.id}" data-slot="${slot}" data-equipped="${equipped?'1':'0'}">${equipped?'Unequip':'Equip'}</button>`
+        : `<button data-buy="${item.id}" ${!affordable?'disabled':''}>${full?(item.kind?'Unlocked':'Fully upgraded'):`${currencyIcon} ${price} ${unitLabel} <span>${item.kind==='weapon'?'Unlock':rank?'Improve':'Buy'}</span>`}</button>`;
+      return `<article class="market-item ${full?'fully-owned':''} ${currency==='rocks'?'rock-curio':''}"><div class="market-item-art" style="--item-color:#${item.accent.toString(16)}">${artwork}<span>${badgeText}</span></div><h3>${item.name}</h3><p class="market-item-story">${item.description}</p><div class="market-item-benefits"><span><small>YOU HAVE</small>${rank?marketItemBenefit(item.id,rank):'Not owned yet'}</span>${!full?`<span><small>AFTER THIS PURCHASE</small><b>${marketItemBenefit(item.id,rank+1)}</b></span>`:''}</div><p class="market-item-rule">${item.effect}</p>${action}${!full&&!affordable?`<small class="market-shortfall">${price-wallet} more ${shortfallUnit} needed</small>`:!item.kind?`<small class="market-shortfall">${rank} / ${item.maxRank} ranks owned</small>`:''}</article>`;
+    }).join('')}</div><p class="shop-note">Gold starts at level 3 (Lv 10: 5, Lv 15: 7, Lv 20: 10, +1 per level after). Rare rocks drop in the woods.</p><div class="shop-feedback" role="status">${this.status}</div></section>`;
     const merchant = this.world.vendors.find(v => v.id === vendor.id)!;
     const portrait = document.createElement('img');
     portrait.className = 'market-merchant-portrait'; portrait.alt = `${vendor.keeper}, your ${merchant.title.toLowerCase()}`;
@@ -202,28 +285,45 @@ export class MarketScene extends Phaser.Scene {
     panel.querySelector('.shop-close')!.addEventListener('click',()=>this.closeShop());
     panel.addEventListener('click',event=>{if(event.target===panel)this.closeShop();});
     panel.querySelectorAll<HTMLButtonElement>('[data-weapon]').forEach(button=>button.addEventListener('click',()=>{
-      const id=button.dataset.weapon as WeaponId;
+      const id=button.dataset.weapon as AnyWeaponId;
       if(this.progress.equipWeapon(id)) {
         this.weaponId=id;
-        this.status=`${WEAPONS[id].name} equipped for your next adventure.`;
+        this.status=`${weaponLabel(id)} equipped for your next adventure.`;
         if(this.progress.storageStatus!=='ready') this.status+=' Saved for this preview or session.';
       }
       this.renderShop();
     }));
     panel.querySelectorAll<HTMLButtonElement>('[data-equip]').forEach(button=>button.addEventListener('click',()=>{
-      const id=button.dataset.equip==='none'?null:button.dataset.equip as CosmeticId;
-      if(this.progress.equipCosmetic(id)) this.status=id?`${MARKET_ITEMS.find(item=>item.id===id)!.name} equipped.`:'Cosmetic removed.';
+      const itemId=button.dataset.equip as CosmeticId;
+      const slot=button.dataset.slot as CosmeticSlot;
+      const wasEquipped=button.dataset.equipped==='1';
+      const itemName=MARKET_ITEMS.find(item=>item.id===itemId)?.name??itemId;
+      if(this.progress.equipCosmeticSlot(slot,wasEquipped?null:itemId)) {
+        this.status=wasEquipped?`${itemName} unequipped.`:`${itemName} equipped in your ${COSMETIC_SLOT_LABELS[slot].toLowerCase()} slot.`;
+      }
       if(this.progress.storageStatus!=='ready') this.status+=' Saved for this preview or session.';
-      this.renderShop();
+      this.renderShop(itemId);
     }));
     panel.querySelectorAll<HTMLButtonElement>('[data-buy]').forEach(button=>button.addEventListener('click',()=>{
-      const result=this.progress.purchase(button.dataset.buy!);
-      const item=MARKET_ITEMS.find(item=>item.id===button.dataset.buy)!;
-      this.status=result.status==='purchased'?`${item.name} is yours. ${marketItemBenefit(item.id,result.rank)}.${item.kind==='cosmetic'?' Equip it here to wear it.':''}${result.saved?'':' Saved for this preview or session.'}`:result.status==='insufficient-gold'?'Your purse has changed. Earn a little more gold first.':'This item is already fully upgraded.';
-      this.root.querySelector('[data-gold]')!.textContent=String(result.balance);
-      this.renderShop(button.dataset.buy);
+      const boughtId=button.dataset.buy!;
+      const result=this.progress.purchase(boughtId);
+      const item=MARKET_ITEMS.find(item=>item.id===boughtId)!;
+      if (result.status==='purchased') {
+        this.status=`${item.name} is yours. ${marketItemBenefit(item.id,result.rank)}.${item.kind==='cosmetic'?' Equip it here to wear it.':''}${result.saved?'':' Saved for this preview or session.'}`;
+      } else if (result.status==='insufficient-rocks') {
+        this.status='You need a few more rare rocks from the woods first.';
+      } else if (result.status==='insufficient-gold') {
+        this.status='Your purse has changed. Earn a little more gold first.';
+      } else {
+        this.status='This item is already fully upgraded.';
+      }
+      this.refreshHeaderBalances();
+      this.renderShop(boughtId);
     }));
-    const focus=focusItem?panel.querySelector<HTMLButtonElement>(`[data-buy="${focusItem}"]:not(:disabled)`):undefined;
+    const focus=focusItem
+      ?(panel.querySelector<HTMLButtonElement>(`[data-buy="${focusItem}"]:not(:disabled)`)
+        ??panel.querySelector<HTMLButtonElement>(`[data-equip="${focusItem}"]:not(:disabled)`))
+      :undefined;
     (focus??panel.querySelector<HTMLButtonElement>('.shop-close'))?.focus({preventScroll:true});
   }
 

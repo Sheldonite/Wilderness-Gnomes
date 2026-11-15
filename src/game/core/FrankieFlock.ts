@@ -5,6 +5,13 @@ import { distanceSq, normalize } from '../utils/math';
 
 export type FrankieState = 'orbiting' | 'diving' | 'returning';
 
+export interface FrankieGustBurst {
+  position: Vector2Like;
+  radius: number;
+  bornAt: number;
+  expiresAt: number;
+}
+
 export interface FrankieBird {
   position: Vector2Like;
   facing: Vector2Like;
@@ -26,15 +33,22 @@ export interface FrankieFeather {
 export class FrankieFlock {
   readonly birds: FrankieBird[] = [];
   feathers: FrankieFeather[] = [];
+  gustBursts: FrankieGustBurst[] = [];
   elapsedMs = 0;
   private lastPlayer: Vector2Like = { x: 0, y: 0 };
   private primed = false;
 
   constructor(private readonly stats: PlayerStats) {}
 
+  /** Rank 10 Skypack Frenzy raises the feather bonus cap from 40 to 60. */
+  get featherCap(): number {
+    const b = BALANCE.companion;
+    return this.stats.companionRank >= 10 ? b.frankieAscendedFeatherCap : b.frankieFeatherCap;
+  }
+
   get damage(): number {
     const b = BALANCE.companion;
-    return b.frankieDamage + Math.min(b.frankieFeatherCap, this.stats.frankieFeatherBonus);
+    return b.frankieDamage + Math.min(this.featherCap, this.stats.frankieFeatherBonus);
   }
 
   get count(): number {
@@ -91,9 +105,28 @@ export class FrankieFlock {
         } else {
           this.fly(bird, target.position, b.frankieDiveSpeed, deltaMs);
           if (distanceSq(bird.position, target.position) <= (b.frankieHitRadius + target.radius) ** 2) {
-            damage(target, this.damage);
+            const strikeDamage = this.damage;
+            damage(target, strikeDamage, 'companion');
+            // Rank 5 Gale Stoop: diving buzzards splash 50% damage in a 70px gust around target.
+            if (this.stats.companionRank >= 5) {
+              const splashDamage = Math.round(strikeDamage * b.frankieGustDamageRatio);
+              for (const other of enemies) {
+                if (other.isDead || other.id === target.id) continue;
+                if (distanceSq(target.position, other.position) <= (b.frankieGustRadius + other.radius) ** 2) {
+                  damage(other, splashDamage, 'companion');
+                }
+              }
+              this.gustBursts.push({
+                position: { ...target.position },
+                radius: b.frankieGustRadius,
+                bornAt: this.elapsedMs,
+                expiresAt: this.elapsedMs + 280
+              });
+            }
             bird.state = 'returning';
-            bird.cooldownMs = b.frankieCooldownMs;
+            bird.cooldownMs = this.stats.companionRank >= 10
+              ? Math.round(b.frankieCooldownMs * b.frankieFrenzyCooldownScale)
+              : b.frankieCooldownMs;
             bird.targetId = undefined;
           }
         }
@@ -134,9 +167,10 @@ export class FrankieFlock {
       if (feather.isCollected || this.elapsedMs >= feather.expiresAt) continue;
       if (distanceSq(feather.position, player) > b.frankieCollectRange ** 2) continue;
       feather.isCollected = true;
-      this.stats.frankieFeatherBonus = Math.min(b.frankieFeatherCap, this.stats.frankieFeatherBonus + b.frankieFeatherBonus);
+      this.stats.frankieFeatherBonus = Math.min(this.featherCap, this.stats.frankieFeatherBonus + b.frankieFeatherBonus);
     }
     this.feathers = this.feathers.filter(feather => !feather.isCollected && this.elapsedMs < feather.expiresAt);
+    this.gustBursts = this.gustBursts.filter(gust => this.elapsedMs < gust.expiresAt);
   }
 
   private slot(player: Vector2Like, index: number, count: number): Vector2Like {

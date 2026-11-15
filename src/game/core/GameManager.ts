@@ -1,10 +1,24 @@
 import { BALANCE } from '../config/balance';
-import { ABILITIES, awakeningTier, emptyAbilityRanks } from '../config/abilities';
+import { ABILITIES, ABILITY_NAMES, awakeningTier, emptyAbilityRanks } from '../config/abilities';
+import { BOSS_ABILITY_NAMES } from '../config/bossAbilities';
 import { getWeapon } from '../config/weapons';
-import { COMPANION_BY_CHARACTER, companionRankForLevel, companionPower, frankieBirdsForRank } from '../config/companions';
-import type { GameRunState, HudSnapshot, PlayerCharacterId, PlayerStats, WeaponId, UpgradeSource } from './types';
+import { COMPANION_BY_CHARACTER, COMPANION_NAMES, companionRankForLevel, companionPower, frankieBirdsForRank } from '../config/companions';
+import { CHARACTER_PASSIVES } from '../config/playerCharacters';
+import type {
+  AbilityId,
+  BossAbilityId,
+  DamageBreakdownEntry,
+  DamageSourceId,
+  GameRunState,
+  HudSnapshot,
+  PlayerCharacterId,
+  PlayerStats,
+  WeaponId,
+  UpgradeSource
+} from './types';
 import { BossGate } from './BossGate';
 import { createRunId, marketBonuses, type MarketProfile } from './MarketProgress';
+import { WOODLAND_SHRINE_REWARD, type ShrineReward } from './RunEvents';
 
 /** XP needed to finish the given level: exponential early, then a fixed step per level. */
 export function xpThreshold(level: number): number {
@@ -39,11 +53,17 @@ export class GameManager {
   private heartRegenMs = 0;
   private slowUntil = 0;
   private slowFactor = 1;
+  rerollsRemaining: number;
+  bonusGold = 0;
+  private shrineFrenzyRemainingMs = 0;
+  private readonly damageBySource = new Map<DamageSourceId, number>();
 
   constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile, characterId: PlayerCharacterId = 'wizard') {
     const arm = getWeapon(weaponId);
     this.marketBonuses = marketBonuses(marketProfile);
     const bonuses = this.marketBonuses;
+    const passive = CHARACTER_PASSIVES[characterId] ?? CHARACTER_PASSIVES.wizard;
+    this.rerollsRemaining = 1 + ((bonuses as any).extraRerolls ?? 0) + passive.extraRerolls;
     const companionId = COMPANION_BY_CHARACTER[characterId] ?? COMPANION_BY_CHARACTER.wizard;
     this.playerStats = {
       level: 1,
@@ -52,9 +72,9 @@ export class GameManager {
       abilityRanks: emptyAbilityRanks(),
       bossAbilityRanks: { crownfire: 0, stormcall: 0, 'phoenix-heart': 0 },
       weaponId: arm.id,
-      maxHealth: BALANCE.player.maxHealth + bonuses.extraHealth,
-      health: BALANCE.player.maxHealth + bonuses.extraHealth,
-      speed: BALANCE.player.speed * bonuses.speedMultiplier,
+      maxHealth: BALANCE.player.maxHealth + bonuses.extraHealth + passive.extraHealth,
+      health: BALANCE.player.maxHealth + bonuses.extraHealth + passive.extraHealth,
+      speed: BALANCE.player.speed * bonuses.speedMultiplier * passive.speedMultiplier,
       projectileDamage: arm.projectileDamage * bonuses.damageMultiplier,
       weaponCooldownMs: arm.cooldownMs * bonuses.cooldownMultiplier,
       projectileCount: arm.projectileCount + bonuses.extraProjectiles,
@@ -74,7 +94,13 @@ export class GameManager {
       mysteryPounceRange: BALANCE.companion.mysteryPounceRange,
       mysteryReturnSpeed: BALANCE.companion.mysteryReturnSpeed,
       shoutAttackSpeedBonus: 0,
-      shoutMoveSpeedBonus: 0
+      shoutMoveSpeedBonus: 0,
+      spellPowerMultiplier: passive.spellPowerMultiplier,
+      abilityPowerMultiplier: passive.abilityPowerMultiplier,
+      xpMagnetRangeMultiplier: passive.xpMagnetRangeMultiplier,
+      shoutRemainingMs: 0,
+      shrineAttackSpeedBonus: 0,
+      shrineMoveSpeedBonus: 0
     };
     this.applyCompanionRank();
   }
@@ -133,6 +159,13 @@ export class GameManager {
       if (this.wardLeaves < bark.leaves && this.elapsedMs >= this.nextLeafAt) {
         this.wardLeaves++;
         this.nextLeafAt = this.elapsedMs + ABILITIES.ward.rechargeMs[this.playerStats.abilityRanks['barkskin-ward']];
+      }
+    }
+    if (this.shrineFrenzyRemainingMs > 0 && deltaMs > 0) {
+      this.shrineFrenzyRemainingMs = Math.max(0, this.shrineFrenzyRemainingMs - deltaMs);
+      if (this.shrineFrenzyRemainingMs <= 0) {
+        this.playerStats.shrineAttackSpeedBonus = 0;
+        this.playerStats.shrineMoveSpeedBonus = 0;
       }
     }
   }
@@ -200,6 +233,59 @@ export class GameManager {
       this.bossUpgradeAvailable = false;
       if (this.xp >= this.xpToNextLevel && !this.bossGate.required(this.level)) this.advanceLevel();
     }
+  }
+
+  /** Consumes one upgrade card reroll if any remain. */
+  consumeReroll(): boolean {
+    if (this.rerollsRemaining <= 0) return false;
+    this.rerollsRemaining -= 1;
+    return true;
+  }
+
+  /** Forgoes an upgrade pick in exchange for +15 health (capped at maxHealth) and +1 bonus gold. */
+  skipUpgradeForBonus(): { healed: number; bonusGold: number } {
+    if (this.state === 'GameOver') {
+      return { healed: 0, bonusGold: this.bonusGold };
+    }
+    const before = this.playerStats.health;
+    this.playerStats.health = Math.min(this.playerStats.maxHealth, this.playerStats.health + 15);
+    this.bonusGold += 1;
+    this.resumeAfterUpgrade();
+    return { healed: this.playerStats.health - before, bonusGold: this.bonusGold };
+  }
+
+  /** Grants the choice-free Woodland Shrine blessing (+HP, frenzy, +bonus gold, XP burst). */
+  grantShrineReward(reward: ShrineReward = WOODLAND_SHRINE_REWARD): void {
+    if (this.state === 'GameOver') return;
+    this.playerStats.health = Math.min(this.playerStats.maxHealth, this.playerStats.health + reward.heal);
+    this.bonusGold += reward.bonusGold;
+    this.shrineFrenzyRemainingMs = Math.max(this.shrineFrenzyRemainingMs, reward.frenzyMs);
+    this.playerStats.shrineAttackSpeedBonus = reward.attackSpeedBonus;
+    this.playerStats.shrineMoveSpeedBonus = reward.moveSpeedBonus;
+    if (reward.xpBurst > 0) {
+      this.addXp(reward.xpBurst);
+    }
+  }
+
+  /** Records damage attributed to a weapon, companion, active ability, or boss relic. */
+  recordDamage(source: DamageSourceId, amount: number): void {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    this.damageBySource.set(source, (this.damageBySource.get(source) ?? 0) + amount);
+  }
+
+  /** Returns per-source run damage sorted descending for pause/game-over breakdowns. */
+  getDamageBreakdown(): DamageBreakdownEntry[] {
+    const labelFor = (source: DamageSourceId): string => {
+      if (source === 'weapon') return getWeapon(this.playerStats.weaponId).name;
+      if (source === 'companion') return COMPANION_NAMES[this.playerStats.companionId] ?? 'Companion';
+      if (source in ABILITY_NAMES) return ABILITY_NAMES[source as AbilityId];
+      if (source in BOSS_ABILITY_NAMES) return BOSS_ABILITY_NAMES[source as BossAbilityId];
+      return source;
+    };
+    return Array.from(this.damageBySource.entries())
+      .filter(([, dmg]) => dmg > 0)
+      .map(([id, damage]) => ({ id, label: labelFor(id), damage }))
+      .sort((a, b) => b.damage - a.damage);
   }
 
   pause(): void {
@@ -283,6 +369,10 @@ export class GameManager {
   }
 
   getHudSnapshot(): HudSnapshot {
+    const milestone = this.bossGate.nextBossMilestone(this.level);
+    const wardMaxLeaves = this.bark?.leaves ?? (this.playerStats.abilityRanks['barkskin-ward'] > 0 ? 1 : 0);
+    const wardStatus = this.wardStatus;
+    const wardLeaves = this.bark ? this.wardLeaves : (wardStatus === 'ready' ? 1 : 0);
     return {
       health: this.playerStats.health,
       maxHealth: this.playerStats.maxHealth,
@@ -290,7 +380,16 @@ export class GameManager {
       xpToNextLevel: this.xpToNextLevel,
       level: this.level,
       elapsedSeconds: Math.floor(this.elapsedMs / 1000),
-      kills: this.kills
+      kills: this.kills,
+      rerollsRemaining: this.rerollsRemaining,
+      bonusGold: this.bonusGold,
+      wardStatus,
+      wardLeaves,
+      wardMaxLeaves,
+      shoutRemainingMs: this.playerStats.shoutRemainingMs ?? 0,
+      harvestBonus: this.playerStats.harvestBonus,
+      nextBossLevel: milestone.level,
+      nextBossName: milestone.name
     };
   }
 }

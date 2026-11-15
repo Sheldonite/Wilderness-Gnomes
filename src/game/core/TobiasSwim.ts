@@ -13,6 +13,14 @@ export interface AirWake {
   expiresAt: number;
 }
 
+/** Rank 5 Tidal Wake splash ring spawned on torpedo impact. */
+export interface TidalSplash {
+  position: Vector2Like;
+  radius: number;
+  bornAt: number;
+  expiresAt: number;
+}
+
 /**
  * Tobias, Ron's bluefin tuna. He cruises through the air beside the bard on a slow figure of
  * eight, then torpedoes the nearest foe and drifts back. Pure simulation: no Phaser here, so
@@ -23,6 +31,7 @@ export class TobiasSwim {
   facing: Vector2Like = { x: 1, y: 0 };
   state: TobiasState = 'cruising';
   wakes: AirWake[] = [];
+  splashRings: TidalSplash[] = [];
   elapsedMs = 0;
   /** Rises and falls as he swims, so the renderer can lift him off the ground plane. */
   bob = 0;
@@ -31,6 +40,8 @@ export class TobiasSwim {
   private targetId?: number;
   private wakeDueMs = 0;
   private primed = false;
+  private chainsRemaining = 0;
+  private readonly chainedIds = new Set<number>();
 
   constructor(private readonly stats: PlayerStats) {}
 
@@ -59,13 +70,25 @@ export class TobiasSwim {
       if (!target || this.dartAgeMs > b.tobiasDartTimeoutMs) {
         this.state = 'returning';
         this.targetId = undefined;
+        this.chainsRemaining = 0;
       } else {
         this.swim(target.position, b.tobiasDartSpeed, deltaMs);
         if (distanceSq(this.position, target.position) <= (b.tobiasHitRadius + target.radius) ** 2) {
-          damage(target, this.damage);
-          this.state = 'returning';
-          this.cooldownMs = Math.round(b.tobiasCooldownMs / (1 + .04 * this.stats.companionRank));
-          this.targetId = undefined;
+          this.applyHit(target, enemies, damage);
+          this.chainedIds.add(target.id);
+          const nextChain = this.chainsRemaining > 0
+            ? this.closest(this.position, enemies, b.tobiasSurgeChainRadius, this.chainedIds)
+            : undefined;
+          if (nextChain) {
+            this.chainsRemaining -= 1;
+            this.targetId = nextChain.id;
+            this.dartAgeMs = 0;
+          } else {
+            this.state = 'returning';
+            this.cooldownMs = Math.round(b.tobiasCooldownMs / (1 + .04 * this.stats.companionRank));
+            this.targetId = undefined;
+            this.chainsRemaining = 0;
+          }
         }
       }
     } else if (this.state === 'returning') {
@@ -84,6 +107,8 @@ export class TobiasSwim {
           this.state = 'darting';
           this.targetId = prey.id;
           this.dartAgeMs = 0;
+          this.chainedIds.clear();
+          this.chainsRemaining = this.stats.companionRank >= 10 ? b.tobiasSurgeMaxChains : 0;
         }
       }
     }
@@ -93,6 +118,29 @@ export class TobiasSwim {
       this.wakes.push({ position: { ...this.position }, bornAt: this.elapsedMs, expiresAt: this.elapsedMs + b.tobiasWakeMs });
     }
     this.wakes = this.wakes.filter(wake => this.elapsedMs < wake.expiresAt);
+    this.splashRings = this.splashRings.filter(ring => this.elapsedMs < ring.expiresAt);
+  }
+
+  private applyHit(target: CombatTarget, enemies: CombatTarget[], damage: DealDamage): void {
+    const b = BALANCE.companion;
+    const strikeDamage = this.damage;
+    damage(target, strikeDamage, 'companion');
+    // Rank 5 Tidal Wake: torpedo hits splash 60% AoE damage within 75px.
+    if (this.stats.companionRank >= 5) {
+      const splashDamage = Math.round(strikeDamage * b.tobiasWakeSplashRatio);
+      for (const other of enemies) {
+        if (other.isDead || other.id === target.id) continue;
+        if (distanceSq(target.position, other.position) <= (b.tobiasWakeSplashRadius + other.radius) ** 2) {
+          damage(other, splashDamage, 'companion');
+        }
+      }
+      this.splashRings.push({
+        position: { ...target.position },
+        radius: b.tobiasWakeSplashRadius,
+        bornAt: this.elapsedMs,
+        expiresAt: this.elapsedMs + 320
+      });
+    }
   }
 
   /** The lazy figure of eight he holds beside the bard when nothing needs torpedoing. */
@@ -111,11 +159,11 @@ export class TobiasSwim {
     this.position = { x: this.position.x + heading.x * travel, y: this.position.y + heading.y * travel };
   }
 
-  private closest(from: Vector2Like, enemies: CombatTarget[], range: number): CombatTarget | undefined {
+  private closest(from: Vector2Like, enemies: CombatTarget[], range: number, excluded?: Set<number>): CombatTarget | undefined {
     let best: CombatTarget | undefined;
     let bestDistance = range * range;
     for (const enemy of enemies) {
-      if (enemy.isDead) continue;
+      if (enemy.isDead || excluded?.has(enemy.id)) continue;
       const distance = distanceSq(from, enemy.position);
       if (distance > bestDistance) continue;
       best = enemy;

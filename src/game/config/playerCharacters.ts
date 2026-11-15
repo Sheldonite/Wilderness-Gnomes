@@ -24,10 +24,56 @@ export interface PlayerCharacterDefinition {
   aura: boolean;
   /** The one companion who travels with this wanderer, for every run. */
   companionId: CompanionId;
+  /** Short passive identity tag surfaced in character selection and tooltips. */
+  passiveTrait: string;
   /** One line for the home screen card. */
   blurb: string;
   animationForDirection: (direction: Vector2Like) => PlayerAnimationChoice;
 }
+
+export interface CharacterPassiveModifiers {
+  extraHealth: number;
+  extraRerolls: number;
+  speedMultiplier: number;
+  xpMagnetRangeMultiplier: number;
+  spellPowerMultiplier: number;
+  abilityPowerMultiplier: number;
+}
+
+export const CHARACTER_PASSIVES: Record<PlayerCharacterId, CharacterPassiveModifiers> = {
+  wizard: {
+    extraHealth: 0,
+    extraRerolls: 0,
+    speedMultiplier: 1,
+    xpMagnetRangeMultiplier: 1,
+    spellPowerMultiplier: 1.15,
+    abilityPowerMultiplier: 1.15
+  },
+  hailey: {
+    extraHealth: 0,
+    extraRerolls: 0,
+    speedMultiplier: 1.1,
+    xpMagnetRangeMultiplier: 1.35,
+    spellPowerMultiplier: 1,
+    abilityPowerMultiplier: 1
+  },
+  sheldon: {
+    extraHealth: 25,
+    extraRerolls: 1,
+    speedMultiplier: 1,
+    xpMagnetRangeMultiplier: 1,
+    spellPowerMultiplier: 1,
+    abilityPowerMultiplier: 1
+  },
+  ron: {
+    extraHealth: 0,
+    extraRerolls: 0,
+    speedMultiplier: 1,
+    xpMagnetRangeMultiplier: 1,
+    spellPowerMultiplier: 1,
+    abilityPowerMultiplier: 1
+  }
+};
 
 export const HAILEY_SPRITE_KEY = 'player-hailey';
 export const HAILEY_FRAME_WIDTH = 145;
@@ -66,7 +112,9 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
   sheldon: {
     id: 'sheldon', name: 'Sheldon', textureKey: 'player-sheldon', scale: .35,
     idleAnimation: { key: 'sheldon-idle-south' }, aura: false, bakedAnimation: true, footOriginY: 238 / 256,
-    companionId: COMPANION_BY_CHARACTER.sheldon, blurb: 'Always up for the next trail.',
+    companionId: COMPANION_BY_CHARACTER.sheldon,
+    passiveTrait: '+25 Max HP · +1 Reroll',
+    blurb: 'Always up for the next trail. +25 Max HP & +1 starting reroll.',
     animationForDirection: direction => sheldonAnimation(direction),
     idleForDirection: direction => sheldonAnimation(direction, true)
   },
@@ -80,7 +128,8 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
     idleAnimation: { key: 'ron-idle-south' },
     aura: false,
     companionId: COMPANION_BY_CHARACTER.ron,
-    blurb: 'A festive bard. Every heart a willing audience.',
+    passiveTrait: '3 Exclusive Performance Abilities',
+    blurb: 'A festive bard. Every heart a willing audience — with 3 exclusive performance abilities.',
     animationForDirection: direction => ronAnimation(direction),
     idleForDirection: direction => ronAnimation(direction, true)
   },
@@ -92,7 +141,8 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
     idleAnimation: { key: 'player-idle-down' },
     aura: false,
     companionId: COMPANION_BY_CHARACTER.wizard,
-    blurb: 'A spark of woodland magic.',
+    passiveTrait: '+15% Spell & Ability Power',
+    blurb: 'A spark of woodland magic. +15% projectile & ability spell power.',
     animationForDirection: (direction) =>
       WIZARD_WALK_ANIMATION_BY_DIRECTION[directionToKey(direction)] ?? { key: 'player-idle-down' }
   },
@@ -104,7 +154,8 @@ export const PLAYER_CHARACTERS: Record<PlayerCharacterId, PlayerCharacterDefinit
     idleAnimation: { key: 'hailey-idle-down' },
     aura: true,
     companionId: COMPANION_BY_CHARACTER.hailey,
-    blurb: 'An adventurous heart.',
+    passiveTrait: '+10% Move Speed · +35% XP Magnet',
+    blurb: 'An adventurous heart. +10% move speed & +35% XP magnet range.',
     animationForDirection: (direction) =>
       HAILEY_WALK_ANIMATION_BY_DIRECTION[directionToKey(direction)] ?? { key: 'hailey-idle-down' }
   }
