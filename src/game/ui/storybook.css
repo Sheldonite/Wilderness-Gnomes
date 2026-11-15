@@ -222,11 +222,92 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 #ui-root .run-stats{top:14px;padding:0;gap:18px;background:none;border:0;border-image:none;box-shadow:none;filter:none}
 #ui-root .run-stats b{font:700 18px var(--display);color:var(--cream);text-shadow:var(--outline-text)}
 #ui-root .run-stats svg{width:16px;height:16px;color:var(--gold);filter:drop-shadow(0 1px 1px #000)}
-/* pause, top right */
-#ui-root .pause-button{top:10px;right:10px;width:38px;height:38px;padding:0;justify-content:center;border-radius:50%;
+/* pause & quick controls, top right */
+#ui-root .hud-controls{top:10px;right:10px;gap:6px}
+#ui-root .hud-controls .pause-button,#ui-root .mute-button{position:static;top:auto;right:auto;width:38px;height:38px;padding:0;justify-content:center;border-radius:50%;
   background:var(--walnut);border:1px solid var(--walnut-edge);border-image:none;box-shadow:var(--panel-shadow);filter:none;color:var(--gold)}
-#ui-root .pause-button svg{width:16px;height:16px}
-#ui-root .pause-button:hover{background:linear-gradient(180deg,#4d331d,#2c1c0f);filter:none}
+#ui-root .aim-button{position:static;height:38px;padding:0 11px;border-radius:999px;gap:5px;
+  background:var(--walnut);border:1px solid var(--walnut-edge);border-image:none;box-shadow:var(--panel-shadow);filter:none;
+  color:var(--cream);font:600 12px var(--display)}
+#ui-root .aim-button svg{width:15px;height:15px;color:var(--gold)}
+#ui-root .aim-button.is-manual{border-color:var(--gold);color:var(--gold);background:linear-gradient(180deg,#4c3319f0,#2c1c0df0);box-shadow:var(--panel-shadow),0 0 10px #f2c86538}
+#ui-root .mute-button.is-muted{color:#cbb593;border-color:#9a7a52;opacity:.9}
+#ui-root :is(.pause-button,.hud-icon-button) svg{width:16px;height:16px}
+#ui-root :is(.pause-button,.hud-icon-button):hover{background:linear-gradient(180deg,#4d331d,#2c1c0f);filter:none}
+/* unobtrusive status strip below hero card */
+#ui-root .status-strip{position:absolute;top:88px;left:10px;display:flex;flex-wrap:wrap;align-items:center;gap:5px;max-width:min(320px,calc(100vw - 20px));pointer-events:none;z-index:4}
+#ui-root .status-pill{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:3px 9px;border-radius:999px;
+  background:var(--walnut);border:1px solid #c9a15aa8;box-shadow:var(--panel-shadow);color:var(--cream);font:600 12px/1.2 var(--display);white-space:nowrap;font-variant-numeric:tabular-nums}
+#ui-root .status-pill svg{width:14px;height:14px;color:var(--gold);flex-shrink:0}
+#ui-root .status-pill small{font-size:12px;color:#edd7a0;font-weight:600}
+#ui-root .dash-pill{pointer-events:auto;cursor:pointer;appearance:none}
+#ui-root .dash-pill:hover{background:linear-gradient(180deg,#4d331d,#2c1c0f)}
+#ui-root .dash-pill .pill-progress{position:absolute;left:0;bottom:0;height:2px;width:100%;transform-origin:left;background:linear-gradient(90deg,#9ad36c,var(--gold));pointer-events:none}
+#ui-root .dash-pill.is-ready{border-color:#9ad36cc8;color:#f6ffd9}
+#ui-root .dash-pill.is-cooling{opacity:.84;border-color:#9a7a52a8}
+.ward-pips{display:inline-flex;align-items:center;gap:3px}
+.ward-pips i{display:inline-block;width:7px;height:7px;border-radius:50% 0 50% 50%;transform:rotate(-45deg);background:#140b05;box-shadow:inset 0 0 0 1px #c9a15a77}
+.ward-pips i.on{background:#8fd158;box-shadow:0 0 4px #8fd15888}
+#ui-root .ward-pill.ward-protecting{border-color:#a6ea70;box-shadow:var(--panel-shadow),0 0 8px #8fd15855}
+#ui-root .ward-pill.ward-recharging{opacity:.82}
+#ui-root .shout-pill{border-color:#f0b958;color:#ffe7a8}
+#ui-root .harvest-pill{border-color:#8cc45e;color:#e4f9ca}
+#ui-root .boss-milestone-pill{border-color:#d6854d}
+#ui-root .boss-milestone-pill svg{color:#ffb86b}
+/* level-up reroll & skip bar */
+.levelup-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin-top:14px}
+.levelup-action-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 16px;
+  border:1px solid #8a6429aa;border-radius:8px;background:linear-gradient(180deg,#fff5d8,#e6d19f);color:var(--ink);
+  font:700 13px var(--display);box-shadow:0 3px 8px #3b241226;transition:transform .15s,filter .15s,border-color .15s}
+.levelup-action-button svg{width:17px;height:17px;color:#6f4c1a}
+.levelup-action-button .reroll-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#6e4b2a;color:var(--cream);font-size:11px}
+.levelup-action-button kbd{color:var(--ink-soft)}
+.levelup-action-button:hover:enabled{transform:translateY(-2px);filter:brightness(1.04);border-color:#6e4b2a}
+.levelup-action-button:disabled{opacity:.5;cursor:default;filter:grayscale(.35)}
+.levelup-action-button.skip-button{background:linear-gradient(180deg,#f3f5dd,#d8dfc0);border-color:#5f8f3e88;color:#2f4a1e}
+.levelup-action-button.skip-button svg{color:#46652f}
+.levelup-action-button.skip-button small{font-weight:600;color:#46652f}
+@keyframes card-reroll-in{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.upgrade-card.is-rerolled{animation:card-reroll-in .22s ease-out both}
+.upgrade-card.is-rerolled:nth-child(2){animation-delay:40ms}
+.upgrade-card.is-rerolled:nth-child(3){animation-delay:80ms}
+/* post-run damage breakdown */
+.gameover-panel:has(.damage-breakdown){max-width:640px;padding:28px 36px 24px}
+.gameover-panel:has(.damage-breakdown) .result-stats{padding:14px 0;margin:4px 0 14px}
+.damage-breakdown{margin:12px 0 6px;padding:12px 14px;border:1px dashed #6e4b2a77;border-radius:8px;background:#fff6dc66;text-align:left}
+.breakdown-header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px}
+.breakdown-title{font-family:var(--display);font-variant:small-caps;text-transform:lowercase;letter-spacing:1.3px;font-size:13px;font-weight:700;color:var(--ink)}
+.breakdown-total{font:600 12px var(--display);color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.breakdown-list{list-style:none;margin:0;padding:0 4px 0 0;display:flex;flex-direction:column;gap:7px;max-height:205px;overflow-y:auto}
+.breakdown-row{display:flex;align-items:center;gap:9px}
+.breakdown-icon{width:24px;height:24px;display:grid;place-items:center;border-radius:6px;background:#6e4b2a1a;color:var(--ink-soft);flex-shrink:0}
+.breakdown-icon svg{width:16px;height:16px}
+.breakdown-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.breakdown-meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px}
+.breakdown-label{font-family:var(--display);font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.breakdown-values{font-family:var(--display);font-variant-numeric:tabular-nums;color:var(--ink-soft);white-space:nowrap;flex-shrink:0}
+.breakdown-values b{color:var(--ink);font-weight:700}
+.breakdown-values small{font-size:11px;color:var(--ink-faint);margin-left:3px}
+.breakdown-track{height:8px;border-radius:999px;background:#6e4b2a22;overflow:hidden}
+.breakdown-track i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#5f8f3e,#91ba59)}
+.tone-weapon .breakdown-icon{color:#8c5a18;background:#f2c86538}
+.tone-weapon .breakdown-track i{background:linear-gradient(90deg,#b98424,#f2c865)}
+.tone-companion .breakdown-icon{color:#5f3488;background:#a36ad626}
+.tone-companion .breakdown-track i{background:linear-gradient(90deg,#7949ab,#bd8df0)}
+.tone-relic .breakdown-icon{color:#8a3418;background:#e5652e29}
+.tone-relic .breakdown-track i{background:linear-gradient(90deg,#b8421b,#ef8b4c)}
+/* touch virtual joystick & mobile dash */
+#ui-root.run-frozen .touch-controls,#ui-root:has(.storybook-overlay) .touch-controls{display:none}
+#ui-root .joystick-base{background:radial-gradient(circle,#22160c88 45%,#3b2717cc);border:2px solid #c9a15aa8;box-shadow:inset 0 2px 8px #0008,0 4px 12px #0007}
+#ui-root .joystick-base::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed #f2c8653d;pointer-events:none}
+#ui-root .joystick-knob{background:radial-gradient(circle at 38% 35%,#f5d882,#b88228 65%,#6b4312);border:2px solid #fff1cfcc;box-shadow:0 3px 8px #000a;transition:transform 80ms ease-out}
+#ui-root .touch-joystick.is-active .joystick-knob{transition:none;box-shadow:0 3px 10px #000c,0 0 12px #f2c86577}
+#ui-root .touch-dash-button{background:var(--walnut);border:2px solid var(--walnut-edge);box-shadow:var(--panel-shadow),0 6px 14px #0009;color:var(--cream);font:700 12px var(--display)}
+#ui-root .touch-dash-button svg{width:24px;height:24px;color:var(--gold);position:relative;z-index:1}
+#ui-root .touch-dash-button span{position:relative;z-index:1}
+#ui-root .touch-dash-cooldown{position:absolute;left:0;right:0;bottom:0;height:0%;background:#00000066;pointer-events:none}
+#ui-root .touch-dash-button.is-cooling{opacity:.78;border-color:#9a7a52}
+#ui-root .touch-dash-button.is-ready:active{transform:scale(.94)}
 /* experience, along the bottom */
 #ui-root .xp-hud{left:14px;right:14px;bottom:8px;padding:0}
 #ui-root .xp-track{height:7px}
@@ -251,6 +332,18 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 #ui-root .upgrade-receipt strong{font-family:var(--display);color:var(--gold)}
 #ui-root .upgrade-receipt span{color:#f1e2c0}
 @media(max-width:600px){
-  .hero-info{width:130px}#ui-root .run-stats{left:auto;right:58px;transform:none;top:18px;gap:12px}#ui-root .run-stats b{font-size:15px}
-  #ui-root .boss-hud,#ui-root .event-banner{top:84px}.rare-rock-toast{top:132px}
+  .hero-info{width:130px}
+  #ui-root .hud-controls{top:8px;right:8px;gap:5px}
+  #ui-root .hud-controls .pause-button,#ui-root .mute-button{width:34px;height:34px}
+  #ui-root .aim-button{height:34px;padding:0 9px;font-size:11px}
+  #ui-root .run-stats{left:auto;right:10px;transform:none;top:48px;gap:12px}#ui-root .run-stats b{font-size:15px}
+  #ui-root .status-strip{top:84px;left:10px;max-width:calc(100vw - 20px)}
+  #ui-root .boss-hud,#ui-root .event-banner{top:118px}.rare-rock-toast{top:170px}
+  #ui-root .touch-joystick{left:14px;bottom:28px;width:104px;height:104px}
+  #ui-root .joystick-knob{width:42px;height:42px}
+  #ui-root .touch-dash-button{right:14px;bottom:34px;width:68px;height:68px}
+}
+@media(max-height:700px){
+  .levelup-actions{margin-top:9px;gap:8px}.levelup-action-button{min-height:34px;padding:6px 12px;font-size:12px}
+  .gameover-panel:has(.damage-breakdown){padding:20px 26px 18px}.breakdown-list{max-height:150px}
 }
