@@ -1,20 +1,86 @@
 export const OVEN = {
-  level: 10, name: 'Oven', health: 6500, healthPerMinute: 150, contactDamage: 22,
-  radius: 22, speed: 64, standOff: 160,
-  spawnDistance: 340, introductionMs: 1800, windupMs: 800, flightMs: 1100,
-  cooldownMs: 3000, hotCooldownMs: 2200, damage: 18, blastRadius: 42,
-  spread: 92, xp: 120, ringRadius: 110,
-  /** Tacos in a calm ring, and in each of the two staggered rings once the Oven runs hot. */
-  ringTacos: 5, hotRingTacos: 7, secondRingDelayMs: 400,
+  level: 10,
+  name: 'Oven',
+  health: 3800,
+  healthPerMinute: 80,
+  contactDamage: 28,
+  radius: 22,
+  speed: 96,
+  hotSpeedMultiplier: 1.25,
+  standOff: 135,
+  spawnDistance: 340,
+  introductionMs: 1800,
+  arrivalWalkMs: 700,
+  windupMs: 650,
+  flightMs: 820,
+  cooldownMs: 1350,
+  hotCooldownMs: 850,
+  damage: 26,
+  blastRadius: 48,
+  spread: 84,
+  xp: 120,
+  /** Predictive leading taco barrage counts and tracking limits. */
+  tossTacos: 3,
+  hotTossTacos: 5,
+  tossLeadMaxMs: 1500,
+  maxTrackSpeed: 360,
+  /** Center-trap double ring: inner tight ring + center taco, followed by outer collapsing ring. */
+  innerRingRadius: 72,
+  outerRingRadius: 135,
+  innerRingTacos: 4,
+  hotInnerRingTacos: 6,
+  outerRingTacos: 6,
+  hotOuterRingTacos: 8,
+  secondRingDelayMs: 420,
+  /** Toaster Leap Slam + expanding magma shockwave ring. */
+  slamWindupMs: 700,
+  hotSlamWindupMs: 520,
+  slamFlightMs: 480,
+  slamRadius: 96,
+  slamDamage: 34,
+  slamEmberCount: 4,
+  slamEmberRadius: 58,
+  slamLeadMs: 260,
+  shockwaveMaxRadius: 440,
+  shockwaveSpeed: 420,
+  shockwaveWidth: 34,
+  shockwaveDamage: 24,
   /** Upper bound on tacos in the air and salsa on the ground. */
-  maxTacos: 14, maxSalsa: 16,
-  salsaRadius: 32, salsaLifeMs: 2600, salsaTickMs: 1000, salsaDamage: 4,
-  hotSalsaLifeMs: 4000, hotSalsaDamage: 7,
-  /** Oven door blast: a telegraphed cone of flame aimed where the player stood. */
-  coneWindupMs: 1100, coneRange: 320, coneHalfAngle: .6, coneDamage: 24, coneMs: 450,
+  maxTacos: 18,
+  maxSalsa: 22,
+  salsaRadius: 44,
+  salsaLifeMs: 4200,
+  salsaTickMs: 420,
+  salsaDamage: 8,
+  hotSalsaLifeMs: 5200,
+  hotSalsaDamage: 13,
+  /** Oven door flame sweep: telegraphed starting wedge + direction, sweeping across the player. */
+  coneWindupMs: 780,
+  coneRange: 340,
+  coneHalfAngle: 0.45,
+  coneDamage: 28,
+  coneMs: 750,
+  coneSweepAngle: Math.PI * 0.65,
+  coneHitCooldownMs: 320,
+  /** Open-door overheat punish window after Flame Sweep and (above 50% HP) Toaster Slam. */
+  overheatMs: 1900,
+  hotOverheatMs: 1400,
+  overheatVulnerability: 1.6,
+  /** Phase 2 ("OVERCOOKED!") threshold and slam -> cone stutter chain delay. */
+  hotFraction: 0.5,
+  hotChainDelayMs: 350,
   /** Line cooks rush in when the Oven drops past each of these health fractions. */
-  addThresholds: [.66, .33], addsPerWave: 7, addTint: 0xff7a55,
-  hotFraction: .5
+  addThresholds: [0.66, 0.33],
+  addsPerWave: 7,
+  addTint: 0xff7a55
 } as const;
 
-export const OVEN_LOOK = { height: 160, stridePixels: 48, shadowWidth: 110, shadowHeight: 28 } as const;
+export const OVEN_LOOK = {
+  height: 160,
+  stridePixels: 48,
+  shadowWidth: 110,
+  shadowHeight: 28,
+  slamJumpHeight: 115,
+  hotTint: 0xff946b,
+  overheatTint: 0xffd27d
+} as const;
