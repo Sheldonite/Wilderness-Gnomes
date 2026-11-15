@@ -13,7 +13,7 @@ import type { SummonAdds } from './BossSummons';
 export type FireShards = (origin: Vector2Like, directions: Vector2Like[]) => void;
 
 export class KingBossSystem {
-  readonly encounter = new KingEncounter();
+  encounter = new KingEncounter();
   boss?: KingBoss;
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly hud: HTMLElement;
@@ -21,6 +21,7 @@ export class KingBossSystem {
   private readonly caption: HTMLElement;
   private celebrationMs = 0;
   private shoutMs = 0;
+  private lastPhase?: KingEncounter['phase'];
 
   constructor(private readonly scene: Phaser.Scene, private readonly game: GameManager, private readonly navigation: SceneryNavigation,
     private readonly arena: () => KingArena | undefined, private readonly hitPlayer: KingHit,
@@ -33,19 +34,33 @@ export class KingBossSystem {
     this.fill = this.hud.querySelector('i')!; this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
+  spawnEncore(player: Vector2Like, enemies: EnemyController[], healthMultiplier: number): void {
+    this.encounter = new KingEncounter();
+    this.encounter.spawned = true;
+    this.celebrationMs = 0;
+    this.shoutMs = 0;
+    this.spawnBoss(player, enemies, healthMultiplier);
+  }
+
+  private spawnBoss(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    // Beside the player rather than above, where the boss bar would hide him.
+    let spawn = this.navigation.nearest({ x: player.x + KING.spawnDistance, y: player.y }, KING.radius);
+    const e = Math.PI / 8;
+    for (const angle of [0, Math.PI, e, -e, Math.PI - e, e - Math.PI, 2 * e, -2 * e, Math.PI - 2 * e, 2 * e - Math.PI, 4 * e, -4 * e]) {
+      const candidate = { x: player.x + Math.cos(angle) * KING.spawnDistance, y: player.y + Math.sin(angle) * KING.spawnDistance };
+      if (this.navigation.clear(player, candidate, KING.radius)) { spawn = candidate; break; }
+    }
+    const health = Math.round(scaledBossHealth(KING.health, KING.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier);
+    this.boss = new KingBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
+    this.lastPhase = undefined;
+    this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
+    this.hud.hidden = false;
+    this.scene.events.emit('audio:play', 'boss-spawn');
+  }
+
   update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
     if (this.game.bossGate.required(this.game.level) === 'king' && this.encounter.shouldSpawn(this.game.level)) {
-      // Beside the player rather than above, where the boss bar would hide him.
-      let spawn = this.navigation.nearest({ x: player.x + KING.spawnDistance, y: player.y }, KING.radius);
-      const e = Math.PI / 8;
-      for (const angle of [0, Math.PI, e, -e, Math.PI - e, e - Math.PI, 2 * e, -2 * e, Math.PI - 2 * e, 2 * e - Math.PI, 4 * e, -4 * e]) {
-        const candidate = { x: player.x + Math.cos(angle) * KING.spawnDistance, y: player.y + Math.sin(angle) * KING.spawnDistance };
-        if (this.navigation.clear(player, candidate, KING.radius)) { spawn = candidate; break; }
-      }
-      const health = scaledBossHealth(KING.health, KING.healthPerMinute, this.game.getDifficultyMinutes());
-      this.boss = new KingBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
-      this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
-      this.hud.hidden = false;
+      this.spawnBoss(player, enemies);
     }
     this.graphics.clear();
     if (this.encounter.defeated) {
@@ -84,6 +99,11 @@ export class KingBossSystem {
     for (const p of this.encounter.bounces) {
       this.scene.events.emit('presentation:level', p);
       this.scene.cameras.main.shake(140, .004);
+    }
+    if (this.encounter.bounces.length > 0) this.scene.events.emit('audio:play', 'boss-impact');
+    if (phase !== this.lastPhase) {
+      this.lastPhase = phase;
+      if (phase === 'curling') this.scene.events.emit('audio:play', 'boss-warn');
     }
   }
 

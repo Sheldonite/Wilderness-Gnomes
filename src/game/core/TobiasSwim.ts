@@ -46,7 +46,7 @@ export class TobiasSwim {
   constructor(private readonly stats: PlayerStats) {}
 
   get damage(): number {
-    return Math.round(BALANCE.companion.tobiasDamage * companionPower(this.stats.companionRank));
+    return Math.round(BALANCE.companion.tobiasDamage * companionPower(this.stats.companionRank) * (this.stats.tobiasDamageMultiplier ?? 1));
   }
 
   get darting(): boolean {

@@ -44,7 +44,7 @@ export class MidnightBehavior {
         for (const enemy of enemies) {
           if (enemy.isDead || (this.navigation && !this.navigation.clear(this.position, enemy.position, 2)) || distanceSq(this.position, enemy.position) > (power.range + enemy.radius) ** 2) continue;
           const direction = normalize(enemy.position.x - this.position.x, enemy.position.y - this.position.y);
-          if (direction.x * this.aim.x + direction.y * this.aim.y >= Math.cos(power.arcDegrees * Math.PI / 360) - 1e-9 || distanceSq(this.position, enemy.position) < 1) damage(enemy, power.damage);
+          if (direction.x * this.aim.x + direction.y * this.aim.y >= Math.cos(power.arcDegrees * Math.PI / 360) - 1e-9 || distanceSq(this.position, enemy.position) < 1) damage(enemy, power.damage, 'companion');
         }
       }
       if (this.swatAgeMs >= b.midnightSwatDurationMs) this.state = 'returning';
@@ -78,7 +78,11 @@ export class MidnightBehavior {
   }
 
   /** Midnight's swat grows with her companion rank, which rises with the player's level. */
-  get swatPower() { return midnightSwatPower(this.stats?.companionRank ?? 0); }
+  get swatPower() {
+    const base = midnightSwatPower(this.stats?.companionRank ?? 0);
+    const scale = this.stats?.midnightDamageMultiplier ?? 1;
+    return scale === 1 ? base : { ...base, damage: Math.round(base.damage * scale) };
+  }
 
   private followPoint(player: Vector2Like): Vector2Like {
     return clampToArena({ x: player.x + BALANCE.companion.midnightFollowDistance, y: player.y + BALANCE.companion.midnightFollowDistance * .55 }, 12);

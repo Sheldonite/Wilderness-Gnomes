@@ -155,7 +155,8 @@ export class PlayerController {
     }
 
     let moveVector = rawDirection;
-    let moveSpeed = this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * (this.stats.moveSlow ?? 1);
+    const speedBonus = 1 + this.stats.shoutMoveSpeedBonus + (this.stats.shrineMoveSpeedBonus ?? 0);
+    let moveSpeed = this.stats.speed * speedBonus * (this.stats.moveSlow ?? 1);
 
     if (this.dashRemainingMs > 0) {
       this.dashRemainingMs = Math.max(0, this.dashRemainingMs - deltaMs);
@@ -166,7 +167,7 @@ export class PlayerController {
         this.scene.events.emit('presentation:trail', this.position, LOOK.ability.ward);
       }
       moveVector = this.dashDirection;
-      moveSpeed = this.stats.speed * (1 + this.stats.shoutMoveSpeedBonus) * WOODLAND_DASH.speedMultiplier;
+      moveSpeed = this.stats.speed * speedBonus * WOODLAND_DASH.speedMultiplier;
     }
 
     const dt = deltaMs / 1000;

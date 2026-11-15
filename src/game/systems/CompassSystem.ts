@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { reducedMotion } from '../config/presentation';
 
-export type CompassTargetKind = 'chest' | 'relic' | 'rock' | 'elite';
+export type CompassTargetKind = 'chest' | 'relic' | 'rock' | 'elite' | 'shrine';
 
 export interface CompassTarget {
   x: number;
@@ -54,8 +54,9 @@ const MAX_MARKERS = 16;
 export const COMPASS_STYLES: Record<CompassTargetKind, CompassStyle> = {
   relic: { fill: 0xc78cff, core: 0xf7e8ff, stroke: 0x241135, scale: 1.18, priority: 0 },
   chest: { fill: 0xf2c865, core: 0xfff5d4, stroke: 0x26180a, scale: 1.05, priority: 1 },
-  elite: { fill: 0xff9f38, core: 0xfff0cc, stroke: 0x2a1406, scale: 1.02, priority: 2 },
-  rock: { fill: 0xa855f7, core: 0xefd8ff, stroke: 0x1e0e30, scale: 0.96, priority: 3 }
+  shrine: { fill: 0x6ce5b1, core: 0xeafff5, stroke: 0x103527, scale: 1.04, priority: 2 },
+  elite: { fill: 0xff9f38, core: 0xfff0cc, stroke: 0x2a1406, scale: 1.02, priority: 3 },
+  rock: { fill: 0xa855f7, core: 0xefd8ff, stroke: 0x1e0e30, scale: 0.96, priority: 4 }
 };
 
 export function projectCompassTarget(

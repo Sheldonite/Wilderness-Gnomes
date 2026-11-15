@@ -23,12 +23,13 @@ export class XPOrb {
     this.sprite.setDepth(5);
   }
 
-  update(deltaMs: number, playerPosition: Vector2Like): void {
+  update(deltaMs: number, playerPosition: Vector2Like, magnetMultiplier = 1): void {
     if (this.isCollected) {
       return;
     }
 
-    const magnetRangeSq = BALANCE.xp.magnetRange * BALANCE.xp.magnetRange;
+    const effectiveRange = BALANCE.xp.magnetRange * Math.max(0.1, magnetMultiplier);
+    const magnetRangeSq = effectiveRange * effectiveRange;
     if (!this.magnetized && distanceSq(this.position, playerPosition) > magnetRangeSq) {
       return;
     }

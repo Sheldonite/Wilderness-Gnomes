@@ -14,7 +14,7 @@ export type CallHerd = (lanes: number, count: number) => void;
 export type FlingShards = (origin: Vector2Like, directions: Vector2Like[]) => void;
 
 export class StagBossSystem {
-  readonly encounter = new StagEncounter();
+  encounter = new StagEncounter();
   boss?: StagBoss;
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly hud: HTMLElement;
@@ -27,6 +27,7 @@ export class StagBossSystem {
   private roarMs = -1;
   private roarAt: Vector2Like = { x: 0, y: 0 };
   private rutShown = false;
+  private lastPhase?: StagEncounter['phase'];
 
   constructor(private readonly scene: Phaser.Scene, private readonly game: GameManager, private readonly navigation: SceneryNavigation,
     private readonly hitPlayer: StagHit, private readonly callHerd: CallHerd = () => {},
@@ -39,18 +40,35 @@ export class StagBossSystem {
     this.fill = this.hud.querySelector('i')!; this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
+  spawnEncore(player: Vector2Like, enemies: EnemyController[], healthMultiplier: number): void {
+    this.encounter = new StagEncounter();
+    this.encounter.spawned = true;
+    this.celebrationMs = 0;
+    this.shoutMs = 0;
+    this.shout = '';
+    this.roarMs = -1;
+    this.rutShown = false;
+    this.spawnBoss(player, enemies, healthMultiplier);
+  }
+
+  private spawnBoss(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    let spawn = this.navigation.nearest({ x: player.x - STAG.spawnDistance, y: player.y }, STAG.radius);
+    for (let i = 0; i < 16; i++) {
+      const angle = Math.PI + i * Math.PI / 8;
+      const candidate = { x: player.x + Math.cos(angle) * STAG.spawnDistance, y: player.y + Math.sin(angle) * STAG.spawnDistance };
+      if (this.navigation.clear(player, candidate, STAG.radius)) { spawn = candidate; break; }
+    }
+    const health = Math.round(scaledBossHealth(STAG.health, STAG.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier);
+    this.boss = new StagBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
+    this.lastPhase = undefined;
+    this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
+    this.hud.hidden = false;
+    this.scene.events.emit('audio:play', 'boss-spawn');
+  }
+
   update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
     if (this.game.bossGate.required(this.game.level) === 'stag' && this.encounter.shouldSpawn(this.game.level)) {
-      let spawn = this.navigation.nearest({ x: player.x - STAG.spawnDistance, y: player.y }, STAG.radius);
-      for (let i = 0; i < 16; i++) {
-        const angle = Math.PI + i * Math.PI / 8;
-        const candidate = { x: player.x + Math.cos(angle) * STAG.spawnDistance, y: player.y + Math.sin(angle) * STAG.spawnDistance };
-        if (this.navigation.clear(player, candidate, STAG.radius)) { spawn = candidate; break; }
-      }
-      const health = scaledBossHealth(STAG.health, STAG.healthPerMinute, this.game.getDifficultyMinutes());
-      this.boss = new StagBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
-      this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
-      this.hud.hidden = false;
+      this.spawnBoss(player, enemies);
     }
     this.graphics.clear();
     if (this.encounter.defeated) {
@@ -156,6 +174,17 @@ export class StagBossSystem {
     for (const p of this.encounter.impacts) {
       this.scene.events.emit('presentation:level', p);
       this.scene.cameras.main.shake(180, .004);
+    }
+    if (phase !== this.lastPhase) {
+      this.lastPhase = phase;
+      if (phase === 'windup' || phase === 'sweepWindup' || phase === 'volleyWindup' || phase === 'bellowWindup') {
+        this.scene.events.emit('audio:play', 'boss-warn');
+      } else if (phase === 'stunned') {
+        this.scene.events.emit('audio:play', 'boss-impact');
+      }
+    }
+    if (this.encounter.bellowed || this.encounter.swept || this.encounter.impacts.length > 0) {
+      this.scene.events.emit('audio:play', 'boss-impact');
     }
   }
 

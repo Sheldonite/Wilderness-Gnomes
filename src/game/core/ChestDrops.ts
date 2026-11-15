@@ -16,10 +16,11 @@ export class ChestDrops {
   constructor(private readonly navigation: Pick<SceneryNavigation, 'blocked' | 'clear'>,
     private readonly random: () => number = Math.random) {}
 
-  advanceToLevel(level: number): void {
+  advanceToLevel(level: number, bonusChance = 0): void {
+    const chance = Math.max(0, Math.min(1, BALANCE.chest.chancePerLevel + bonusChance));
     while (this.lastLevel < level) {
       this.lastLevel++;
-      if (this.random() < BALANCE.chest.chancePerLevel) this.pending++;
+      if (this.random() < chance) this.pending++;
     }
   }
 

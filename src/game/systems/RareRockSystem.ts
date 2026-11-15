@@ -38,6 +38,7 @@ export class RareRockSystem {
     const picked = this.drops.collectNearby(player);
     if (picked) {
       const result = this.wallet.collectRock(`${this.runId}:rock:${picked.id}`);
+      this.scene.events.emit('audio:play', 'rock');
       this.views.get(picked.id)?.destroy(); this.views.delete(picked.id);
       this.noticeUntil = this.age + 3000;
       this.refreshHud(result.saved ? '+1 rare rock ·' : '+1 rare rock (not saved) ·');

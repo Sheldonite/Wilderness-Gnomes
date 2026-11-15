@@ -88,7 +88,7 @@ export class CollisionSystem {
           continue;
         }
 
-        damage(enemy, projectile.damage);
+        damage(enemy, projectile.damage, projectile.source);
         projectile.markHit(enemy.id, enemies);
         projectile.spawnSplits(projectiles);
         if (projectile.isDead) break;

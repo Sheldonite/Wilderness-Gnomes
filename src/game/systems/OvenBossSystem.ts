@@ -12,7 +12,7 @@ import { OvenBoss } from '../entities/OvenBoss';
 import type { SummonAdds } from './BossSummons';
 
 export class OvenBossSystem {
-  readonly encounter = new OvenEncounter();
+  encounter = new OvenEncounter();
   boss?: OvenBoss;
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly tacos: Phaser.GameObjects.Image[];
@@ -23,6 +23,7 @@ export class OvenBossSystem {
   /** Keeps a one-off announcement (line cooks) on screen for a moment. */
   private shoutMs = 0;
   private shout = '';
+  private lastPhase?: OvenEncounter['phase'];
 
   constructor(private readonly scene: Phaser.Scene, private readonly game: GameManager, private readonly navigation: SceneryNavigation,
     private readonly summon: SummonAdds = () => {}) {
@@ -35,19 +36,34 @@ export class OvenBossSystem {
     this.fill = this.hud.querySelector('i')!; this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
+  spawnEncore(player: Vector2Like, enemies: EnemyController[], healthMultiplier: number): void {
+    this.encounter = new OvenEncounter();
+    this.encounter.spawned = true;
+    this.celebrationMs = 0;
+    this.shoutMs = 0;
+    this.shout = '';
+    this.spawnBoss(player, enemies, healthMultiplier);
+  }
+
+  private spawnBoss(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    // Prefer a clear point on the player's bank, away from contact range.
+    let spawn = this.navigation.nearest({ x: player.x + OVEN.spawnDistance, y: player.y }, OVEN.radius);
+    for (let i = 0; i < 16; i++) {
+      const angle = i * Math.PI / 8;
+      const candidate = { x: player.x + Math.cos(angle) * OVEN.spawnDistance, y: player.y + Math.sin(angle) * OVEN.spawnDistance };
+      if (this.navigation.clear(player, candidate, OVEN.radius)) { spawn = candidate; break; }
+    }
+    const health = Math.round(scaledBossHealth(OVEN.health, OVEN.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier);
+    this.boss = new OvenBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
+    this.lastPhase = undefined;
+    this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
+    this.hud.hidden = false;
+    this.scene.events.emit('audio:play', 'boss-spawn');
+  }
+
   update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
     if (this.game.bossGate.required(this.game.level) === 'oven' && this.encounter.shouldSpawn(this.game.level)) {
-      // Prefer a clear point on the player's bank, away from contact range.
-      let spawn = this.navigation.nearest({ x: player.x + OVEN.spawnDistance, y: player.y }, OVEN.radius);
-      for (let i = 0; i < 16; i++) {
-        const angle = i * Math.PI / 8;
-        const candidate = { x: player.x + Math.cos(angle) * OVEN.spawnDistance, y: player.y + Math.sin(angle) * OVEN.spawnDistance };
-        if (this.navigation.clear(player, candidate, OVEN.radius)) { spawn = candidate; break; }
-      }
-      const health = scaledBossHealth(OVEN.health, OVEN.healthPerMinute, this.game.getDifficultyMinutes());
-      this.boss = new OvenBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
-      this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
-      this.hud.hidden = false;
+      this.spawnBoss(player, enemies);
     }
     this.graphics.clear(); this.tacos.forEach(t => t.setVisible(false));
     if (this.encounter.defeated) {
@@ -99,7 +115,14 @@ export class OvenBossSystem {
       this.tacos[i].setVisible(true).setPosition(x, y).setRotation(reducedMotion() ? -.3 : progress * Math.PI * 2);
     });
     for (const p of this.encounter.impacts) this.scene.events.emit('presentation:defeat', p);
+    if (this.encounter.impacts.length > 0 || this.encounter.coneFired) {
+      this.scene.events.emit('audio:play', 'boss-impact');
+    }
     if (this.encounter.coneFired) this.scene.cameras.main.shake(160, .003);
+    if (phase !== this.lastPhase) {
+      this.lastPhase = phase;
+      if (phase === 'windup') this.scene.events.emit('audio:play', 'boss-warn');
+    }
   }
 
   /** The door blast: a pale wedge while it is aimed, a roaring one while it burns. */

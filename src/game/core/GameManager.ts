@@ -97,7 +97,10 @@ export class GameManager {
       shoutMoveSpeedBonus: 0,
       spellPowerMultiplier: passive.spellPowerMultiplier,
       abilityPowerMultiplier: passive.abilityPowerMultiplier,
-      xpMagnetRangeMultiplier: passive.xpMagnetRangeMultiplier,
+      xpMagnetRangeMultiplier: passive.xpMagnetRangeMultiplier * bonuses.magnetMultiplier,
+      midnightDamageMultiplier: bonuses.midnightDamageMultiplier,
+      frankieDamageMultiplier: bonuses.frankieDamageMultiplier,
+      tobiasDamageMultiplier: bonuses.tobiasDamageMultiplier,
       shoutRemainingMs: 0,
       shrineAttackSpeedBonus: 0,
       shrineMoveSpeedBonus: 0

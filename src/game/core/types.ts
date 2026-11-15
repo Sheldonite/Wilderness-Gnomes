@@ -81,6 +81,10 @@ export interface PlayerStats {
   abilityPowerMultiplier?: number;
   /** Multiplier for XP orb magnet pickup radius (used by Hailey). */
   xpMagnetRangeMultiplier?: number;
+  /** Market charm multipliers for companions (Wayfinder/Mooncat/Midnight/Frankie/Tobias). */
+  midnightDamageMultiplier?: number;
+  frankieDamageMultiplier?: number;
+  tobiasDamageMultiplier?: number;
   /** Remaining duration (ms) for active Inspiring Shout buff, for HUD display. */
   shoutRemainingMs?: number;
   /** Temporary attack-speed bonus from a Woodland Shrine blessing. */

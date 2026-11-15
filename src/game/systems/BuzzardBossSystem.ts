@@ -13,7 +13,7 @@ import { BuzzardBoss } from '../entities/BuzzardBoss';
 export type FlingFeathers = (origin: Vector2Like, directions: Vector2Like[]) => void;
 
 export class BuzzardBossSystem {
-  readonly encounter = new BuzzardEncounter();
+  encounter = new BuzzardEncounter();
   boss?: BuzzardBoss;
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly hud: HTMLElement;
@@ -22,6 +22,7 @@ export class BuzzardBossSystem {
   private celebrationMs = 0;
   private gustMs = -1;
   private gustCone?: { origin: Vector2Like; direction: Vector2Like };
+  private lastPhase?: BuzzardEncounter['phase'];
 
   constructor(private readonly scene: Phaser.Scene, private readonly game: GameManager, private readonly navigation: SceneryNavigation,
     private readonly arena: () => KingArena | undefined, private readonly hitPlayer: BuzzardHit, private readonly flingFeathers: FlingFeathers) {
@@ -33,14 +34,29 @@ export class BuzzardBossSystem {
     this.fill = this.hud.querySelector('i')!; this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
+  spawnEncore(player: Vector2Like, enemies: EnemyController[], healthMultiplier: number): void {
+    this.encounter = new BuzzardEncounter();
+    this.encounter.spawned = true;
+    this.celebrationMs = 0;
+    this.gustMs = -1;
+    this.gustCone = undefined;
+    this.spawnBoss(player, enemies, healthMultiplier);
+  }
+
+  private spawnBoss(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    // He swoops in from off to one side; flying, he needs no clear path.
+    const spawn = { x: player.x - BUZZARD.spawnDistance, y: player.y - 60 };
+    const health = Math.round(scaledBossHealth(BUZZARD.health, BUZZARD.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier);
+    this.boss = new BuzzardBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
+    this.lastPhase = undefined;
+    this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
+    this.hud.hidden = false;
+    this.scene.events.emit('audio:play', 'boss-spawn');
+  }
+
   update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
     if (this.game.bossGate.required(this.game.level) === 'buzzard' && this.encounter.shouldSpawn(this.game.level)) {
-      // He swoops in from off to one side; flying, he needs no clear path.
-      const spawn = { x: player.x - BUZZARD.spawnDistance, y: player.y - 60 };
-      const health = scaledBossHealth(BUZZARD.health, BUZZARD.healthPerMinute, this.game.getDifficultyMinutes());
-      this.boss = new BuzzardBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
-      this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
-      this.hud.hidden = false;
+      this.spawnBoss(player, enemies);
     }
     this.graphics.clear();
     if (this.encounter.defeated) {
@@ -63,6 +79,16 @@ export class BuzzardBossSystem {
     if (this.caption.textContent !== message) this.caption.textContent = message;
     this.fill.style.transform = `scaleX(${Math.max(0, fraction)})`;
     this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuenow', String(Math.max(0, Math.ceil(this.boss.health))));
+    if (phase !== this.lastPhase) {
+      const prevPhase = this.lastPhase;
+      this.lastPhase = phase;
+      if (phase === 'diveWindup' || phase === 'volleyWindup' || phase === 'gustWindup') {
+        this.scene.events.emit('audio:play', 'boss-warn');
+      } else if (prevPhase === 'diving' && phase !== 'diving') {
+        this.scene.events.emit('audio:play', 'boss-impact');
+      }
+    }
+    if (this.encounter.blown) this.scene.events.emit('audio:play', 'boss-impact');
     this.draw(phase, deltaMs);
   }
 

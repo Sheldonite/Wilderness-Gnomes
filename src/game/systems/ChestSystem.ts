@@ -23,7 +23,7 @@ export class ChestSystem {
   update(deltaMs: number, player: Vector2Like, game: GameManager): boolean {
     if (game.state !== 'Playing') return false;
     if (game.bossGate.required(game.level)) return false;
-    this.drops.advanceToLevel(game.level);
+    this.drops.advanceToLevel(game.level, game.marketBonuses.extraChestChance);
     this.retryMs -= deltaMs;
     if (this.retryMs <= 0 && this.drops.pending) {
       this.retryMs = 500;
@@ -37,6 +37,7 @@ export class ChestSystem {
     const collected = this.drops.collectNearby(player, game);
     if (!collected) return false;
     this.removeView(collected.id);
+    this.scene.events.emit('audio:play', 'chest');
     this.scene.events.emit('presentation:level', collected.position);
     return true;
   }

@@ -48,7 +48,7 @@ export class FrankieFlock {
 
   get damage(): number {
     const b = BALANCE.companion;
-    return b.frankieDamage + Math.min(this.featherCap, this.stats.frankieFeatherBonus);
+    return Math.round((b.frankieDamage + Math.min(this.featherCap, this.stats.frankieFeatherBonus)) * (this.stats.frankieDamageMultiplier ?? 1));
   }
 
   get count(): number {

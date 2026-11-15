@@ -19,6 +19,7 @@ import {
 import squareUrl from '../../../assets/storybook/newnan-market-square.png';
 import { getPlayerCharacter, type PlayerCharacterDefinition } from '../../config/playerCharacters';
 import { MarketProgress, marketProgress, type AnyWeaponId } from '../../core/MarketProgress';
+import { audioSystem } from '../../systems/AudioSystem';
 import type { Vector2Like } from '../../core/types';
 import { MarketWorld } from '../../market/MarketWorld';
 import { marketItemIcon } from '../../ui/marketIcons';
@@ -67,7 +68,7 @@ export class MarketScene extends Phaser.Scene {
   private readonly onResize = () => this.resize();
   private readonly onKey = (event: KeyboardEvent) => {
     if (this.shop) {
-      if (event.key === 'Escape') { event.preventDefault(); this.closeShop(); }
+      if (event.key === 'Escape') { event.preventDefault(); audioSystem.play('ui-click'); this.closeShop(); }
       if (event.key === 'Tab') {
         const buttons = [...this.root.querySelectorAll<HTMLButtonElement>('.market-shop button:not(:disabled)')];
         const first = buttons[0], last = buttons[buttons.length - 1];
@@ -76,8 +77,8 @@ export class MarketScene extends Phaser.Scene {
       }
       return;
     }
-    if (event.key.toLowerCase() === 'e' && this.nearestVendor) { event.preventDefault(); this.openShop(this.nearestVendor); }
-    if (event.key === 'Escape') this.returnToTitle();
+    if (event.key.toLowerCase() === 'e' && this.nearestVendor) { event.preventDefault(); audioSystem.play('ui-click'); this.openShop(this.nearestVendor); }
+    if (event.key === 'Escape') { audioSystem.play('ui-click'); this.returnToTitle(); }
   };
 
   constructor() { super('MarketScene'); }
@@ -90,6 +91,8 @@ export class MarketScene extends Phaser.Scene {
     this.path = []; this.visiting = undefined; this.shop = undefined; this.nearestVendor = undefined;
     this.facing = { x: 0, y: 1 };
     this.status = ''; this.zoomed = true; this.leaving = false;
+    audioSystem.attachScene(this);
+    audioSystem.setMusicMode('market');
     this.preview = import.meta.env.DEV && Boolean(data.review);
     this.progress = this.preview ? new MarketProgress(null) : marketProgress;
     if (this.preview) {
@@ -136,11 +139,11 @@ export class MarketScene extends Phaser.Scene {
     const touchHint = document.createElement('span'); touchHint.className='market-touch-hint';
     touchHint.textContent='Tap the square to stroll · tap a stall to shop';
     this.root.querySelector('.market-directions')!.prepend(touchHint);
-    this.root.querySelector('.market-back')!.addEventListener('click', () => this.returnToTitle());
-    this.root.querySelector('.market-adventure')!.addEventListener('click', () => this.startAdventure());
-    this.root.querySelector('.market-zoom')!.addEventListener('click', () => { this.zoomed = !this.zoomed; this.resize(); });
-    this.root.querySelector('.market-interact button')!.addEventListener('click', () => { if (this.nearestVendor) this.openShop(this.nearestVendor); });
-    this.root.querySelectorAll<HTMLButtonElement>('[data-vendor]').forEach(button => button.addEventListener('click', () => this.visit(button.dataset.vendor as MarketVendorId)));
+    this.root.querySelector('.market-back')!.addEventListener('click', () => { audioSystem.play('ui-click'); this.returnToTitle(); });
+    this.root.querySelector('.market-adventure')!.addEventListener('click', () => { audioSystem.play('ui-click'); this.startAdventure(); });
+    this.root.querySelector('.market-zoom')!.addEventListener('click', () => { audioSystem.play('ui-click'); this.zoomed = !this.zoomed; this.resize(); });
+    this.root.querySelector('.market-interact button')!.addEventListener('click', () => { if (this.nearestVendor) { audioSystem.play('ui-click'); this.openShop(this.nearestVendor); } });
+    this.root.querySelectorAll<HTMLButtonElement>('[data-vendor]').forEach(button => button.addEventListener('click', () => { audioSystem.play('ui-click'); this.visit(button.dataset.vendor as MarketVendorId); }));
     this.input.on('pointerdown', this.onMapClick, this);
     window.addEventListener('keydown', this.onKey);
     this.scale.on('resize', this.onResize);
@@ -282,14 +285,17 @@ export class MarketScene extends Phaser.Scene {
     portrait.src = this.textures.getBase64(merchant.portraitKey, merchant.portraitFrame);
     panel.querySelector('.market-eyebrow')!.before(portrait);
     this.root.append(panel);
-    panel.querySelector('.shop-close')!.addEventListener('click',()=>this.closeShop());
-    panel.addEventListener('click',event=>{if(event.target===panel)this.closeShop();});
+    panel.querySelector('.shop-close')!.addEventListener('click',()=>{audioSystem.play('ui-click');this.closeShop();});
+    panel.addEventListener('click',event=>{if(event.target===panel){audioSystem.play('ui-click');this.closeShop();}});
     panel.querySelectorAll<HTMLButtonElement>('[data-weapon]').forEach(button=>button.addEventListener('click',()=>{
       const id=button.dataset.weapon as AnyWeaponId;
       if(this.progress.equipWeapon(id)) {
+        audioSystem.play('upgrade-pick');
         this.weaponId=id;
         this.status=`${weaponLabel(id)} equipped for your next adventure.`;
         if(this.progress.storageStatus!=='ready') this.status+=' Saved for this preview or session.';
+      } else {
+        audioSystem.play('ui-click');
       }
       this.renderShop();
     }));
@@ -299,7 +305,10 @@ export class MarketScene extends Phaser.Scene {
       const wasEquipped=button.dataset.equipped==='1';
       const itemName=MARKET_ITEMS.find(item=>item.id===itemId)?.name??itemId;
       if(this.progress.equipCosmeticSlot(slot,wasEquipped?null:itemId)) {
+        audioSystem.play('upgrade-pick');
         this.status=wasEquipped?`${itemName} unequipped.`:`${itemName} equipped in your ${COSMETIC_SLOT_LABELS[slot].toLowerCase()} slot.`;
+      } else {
+        audioSystem.play('ui-click');
       }
       if(this.progress.storageStatus!=='ready') this.status+=' Saved for this preview or session.';
       this.renderShop(itemId);
@@ -309,13 +318,17 @@ export class MarketScene extends Phaser.Scene {
       const result=this.progress.purchase(boughtId);
       const item=MARKET_ITEMS.find(item=>item.id===boughtId)!;
       if (result.status==='purchased') {
+        audioSystem.play('upgrade-pick');
         this.status=`${item.name} is yours. ${marketItemBenefit(item.id,result.rank)}.${item.kind==='cosmetic'?' Equip it here to wear it.':''}${result.saved?'':' Saved for this preview or session.'}`;
-      } else if (result.status==='insufficient-rocks') {
-        this.status='You need a few more rare rocks from the woods first.';
-      } else if (result.status==='insufficient-gold') {
-        this.status='Your purse has changed. Earn a little more gold first.';
       } else {
-        this.status='This item is already fully upgraded.';
+        audioSystem.play('ui-click');
+        if (result.status==='insufficient-rocks') {
+          this.status='You need a few more rare rocks from the woods first.';
+        } else if (result.status==='insufficient-gold') {
+          this.status='Your purse has changed. Earn a little more gold first.';
+        } else {
+          this.status='This item is already fully upgraded.';
+        }
       }
       this.refreshHeaderBalances();
       this.renderShop(boughtId);

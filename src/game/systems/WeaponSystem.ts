@@ -44,6 +44,7 @@ export class WeaponSystem {
     this.cooldownRemainingMs = stats.weaponCooldownMs / (1 + stats.shoutAttackSpeedBonus + (stats.shrineAttackSpeedBonus ?? 0));
     this.shotThisFrame = true;
     this.fireProjectiles(playerPosition, aimTarget, stats, projectiles);
+    this.scene.events.emit('audio:play', `shot-${stats.weaponId}`);
   }
 
   private findClosestEnemy(

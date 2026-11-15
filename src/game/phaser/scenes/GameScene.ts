@@ -45,6 +45,7 @@ import { PresentationSystem } from '../../systems/PresentationSystem';
 import { DamageNumberSystem } from '../../systems/DamageNumberSystem';
 import { CompassSystem, type CompassTarget } from '../../systems/CompassSystem';
 import { AbilitySystem } from '../../systems/AbilitySystem';
+import { audioSystem } from '../../systems/AudioSystem';
 import { CombatResolver, type CombatTarget } from '../../core/CombatResolver';
 import { ABILITY_IDS } from '../../config/abilities';
 import { MYSTERY_SPRITE_KEY } from '../../config/companionSprite';
@@ -76,6 +77,7 @@ export class GameScene extends Phaser.Scene {
   private aimReticle!: Phaser.GameObjects.Graphics;
   private aimNotice?: Phaser.GameObjects.Text;
   private aimNoticeMs = 0;
+  private floatingNotices: { text: Phaser.GameObjects.Text; ageMs: number; lifeMs: number; startY: number }[] = [];
   private abilities!: AbilitySystem;
   private combat!: CombatResolver;
   private oven!: OvenBossSystem;
@@ -101,11 +103,6 @@ export class GameScene extends Phaser.Scene {
   private pausedDisplayed = false;
   private gameOverDisplayed = false;
   private readonly handleEscape = () => this.handleEscapePressed();
-  private readonly handleToggleManualAim = () => {
-    if (this.gameManager.state === 'Playing' && !this.debugSpriteSheetMenu?.isOpen) {
-      this.toggleManualAim();
-    }
-  };
   private readonly handlePointerDown = (pointer: Phaser.Input.Pointer) => {
     if (pointer.rightButtonDown() && this.gameManager.state === 'Playing' && !this.debugSpriteSheetMenu?.isOpen) {
       this.toggleManualAim();
@@ -148,9 +145,13 @@ export class GameScene extends Phaser.Scene {
     this.manualAimAngle = 0;
     this.manualAimWorldPoint = undefined;
     this.aimNoticeMs = 0;
+    this.floatingNotices = [];
     this.gamepadDashHeld = false;
     this.finishingReviewRun = false;
     this.anims.resumeAll();
+    audioSystem.attachScene(this);
+    audioSystem.setMusicMode('woods');
+    if (this.sound) this.sound.mute = audioSystem.isMuted();
     document.getElementById('game-root')?.classList.add('in-run');
     this.selectedCharacter = getPlayerCharacter(data.characterId);
     const reviewWeapon = import.meta.env.DEV && !data.skipReview
@@ -181,8 +182,25 @@ export class GameScene extends Phaser.Scene {
       frankie: () => this.textures.getBase64(FRANKIE_PORTRAIT_KEY),
       tobias: () => this.textures.getBase64(TOBIAS_SPRITE_KEY, 0)
     }[this.selectedCharacter.companionId]();
-    this.uiManager = new UIManager(this.gameManager, () => this.togglePause(), this.selectedCharacter,
-      this.textures.getBase64(this.selectedCharacter.textureKey, 0), companionPortrait);
+    this.uiManager = new UIManager(
+      this.gameManager,
+      () => this.togglePause(),
+      this.selectedCharacter,
+      this.textures.getBase64(this.selectedCharacter.textureKey, 0),
+      companionPortrait,
+      {
+        initialMuted: audioSystem.isMuted(),
+        initialManualAim: this.isManualAim,
+        onToggleMute: () => {
+          const muted = audioSystem.toggleMute();
+          if (this.sound) this.sound.mute = muted;
+          if (!muted) audioSystem.play('ui-click');
+          return muted;
+        },
+        onToggleAimMode: () => this.toggleManualAim(),
+        onDash: () => this.triggerDash()
+      }
+    );
     this.debugSpriteSheetMenu = import.meta.env.DEV ? new DebugSpriteSheetMenu(this) : undefined;
     this.presentation = new PresentationSystem(this);
     this.damageNumbers = new DamageNumberSystem(this);
@@ -202,7 +220,10 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setVisible(false);
     this.abilities = new AbilitySystem(this, this.gameManager.playerStats);
-    this.combat = new CombatResolver(enemy => this.killEnemy(enemy));
+    this.combat = new CombatResolver(
+      enemy => this.killEnemy(enemy),
+      (amount, source) => this.gameManager.recordDamage(source, amount)
+    );
 
     this.scenerySystem.create();
     this.chestSystem = new ChestSystem(this, this.scenerySystem.navigation);
@@ -257,7 +278,6 @@ export class GameScene extends Phaser.Scene {
     this.input.mouse?.disableContextMenu();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyRunObjects());
     this.input.keyboard?.on('keydown-ESC', this.handleEscape);
-    this.input.keyboard?.on('keydown-F', this.handleToggleManualAim);
     this.input.on('pointerdown', this.handlePointerDown);
     if (import.meta.env.DEV && new URLSearchParams(location.search).get('review') === 'gameover') this.input.keyboard?.on('keydown-F10', this.finishReviewRun);
     if (import.meta.env.DEV && !data.skipReview) this.setupReview();
@@ -631,8 +651,19 @@ export class GameScene extends Phaser.Scene {
       const bossReadout = this.reviewControls?.querySelector('[data-boss-review]');
       if (bossReadout) bossReadout.textContent = `Level ${this.gameManager.level} · Foes ${this.enemies.filter(e => !e.isDead && !e.isBoss).length} · ${this.bossArena ? `LOCKED ${Math.round(Math.hypot(this.player.position.x - this.bossArena.center.x, this.player.position.y - this.bossArena.center.y))}px` : 'OPEN'} · Relics ${this.chestSystem.drops.chests.filter(c => c.kind === 'boss').length}`;
     }
-    this.uiManager.update(this.gameManager.getHudSnapshot());
+    this.uiManager.update({
+      ...this.gameManager.getHudSnapshot(),
+      dashCooldownRatio: this.dashCooldownRatio
+    });
     this.uiManager.setPauseButtonState(this.gameManager.state === 'Paused');
+    const activeBossMusic = Boolean(
+      this.bossArena ||
+      (this.oven.boss && !this.oven.boss.isDead) ||
+      (this.stag.boss && !this.stag.boss.isDead) ||
+      (this.buzzard.boss && !this.buzzard.boss.isDead) ||
+      (this.king.boss && !this.king.boss.isDead)
+    );
+    audioSystem.setMusicMode(activeBossMusic ? 'boss' : 'woods');
 
     this.setPresentationPaused(this.gameManager.state !== 'Playing' || Boolean(this.debugSpriteSheetMenu?.isOpen));
     if (this.debugSpriteSheetMenu?.isOpen) {
@@ -664,6 +695,7 @@ export class GameScene extends Phaser.Scene {
     this.pausedDisplayed = false;
     this.gameManager.update(deltaMs);
     this.updateAimNotice(deltaMs);
+    this.updateFloatingNotices(deltaMs);
     if (import.meta.env.DEV && this.reviewWalking) {
       this.reviewPathMs += deltaMs;
       const direction = Math.floor(this.reviewPathMs / 850) % 4;
@@ -673,12 +705,24 @@ export class GameScene extends Phaser.Scene {
       this.reviewPathMs = 0;
     }
     this.player.update(deltaMs, this.readPlayerMoveInput());
-    this.cosmetic.update(deltaMs, this.player.position, this.practiceRun ? null : marketProgress.equippedCosmetic);
+    this.cosmetic.update(deltaMs, this.player.position, this.practiceRun ? null : marketProgress.equippedCosmetics);
     const requiredBoss = this.gameManager.bossGate.required(this.gameManager.level);
     if (requiredBoss && !this.bossArena) this.beginBossArena(requiredBoss);
+    const encoreBoss = !requiredBoss && !this.bossArena
+      ? this.gameManager.bossGate.encoreAvailable(this.gameManager.level)
+      : undefined;
+    if (encoreBoss) {
+      this.beginBossArena(encoreBoss);
+      const mult = this.gameManager.bossGate.encoreHealthMultiplier();
+      if (encoreBoss === 'oven') this.oven.spawnEncore(this.player.position, this.enemies, mult);
+      else if (encoreBoss === 'stag') this.stag.spawnEncore(this.player.position, this.enemies, mult);
+      else if (encoreBoss === 'buzzard') this.buzzard.spawnEncore(this.player.position, this.enemies, mult);
+      else this.king.spawnEncore(this.player.position, this.enemies, mult);
+    }
     this.confineToBossArena();
     this.cameraController.update(this.player.position);
-    this.rareRocks.update(deltaMs, this.player.position, !requiredBoss);
+    const arenaClear = !requiredBoss && !this.bossArena;
+    this.rareRocks.update(deltaMs, this.player.position, arenaClear);
     if (this.chestSystem.update(deltaMs, this.player.position, this.gameManager)) {
       this.setPresentationPaused(true);
       this.showLevelUpOnce();
@@ -697,17 +741,29 @@ export class GameScene extends Phaser.Scene {
     }
 
     const difficulty = this.gameManager.getDifficultyMinutes();
-    const open = !this.reviewNoEnemies && !this.gameManager.bossGate.required(this.gameManager.level);
+    const open = !this.reviewNoEnemies && arenaClear;
     if (open) this.enemySpawner.update(deltaMs, this.player.position, this.cameras.main, this.enemies, difficulty, this.gameManager.level);
     this.runEvents.update(deltaMs, open, this.gameManager.level, difficulty, this.player.position, this.cameras.main, this.enemies, this.enemySpawner);
+    for (const reward of this.runEvents.consumeShrineRewards()) {
+      const hpBefore = this.gameManager.playerStats.health;
+      this.gameManager.grantShrineReward(reward);
+      const healed = Math.max(0, Math.round(this.gameManager.playerStats.health - hpBefore));
+      const parts: string[] = [];
+      if (healed > 0) parts.push(`+${healed} HP`);
+      parts.push('Frenzy!');
+      if (reward.bonusGold > 0) parts.push(`+${reward.bonusGold} Gold`);
+      this.spawnFloatingNotice(parts.join(' · '), this.player.position);
+    }
+    if (this.gameManager.state !== 'Playing') return;
+    this.updateManualAim();
     this.weaponSystem.update(
       deltaMs,
       this.player.position,
       this.gameManager.playerStats,
       this.enemies,
-      this.projectiles
+      this.projectiles,
+      this.isManualAim ? this.getManualAimWorldPoint() : undefined
     );
-    this.updateManualAim();
     this.player.setAim(this.manualAimEnabled ? this.manualAimAngle : this.weaponSystem.aimAngle);
     if (this.weaponSystem.consumeShot()) this.player.kickArm();
     this.player.presentArm(deltaMs);
@@ -738,8 +794,9 @@ export class GameScene extends Phaser.Scene {
       projectile.update(deltaMs);
     }
 
+    const magnetMultiplier = this.gameManager.playerStats.xpMagnetRangeMultiplier ?? 1;
     for (const orb of this.xpOrbs) {
-      orb.update(deltaMs, this.player.position);
+      orb.update(deltaMs, this.player.position, magnetMultiplier);
     }
 
     const healthBeforeCollision = this.gameManager.playerStats.health;
@@ -794,7 +851,7 @@ export class GameScene extends Phaser.Scene {
       const push = d > 0 ? { x: dx / d, y: dy / d } : { x: 1, y: 0 };
       enemy.displace(push.x * knockback, push.y * knockback);
       enemy.root(rootMs);
-      this.combat.damage(enemy, burstDamage);
+      this.combat.damage(enemy, burstDamage, 'barkskin-ward');
     }
     this.events.emit('presentation:level', origin);
   }
@@ -809,13 +866,25 @@ export class GameScene extends Phaser.Scene {
     if (bossId === 'stag') this.stag.defeated();
     if (bossId === 'buzzard') this.buzzard.defeated();
     if (bossId === 'king') this.king.defeated();
-    if (bossId && this.gameManager.bossGate.defeat(bossId)) {
-      this.chestSystem.dropBoss(enemy.position);
-      this.bossArena = undefined;
-      this.bossBoundary.clear();
-      if (this.gameManager.bossGate.allDefeated && !this.gameManager.victorious) {
-        this.gameManager.victorious = true;
-        this.victoryInMs = 4000;   // let the celebration and relic chest land first
+    if (bossId) {
+      const dropBossRelic = this.upgradeSystem.getBossChoices(this.gameManager.playerStats).length > 0;
+      const dropBossOrChest = () => {
+        if (dropBossRelic) this.chestSystem.dropBoss(enemy.position);
+        else this.chestSystem.dropChest(enemy.position);
+      };
+      if (this.gameManager.bossGate.defeat(bossId)) {
+        dropBossOrChest();
+        this.bossArena = undefined;
+        this.bossBoundary.clear();
+        if (this.gameManager.bossGate.allDefeated && !this.gameManager.victorious) {
+          this.gameManager.victorious = true;
+          this.victoryInMs = 4000;   // let the celebration and relic chest land first
+        }
+      } else if (this.gameManager.bossGate.allDefeated) {
+        this.gameManager.bossGate.defeatEncore(bossId);
+        dropBossOrChest();
+        this.bossArena = undefined;
+        this.bossBoundary.clear();
       }
     }
     const creature = enemy instanceof EnemyController ? enemy : undefined;
@@ -857,10 +926,14 @@ export class GameScene extends Phaser.Scene {
   private showVictory(): void {
     this.gameManager.pause();
     this.pausedDisplayed = true;   // this overlay stands in for the pause menu
-    this.uiManager.showVictory(() => this.resumeFromPause(), () => {
-      this.uiManager.hideOverlay();
-      this.gameManager.finishRun();
-    });
+    this.uiManager.showVictory(
+      () => this.resumeFromPause(),
+      () => {
+        audioSystem.play('ui-click');
+        this.uiManager.hideOverlay();
+        this.gameManager.finishRun();
+      }
+    );
   }
 
   private showLevelUpOnce(): void {
@@ -870,22 +943,53 @@ export class GameScene extends Phaser.Scene {
 
     this.levelUpDisplayed = true;
     const bossReward = this.gameManager.upgradeSource === 'boss';
-    const choices = bossReward ? this.upgradeSystem.getBossChoices(this.gameManager.playerStats)
-      : this.reviewChoices ?? this.upgradeSystem.getChoices(this.gameManager.playerStats);
+    const bossChoices = bossReward ? this.upgradeSystem.getBossChoices(this.gameManager.playerStats) : [];
+    const useBossChoices = bossReward && bossChoices.length > 0;
+    const source = useBossChoices ? 'boss' : (bossReward ? 'chest' : this.gameManager.upgradeSource);
+    const choices = useBossChoices
+      ? bossChoices
+      : (this.reviewChoices ?? this.upgradeSystem.getChoices(this.gameManager.playerStats));
     this.reviewChoices = undefined;
+    if (choices.length === 0) {
+      this.levelUpDisplayed = false;
+      this.gameManager.resumeAfterUpgrade();
+      return;
+    }
     const grewTo = this.gameManager.consumeCompanionGrowth();
     const stats = this.gameManager.playerStats;
     const note = grewTo
       ? `${COMPANION_NAMES[stats.companionId]} grew to rank ${grewTo} — ${describeCompanionRank(stats.companionId, grewTo, stats)}.`
       : undefined;
-    this.uiManager.showLevelUp(choices, (choice) => {
-      if (bossReward) this.upgradeSystem.applyBossUpgrade(choice, this.gameManager);
-      else this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
-      this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
-      this.levelUpDisplayed = false;
-      this.gameManager.resumeAfterUpgrade();
-      this.events.emit('presentation:level', this.player.position);
-    }, this.gameManager.upgradeSource, note);
+    this.uiManager.showLevelUp(
+      choices,
+      (choice) => {
+        audioSystem.play('upgrade-pick');
+        if (useBossChoices) this.upgradeSystem.applyBossUpgrade(choice, this.gameManager);
+        else this.upgradeSystem.applyUpgrade(choice, this.gameManager.playerStats);
+        this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
+        this.levelUpDisplayed = false;
+        this.gameManager.resumeAfterUpgrade();
+        this.events.emit('presentation:level', this.player.position);
+      },
+      source,
+      note,
+      {
+        rerollsRemaining: useBossChoices ? 0 : this.gameManager.rerollsRemaining,
+        onReroll: useBossChoices
+          ? undefined
+          : () => {
+              if (!this.gameManager.consumeReroll()) return undefined;
+              audioSystem.play('ui-click');
+              return this.upgradeSystem.getChoices(this.gameManager.playerStats);
+            },
+        onSkip: () => {
+          audioSystem.play('ui-click');
+          this.gameManager.skipUpgradeForBonus();
+          this.abilities.sync(this.player.position, this.gameManager.wardStatus, this.gameManager.wardLeaves);
+          this.levelUpDisplayed = false;
+        }
+      }
+    );
   }
 
   private showPausedOnce(): void {
@@ -896,7 +1000,8 @@ export class GameScene extends Phaser.Scene {
     this.pausedDisplayed = true;
     this.uiManager.showPaused(() => this.resumeFromPause(), () => {
       if (this.gameManager.state !== 'Paused') return;
-      if (!this.practiceRun) marketProgress.settleRun(this.gameManager.runId, this.gameManager.level);
+      audioSystem.play('ui-click');
+      if (!this.practiceRun) marketProgress.settleRun(this.gameManager.runId, this.gameManager.level, this.gameManager.bonusGold);
       this.scene.start('StartScene', { skipReview: true });
     });
   }
@@ -955,9 +1060,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameManager.pause();
+    audioSystem.play('ui-click');
   }
 
   private resumeFromPause(): void {
+    audioSystem.play('ui-click');
     this.gameManager.resume();
     this.pausedDisplayed = false;
     this.uiManager.hideOverlay();
@@ -978,11 +1085,29 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameOverDisplayed = true;
-    const settlement = this.practiceRun ? undefined : marketProgress.settleRun(this.gameManager.runId, this.gameManager.level);
-    this.uiManager.showGameOver(() => this.scene.restart({ characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId, skipReview: true }), () => this.scene.start('StartScene', { skipReview: true }), settlement ? {
-      earned: settlement.goldEarned, balance: settlement.balance, saved: settlement.saved,
-      onVisit: () => this.scene.start('MarketScene', { characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId })
-    } : undefined);
+    const settlement = this.practiceRun
+      ? undefined
+      : marketProgress.settleRun(this.gameManager.runId, this.gameManager.level, this.gameManager.bonusGold);
+    this.uiManager.showGameOver(
+      () => {
+        audioSystem.play('ui-click');
+        this.scene.restart({ characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId, skipReview: true });
+      },
+      () => {
+        audioSystem.play('ui-click');
+        this.scene.start('StartScene', { skipReview: true });
+      },
+      settlement ? {
+        earned: settlement.goldEarned,
+        balance: settlement.balance,
+        saved: settlement.saved,
+        onVisit: () => {
+          audioSystem.play('ui-click');
+          this.scene.start('MarketScene', { characterId: this.selectedCharacter.id, weaponId: this.selectedWeaponId });
+        }
+      } : undefined,
+      this.gameManager.getDamageBreakdown()
+    );
   }
 
   private setPresentationPaused(paused: boolean): void {
@@ -1042,6 +1167,8 @@ export class GameScene extends Phaser.Scene {
   toggleManualAim(): boolean {
     this.manualAimEnabled = !this.manualAimEnabled;
     this.updateManualAim();
+    this.uiManager?.setAimMode(this.manualAimEnabled);
+    audioSystem.play('ui-click');
     this.aimNoticeMs = 1300;
     this.aimNotice
       ?.setText(this.manualAimEnabled ? 'Manual Aim: ON' : 'Auto Aim')
@@ -1053,6 +1180,7 @@ export class GameScene extends Phaser.Scene {
 
   private readDirectionVector(): Vector2Like {
     const pad = this.readGamepadInput();
+    const touch = this.uiManager?.getTouchMoveVector() ?? { x: 0, y: 0 };
     const kx = Number(this.keys.d.isDown || this.keys.right.isDown)
       - Number(this.keys.a.isDown || this.keys.left.isDown);
     const ky = Number(this.keys.s.isDown || this.keys.down.isDown)
@@ -1060,8 +1188,8 @@ export class GameScene extends Phaser.Scene {
     const kMag = Math.hypot(kx, ky);
     const keyX = kMag > 0 ? kx / kMag : 0;
     const keyY = kMag > 0 ? ky / kMag : 0;
-    const x = keyX + pad.x;
-    const y = keyY + pad.y;
+    const x = keyX + pad.x + touch.x;
+    const y = keyY + pad.y + touch.y;
     const total = Math.hypot(x, y);
     return total > 1 ? { x: x / total, y: y / total } : { x, y };
   }
@@ -1163,6 +1291,40 @@ export class GameScene extends Phaser.Scene {
     this.player.triggerHitBlink(BALANCE.player.contactInvulnerabilityMs);
   }
 
+  private spawnFloatingNotice(label: string, position: Vector2Like, color = '#ffe59c'): void {
+    const startY = position.y - 36;
+    const text = this.add
+      .text(position.x, startY, label, {
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontSize: '14px',
+        fontStyle: 'bold',
+        color,
+        stroke: '#231409',
+        strokeThickness: 4
+      })
+      .setDepth(34)
+      .setOrigin(0.5, 0.5);
+    this.floatingNotices.push({ text, ageMs: 0, lifeMs: 1400, startY });
+  }
+
+  private updateFloatingNotices(deltaMs: number): void {
+    if (this.floatingNotices.length === 0) return;
+    const calm = reducedMotion();
+    this.floatingNotices = this.floatingNotices.filter((entry) => {
+      entry.ageMs += deltaMs;
+      if (entry.ageMs >= entry.lifeMs) {
+        entry.text.destroy();
+        return false;
+      }
+      const progress = entry.ageMs / entry.lifeMs;
+      if (!calm) {
+        entry.text.setY(entry.startY - progress * 28);
+      }
+      entry.text.setAlpha(progress > 0.65 ? Math.max(0, 1 - (progress - 0.65) / 0.35) : 1);
+      return true;
+    });
+  }
+
   private collectCompassTargets(): CompassTarget[] {
     const targets: CompassTarget[] = [];
     for (const chest of this.chestSystem.drops.chests) {
@@ -1171,6 +1333,9 @@ export class GameScene extends Phaser.Scene {
         y: chest.position.y,
         kind: chest.kind === 'boss' ? 'relic' : 'chest'
       });
+    }
+    for (const shrine of this.runEvents.activeShrines) {
+      targets.push({ x: shrine.position.x, y: shrine.position.y, kind: 'shrine' });
     }
     for (const rock of this.rareRocks.positions) {
       targets.push({ x: rock.x, y: rock.y, kind: 'rock' });
@@ -1205,8 +1370,11 @@ export class GameScene extends Phaser.Scene {
     this.anims.resumeAll();
     this.input.keyboard?.off('keydown-ESC', this.handleEscape);
     this.input.keyboard?.off('keydown-F10', this.finishReviewRun);
-    this.input.keyboard?.off('keydown-F', this.handleToggleManualAim);
     this.input.off('pointerdown', this.handlePointerDown);
+    for (const notice of this.floatingNotices) {
+      notice.text.destroy();
+    }
+    this.floatingNotices = [];
     this.debugSpriteSheetMenu?.destroy();
     this.uiManager?.destroy();
     this.companionSystem?.destroy();

@@ -379,8 +379,9 @@ test('UIManager constructor and update stay backward-compatible without options 
     const game = new GameManager('spell', undefined, 'wizard');
     let pausedCalls = 0;
     const ui = new UIManager(game, () => { pausedCalls++; }, CHARACTER, 'p.png', 'c.png');
-    const snap = game.getHudSnapshot();
-    ui.update(snap);
+    // Omit optional nextBossLevel/nextBossName added by gameplay-depth to verify legacy bare-snapshot compatibility.
+    const { nextBossLevel: _lvl, nextBossName: _name, ...bareSnap } = game.getHudSnapshot();
+    ui.update(bareSnap);
 
     assert.equal(dom.uiRoot.querySelector('.health-value').textContent, '100 / 100');
     assert.equal(dom.uiRoot.querySelector('.level-seal').textContent, '1');
@@ -441,7 +442,7 @@ test('in-run status strip displays dash, Barkskin ward, active buffs, and next b
     assert.equal(dom.uiRoot.querySelector('.boss-milestone-pill').hidden, false);
     assert.match(dom.uiRoot.querySelector('.boss-milestone-pill').textContent, /Next Boss: Lv\. 10/);
 
-    // Cooldown & recharging state updates cleanly
+    // Cooldown & recharging state updates cleanly; clear nextBossLevel/nextBossName carried by baseSnap
     ui.update({
       ...baseSnap,
       dashCooldownRatio: 0.6,
@@ -449,7 +450,9 @@ test('in-run status strip displays dash, Barkskin ward, active buffs, and next b
       wardLeaves: 1,
       wardMaxLeaves: 4,
       shoutRemainingMs: 0,
-      harvestBonus: 0
+      harvestBonus: 0,
+      nextBossLevel: undefined,
+      nextBossName: undefined
     });
     assert.ok(dashPill.classList.contains('is-cooling'));
     assert.match(dashPill.textContent, /40%/);

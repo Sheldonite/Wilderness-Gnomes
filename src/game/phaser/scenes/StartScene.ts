@@ -9,10 +9,10 @@ import { icon } from '../../ui/icons';
 import { showSpriteReview } from '../../ui/SpriteReview';
 import { showMidnightReview } from '../../ui/MidnightReview';
 import { marketProgress, type AnyWeaponId } from '../../core/MarketProgress';
+import { audioSystem } from '../../systems/AudioSystem';
 import { showRonReview } from '../../ui/RonReview';
 import { showSheldonReview } from '../../ui/SheldonReview';
 
-const SOUND_STORAGE_KEY = 'wilderness-gnomes-sound-v1';
 const CHARACTER_ORDER: readonly PlayerCharacterId[] = ['wizard', 'hailey', 'sheldon', 'ron'];
 
 const FALLBACK_WEAPONS: Record<AnyWeaponId, { name: string; icon: string }> = {
@@ -25,36 +25,6 @@ const FALLBACK_WEAPONS: Record<AnyWeaponId, { name: string; icon: string }> = {
 function weaponDisplay(id: AnyWeaponId): { name: string; icon: string } {
   const def = (WEAPONS as Record<string, WeaponDefinition | undefined>)[id];
   return def ? { name: def.name, icon: def.icon } : (FALLBACK_WEAPONS[id] ?? { name: id, icon: 'spell' });
-}
-
-function readSoundMuted(): boolean {
-  try {
-    const raw = globalThis.localStorage?.getItem(SOUND_STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw) as { muted?: unknown } | null;
-    return Boolean(parsed && typeof parsed === 'object' && parsed.muted === true);
-  } catch {
-    return false;
-  }
-}
-
-function writeSoundMuted(muted: boolean): boolean {
-  try {
-    const storage = globalThis.localStorage;
-    if (!storage) return false;
-    let current: Record<string, unknown> = {};
-    const raw = storage.getItem(SOUND_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) current = parsed as Record<string, unknown>;
-    }
-    const sfxVolume = typeof current.sfxVolume === 'number' && Number.isFinite(current.sfxVolume) ? current.sfxVolume : 0.7;
-    const musicVolume = typeof current.musicVolume === 'number' && Number.isFinite(current.musicVolume) ? current.musicVolume : 0.4;
-    storage.setItem(SOUND_STORAGE_KEY, JSON.stringify({ muted, sfxVolume, musicVolume }));
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function soundSvg(muted: boolean): string {
@@ -71,10 +41,10 @@ export class StartScene extends Phaser.Scene {
   private starting = false;
   private reviewActive = false;
   private readonly keyboardHandler = (event: KeyboardEvent) => {
-    if (event.code === 'Digit1') this.selectCharacter('wizard');
-    if (event.code === 'Digit2') this.selectCharacter('hailey');
-    if (event.code === 'Digit3') this.selectCharacter('sheldon');
-    if (event.code === 'Digit4') this.selectCharacter('ron');
+    if (event.code === 'Digit1') this.selectCharacter('wizard', true);
+    if (event.code === 'Digit2') this.selectCharacter('hailey', true);
+    if (event.code === 'Digit3') this.selectCharacter('sheldon', true);
+    if (event.code === 'Digit4') this.selectCharacter('ron', true);
     if (event.code === 'ArrowLeft') { event.preventDefault(); this.cycleCharacter(-1); }
     if (event.code === 'ArrowRight') { event.preventDefault(); this.cycleCharacter(1); }
     // Native focused buttons retain their normal Enter/Space behavior.
@@ -98,7 +68,9 @@ export class StartScene extends Phaser.Scene {
     marketProgress.refresh();
     if (!marketProgress.characterUnlocked(this.selectedCharacterId)) this.selectedCharacterId = 'wizard';
     this.selectedWeaponId = marketProgress.equippedWeapon;
-    this.soundMuted = readSoundMuted();
+    audioSystem.attachScene(this);
+    audioSystem.setMusicMode('title');
+    this.soundMuted = audioSystem.isMuted();
     if (this.sound) this.sound.mute = this.soundMuted;
 
     const equippedWeapon = weaponDisplay(this.selectedWeaponId);
@@ -159,18 +131,21 @@ export class StartScene extends Phaser.Scene {
       </main>`;
     this.refreshSoundToggle();
     this.root.querySelector('.title-sound-toggle')!.addEventListener('click', () => this.toggleSoundMute());
-    this.root.querySelectorAll<HTMLButtonElement>('[data-character]').forEach(button => button.addEventListener('click', () => this.selectCharacter(button.dataset.character as PlayerCharacterId)));
+    this.root.querySelectorAll<HTMLButtonElement>('[data-character]').forEach(button => button.addEventListener('click', () => this.selectCharacter(button.dataset.character as PlayerCharacterId, true)));
     this.root.querySelector('.title-weapons-link')!.addEventListener('click', () => {
       if (this.starting) return; this.starting = true;
+      audioSystem.play('ui-click');
       this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId, vendorId: 'forge' });
     });
     this.root.querySelector('.title-cosmetics-badge')!.addEventListener('click', () => {
       if (this.starting) return; this.starting = true;
+      audioSystem.play('ui-click');
       this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId, vendorId: 'outfitter' });
     });
     this.root.querySelector('.begin-button')!.addEventListener('click', () => this.startGame());
     this.root.querySelector('.title-market-link')!.addEventListener('click', () => {
       if (this.starting) return; this.starting = true;
+      audioSystem.play('ui-click');
       this.scene.start('MarketScene', { characterId: this.selectedCharacterId, weaponId: this.selectedWeaponId });
     });
     window.addEventListener('keydown', this.keyboardHandler);
@@ -185,9 +160,9 @@ export class StartScene extends Phaser.Scene {
   }
 
   private toggleSoundMute(): void {
-    this.soundMuted = !this.soundMuted;
-    writeSoundMuted(this.soundMuted);
+    this.soundMuted = audioSystem.toggleMute();
     if (this.sound) this.sound.mute = this.soundMuted;
+    if (!this.soundMuted) audioSystem.play('ui-click');
     this.refreshSoundToggle();
     try {
       window.dispatchEvent(new CustomEvent('wilderness-gnomes:sound-changed', { detail: { muted: this.soundMuted } }));
@@ -219,15 +194,16 @@ export class StartScene extends Phaser.Scene {
     const index = CHARACTER_ORDER.indexOf(this.selectedCharacterId);
     const next = CHARACTER_ORDER[(Math.max(0, index) + step + CHARACTER_ORDER.length) % CHARACTER_ORDER.length];
     const keepCardFocus = Boolean(document.activeElement?.closest('.wanderer-cards'));
-    this.selectCharacter(next);
+    this.selectCharacter(next, true);
     if (keepCardFocus) {
       this.root?.querySelector<HTMLButtonElement>(`[data-character="${next}"]`)?.focus({ preventScroll: true });
     }
   }
 
-  private selectCharacter(id: PlayerCharacterId): void {
+  private selectCharacter(id: PlayerCharacterId, playSfx = false): void {
     // Every wanderer is on the roster from the first run, so there is nothing to unlock here.
     this.selectedCharacterId = id;
+    if (playSfx) audioSystem.play('ui-click');
     this.root?.querySelectorAll<HTMLButtonElement>('[data-character]').forEach(button => {
       const selected = button.dataset.character === id;
       button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
@@ -236,6 +212,7 @@ export class StartScene extends Phaser.Scene {
 
   private startGame(): void {
     if (this.starting) return;
+    audioSystem.play('ui-click');
     marketProgress.refresh();
     if (!this.reviewActive) {
       if (!marketProgress.characterUnlocked(this.selectedCharacterId)) this.selectedCharacterId = 'wizard';
