@@ -52,7 +52,17 @@ export const BALANCE = {
     stampedeLaneWidth: 70,
     doubleStampedeMinute: 10,
     /** Set pieces may exceed the spawner's cap by this many creatures, never more. */
-    capAllowance: 40
+    capAllowance: 40,
+    /** Woodland Campfire/Shrine cadence and blessing rewards. */
+    shrineFirstMs: 150000,
+    shrineEveryMs: 150000,
+    shrineHeal: 25,
+    shrineFrenzyMs: 6000,
+    shrineAttackSpeedBonus: 0.25,
+    shrineMoveSpeedBonus: 0.18,
+    shrineBonusGold: 2,
+    shrineXpBurst: 18,
+    shrineCollectRange: 42
   },
   deer: {
     unlockLevel: 10,          // from here most spawns are deer
@@ -170,10 +180,21 @@ export const BALANCE = {
     frankieFeatherLifeMs: 18000,
     frankieFeatherBonus: 2,
     frankieFeatherCap: 40,
+    /** Rank 10 Skypack Frenzy raises feather cap and hastens dive cooldown by 25%. */
+    frankieAscendedFeatherCap: 60,
+    frankieFrenzyCooldownScale: 0.75,
+    /** Rank 5 Gale Stoop adds splash damage in a gust around diving hits. */
+    frankieGustRadius: 70,
+    frankieGustDamageRatio: 0.5,
     frankieCollectRange: 42,
     /** Tobias the airborne tuna: cruises beside Ron, then torpedoes the nearest foe. */
     tobiasDamage: 34,
     tobiasCooldownMs: 1450,
+    /** Rank 5 Tidal Wake splash on torpedo hits; Rank 10 Leviathan Surge chains to nearby targets. */
+    tobiasWakeSplashRadius: 75,
+    tobiasWakeSplashRatio: 0.6,
+    tobiasSurgeMaxChains: 2,
+    tobiasSurgeChainRadius: 190,
     tobiasHuntRange: 300,
     tobiasDartSpeed: 620,
     tobiasReturnSpeed: 340,

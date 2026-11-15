@@ -20,7 +20,7 @@ export class AbilitySystem {
   private readonly fireflies: Phaser.GameObjects.Image[] = [];
   private readonly bursts: Burst[] = [];
 
-  constructor(private readonly scene: Phaser.Scene, stats: PlayerStats) {
+  constructor(private readonly scene: Phaser.Scene, private readonly stats: PlayerStats) {
     this.simulation = new AbilitySimulation(stats);
     this.ground = scene.add.graphics().setDepth(2);
     this.foreground = scene.add.graphics().setDepth(22);
@@ -34,7 +34,11 @@ export class AbilitySystem {
   }
 
   update(deltaMs: number, position: Vector2Like, enemies: EnemyController[], orbs: XPOrb[], damage: DealDamage): void {
-    this.simulation.update(deltaMs, position, enemies, orbs, damage);
+    const power = this.stats.abilityPowerMultiplier ?? 1;
+    const attributedDamage: DealDamage = power === 1
+      ? damage
+      : (target, amount, source) => damage(target, Number((amount * power).toFixed(2)), source);
+    this.simulation.update(deltaMs, position, enemies, orbs, attributedDamage);
     for (let i = this.bursts.length - 1; i >= 0; i--) {
       this.bursts[i].age += deltaMs;
       if (this.bursts[i].age >= 600) this.bursts.splice(i, 1);

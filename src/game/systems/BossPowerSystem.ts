@@ -1,21 +1,56 @@
 import Phaser from 'phaser';
+import { BOSS_ABILITY_IDS, bossPower } from '../config/bossAbilities';
 import { BossPowerSimulation, type BossPowerEvent } from '../core/BossPowerSimulation';
 import { reducedMotion } from '../config/presentation';
 import type { GameManager } from '../core/GameManager';
-import type { Vector2Like } from '../core/types';
+import type { BossAbilityId, Vector2Like } from '../core/types';
 import type { CombatTarget, DealDamage } from '../core/CombatResolver';
+import { distanceSq } from '../utils/math';
 
 export class BossPowerSystem {
   readonly simulation = new BossPowerSimulation();
   private readonly graphics: Phaser.GameObjects.Graphics;
   private bursts: (BossPowerEvent & { age: number })[] = [];
+  private shadowElapsedMs = 0;
+  private readonly shadowReadyAt: Record<BossAbilityId, number> = { crownfire: 0, stormcall: 0, 'phoenix-heart': 0 };
   constructor(scene: Phaser.Scene) { this.graphics = scene.add.graphics().setDepth(23); }
 
   update(deltaMs: number, game: GameManager, player: Vector2Like, enemies: CombatTarget[], damage: DealDamage): void {
     if (game.state !== 'Playing') return;
-    this.simulation.update(deltaMs, game, player, enemies, damage);
+    this.shadowElapsedMs += deltaMs;
+    const candidates = BOSS_ABILITY_IDS.filter(
+      id => game.playerStats.bossAbilityRanks[id] > 0 && this.shadowElapsedMs >= this.shadowReadyAt[id]
+    );
+    let cursor = 0;
+    let currentHits = 0;
+    const hitInAbility = new Set<number>();
+    const attributedDamage: DealDamage = (target, amount) => {
+      while (cursor < candidates.length) {
+        const id = candidates[cursor];
+        const power = bossPower(id, game.playerStats.bossAbilityRanks[id]);
+        const inCrownRange = id !== 'crownfire'
+          || distanceSq(player, target.position) <= (power.radius + target.radius + 1) ** 2;
+        const limitReached = id === 'stormcall' && currentHits >= power.targets;
+        if (amount === power.damage && !hitInAbility.has(target.id) && inCrownRange && !limitReached) {
+          hitInAbility.add(target.id);
+          currentHits += 1;
+          damage(target, amount, id);
+          return;
+        }
+        cursor += 1;
+        currentHits = 0;
+        hitInAbility.clear();
+      }
+      damage(target, amount);
+    };
+
+    this.simulation.update(deltaMs, game, player, enemies, attributedDamage);
     this.bursts = this.bursts.filter(burst => (burst.age += deltaMs) < 650);
-    for (const event of this.simulation.events) this.bursts.push({ ...event, age: 0 });
+    for (const event of this.simulation.events) {
+      const rank = game.playerStats.bossAbilityRanks[event.kind];
+      if (rank > 0) this.shadowReadyAt[event.kind] = this.shadowElapsedMs + bossPower(event.kind, rank).cooldownMs;
+      this.bursts.push({ ...event, age: 0 });
+    }
     const g = this.graphics.clear();
     for (const burst of this.bursts) {
       const fade = 1 - burst.age / 650;

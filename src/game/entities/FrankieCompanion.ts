@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { spriteHeading } from '../utils/math';
-import { LOOK } from '../config/presentation';
+import { LOOK, reducedMotion } from '../config/presentation';
 import { FRANKIE_DIVE_KEY, FRANKIE_FLAP_KEY, FRANKIE_SPRITE_KEY } from '../config/frankieSprite';
 import { FrankieFlock } from '../core/FrankieFlock';
 import type { DealDamage } from '../core/CombatResolver';
@@ -12,6 +12,7 @@ export class FrankieCompanion {
   readonly flock: FrankieFlock;
   private readonly birds: Phaser.GameObjects.Sprite[] = [];
   private readonly featherSprites = new Map<FrankieFlock['feathers'][number], Phaser.GameObjects.Image>();
+  private readonly gustGraphics: Phaser.GameObjects.Graphics;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -20,6 +21,7 @@ export class FrankieCompanion {
   ) {
     this.flock = new FrankieFlock(stats);
     this.flock.update(0, playerPosition, [], () => undefined);
+    this.gustGraphics = scene.add.graphics().setDepth(LOOK.depth.companion + 2);
   }
 
   update(
@@ -31,6 +33,7 @@ export class FrankieCompanion {
     this.flock.update(deltaMs, playerPosition, enemies, damage);
     this.syncBirds();
     this.syncFeathers();
+    this.drawGusts();
   }
 
   destroy(): void {
@@ -38,6 +41,7 @@ export class FrankieCompanion {
     this.birds.length = 0;
     for (const sprite of this.featherSprites.values()) sprite.destroy();
     this.featherSprites.clear();
+    this.gustGraphics.destroy();
   }
 
   get positions(): Vector2Like[] {
@@ -82,6 +86,19 @@ export class FrankieCompanion {
         this.featherSprites.set(feather, sprite);
       }
       sprite.setPosition(feather.position.x, feather.position.y);
+    }
+  }
+
+  private drawGusts(): void {
+    const g = this.gustGraphics.clear();
+    if (reducedMotion()) return;
+    for (const gust of this.flock.gustBursts) {
+      const life = (this.flock.elapsedMs - gust.bornAt) / (gust.expiresAt - gust.bornAt);
+      if (life < 0 || life > 1) continue;
+      const alpha = (1 - life) * 0.45;
+      const radius = gust.radius * (0.4 + 0.6 * life);
+      g.lineStyle(3, 0xe8eff5, alpha).strokeCircle(gust.position.x, gust.position.y, radius);
+      g.fillStyle(0xd2e4f0, alpha * 0.2).fillCircle(gust.position.x, gust.position.y, radius);
     }
   }
 }

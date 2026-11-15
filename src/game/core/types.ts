@@ -20,7 +20,14 @@ export type AbilityRank = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 export type BossAbilityId = 'crownfire' | 'stormcall' | 'phoenix-heart';
 export type UpgradeSource = 'level' | 'chest' | 'boss';
 export type AbilityRanks = Record<AbilityId, AbilityRank>;
-export type WeaponId = 'spell' | 'crossbow';
+export type WeaponId = 'spell' | 'crossbow' | 'boomerang' | 'lantern';
+export type DamageSourceId = 'weapon' | 'companion' | AbilityId | BossAbilityId;
+
+export interface DamageBreakdownEntry {
+  id: DamageSourceId;
+  label: string;
+  damage: number;
+}
 
 export interface Vector2Like {
   x: number;
@@ -68,6 +75,18 @@ export interface PlayerStats {
   shoutMoveSpeedBonus: number;
   /** Movement multiplier from being shaken (Wonky's bellow); 1 when unhindered. Refreshed each frame. */
   moveSlow?: number;
+  /** Passive multiplier for primary weapon shots (used by Nick). */
+  spellPowerMultiplier?: number;
+  /** Passive multiplier for active ability damage (used by Nick). */
+  abilityPowerMultiplier?: number;
+  /** Multiplier for XP orb magnet pickup radius (used by Hailey). */
+  xpMagnetRangeMultiplier?: number;
+  /** Remaining duration (ms) for active Inspiring Shout buff, for HUD display. */
+  shoutRemainingMs?: number;
+  /** Temporary attack-speed bonus from a Woodland Shrine blessing. */
+  shrineAttackSpeedBonus?: number;
+  /** Temporary move-speed bonus from a Woodland Shrine blessing. */
+  shrineMoveSpeedBonus?: number;
 }
 
 export interface UpgradeDefinition {
@@ -88,4 +107,14 @@ export interface HudSnapshot {
   level: number;
   elapsedSeconds: number;
   kills: number;
+  rerollsRemaining?: number;
+  bonusGold?: number;
+  dashCooldownRatio?: number;
+  wardStatus?: 'locked' | 'ready' | 'protecting' | 'recharging';
+  wardLeaves?: number;
+  wardMaxLeaves?: number;
+  shoutRemainingMs?: number;
+  harvestBonus?: number;
+  nextBossLevel?: number;
+  nextBossName?: string;
 }

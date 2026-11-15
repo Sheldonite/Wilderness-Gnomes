@@ -142,6 +142,9 @@ export class BootScene extends Phaser.Scene {
     // The buzzards are pixel art now: keep their pixels crisp.
     for (const key of [FRANKIE_SPRITE_KEY, KING_FRANKIE_SPRITE_KEY, FRANKIE_PORTRAIT_KEY]) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures.get(LOOK.texture.feather).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    for (const key of ['boomerang-blade', 'lantern-orb']) {
+      if (this.textures.exists(key)) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
     applyPlayerSpriteAdjustments(this);
     alignMysteryFrames(this);
     this.createPlayerAnimations();

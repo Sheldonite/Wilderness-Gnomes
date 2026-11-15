@@ -68,9 +68,16 @@ export function describeCompanionRank(id: CompanionId, rank: number, stats?: Pla
     }
     case 'frankie': {
       const birds = frankieBirdsForRank(rank);
-      return `${birds} of ${b.frankieMaxBirds} buzzard${birds === 1 ? '' : 's'} · ${Math.round(b.frankieDamage * companionPower(rank))} damage per stoop`;
+      const base = `${birds} of ${b.frankieMaxBirds} buzzard${birds === 1 ? '' : 's'} · ${Math.round(b.frankieDamage * companionPower(rank))} damage per stoop`;
+      if (rank >= 10) return `${base} · Gale Stoop · Skypack Frenzy`;
+      if (rank >= 5) return `${base} · Gale Stoop`;
+      return base;
     }
-    case 'tobias':
-      return `${Math.round(b.tobiasDamage * companionPower(rank))} damage per dart${power ? ` · +${power}% from rank ${rank}` : ''}`;
+    case 'tobias': {
+      const base = `${Math.round(b.tobiasDamage * companionPower(rank))} damage per dart${power ? ` · +${power}% from rank ${rank}` : ''}`;
+      if (rank >= 10) return `${base} · Tidal Wake · Leviathan Surge`;
+      if (rank >= 5) return `${base} · Tidal Wake`;
+      return base;
+    }
   }
 }

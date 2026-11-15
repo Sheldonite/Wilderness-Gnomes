@@ -9,6 +9,7 @@ import { distanceSq, normalize } from '../utils/math';
 export class WeaponSystem {
   private cooldownRemainingMs = 350;
   private shotThisFrame = false;
+  private readonly playerAnchor: Vector2Like = { x: 0, y: 0 };
   aimAngle = 0;
 
   constructor(private readonly scene: Phaser.Scene) {}
@@ -24,21 +25,25 @@ export class WeaponSystem {
     playerPosition: Vector2Like,
     stats: PlayerStats,
     enemies: EnemyController[],
-    projectiles: Projectile[]
+    projectiles: Projectile[],
+    manualAim?: Vector2Like
   ): void {
     this.shotThisFrame = false;
     this.cooldownRemainingMs -= deltaMs;
-    const target = this.findClosestEnemy(playerPosition, enemies);
-    if (target) {
-      this.aimAngle = Math.atan2(target.position.y - playerPosition.y, target.position.x - playerPosition.x);
+    this.playerAnchor.x = playerPosition.x;
+    this.playerAnchor.y = playerPosition.y;
+
+    const aimTarget = manualAim ?? this.findClosestEnemy(playerPosition, enemies)?.position;
+    if (aimTarget) {
+      this.aimAngle = Math.atan2(aimTarget.y - playerPosition.y, aimTarget.x - playerPosition.x);
     }
-    if (this.cooldownRemainingMs > 0 || !target) {
+    if (this.cooldownRemainingMs > 0 || !aimTarget) {
       return;
     }
 
-    this.cooldownRemainingMs = stats.weaponCooldownMs / (1 + stats.shoutAttackSpeedBonus);
+    this.cooldownRemainingMs = stats.weaponCooldownMs / (1 + stats.shoutAttackSpeedBonus + (stats.shrineAttackSpeedBonus ?? 0));
     this.shotThisFrame = true;
-    this.fireProjectiles(playerPosition, target.position, stats, projectiles);
+    this.fireProjectiles(playerPosition, aimTarget, stats, projectiles);
   }
 
   private findClosestEnemy(
@@ -72,7 +77,7 @@ export class WeaponSystem {
     const spread = arm.spreadRadians;
     const startOffset = count > 1 ? -((count - 1) * spread) / 2 : 0;
     const upgrades = weaponUpgrades(stats);
-    const damage = stats.projectileDamage * (1 + (stats.harvestBonus ?? 0));
+    const damage = stats.projectileDamage * (1 + (stats.harvestBonus ?? 0)) * (stats.spellPowerMultiplier ?? 1);
     const muzzle = arm.muzzleOffset ?? 0;
 
     for (let i = 0; i < count; i += 1) {
@@ -95,7 +100,13 @@ export class WeaponSystem {
             radius: arm.projectileRadius,
             texture: arm.texture,
             displaySize: arm.displaySize,
-            trailColor: arm.trailColor
+            trailColor: arm.trailColor,
+            behavior: arm.behavior,
+            boomerangRange: arm.boomerangRange,
+            playerAnchor: arm.behavior === 'boomerang' ? this.playerAnchor : undefined,
+            splashRadius: arm.splashRadius,
+            splashDamageRatio: arm.splashDamageRatio,
+            source: 'weapon'
           }
         )
       );

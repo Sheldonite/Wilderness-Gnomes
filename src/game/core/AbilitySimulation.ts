@@ -1,4 +1,5 @@
 import { ABILITIES, awakeningTier } from '../config/abilities';
+import { BALANCE } from '../config/balance';
 import type { AbilityId, PlayerStats, Vector2Like } from './types';
 import type { CombatTarget, DealDamage } from './CombatResolver';
 import { distanceSq, normalize } from '../utils/math';
@@ -143,12 +144,19 @@ export class AbilitySimulation {
         this.due.set('acorn-shower', this.elapsedMs + this.acornCooldown());
       }
     }
+    const magnetMult = this.stats.xpMagnetRangeMultiplier ?? 1;
+    if (magnetMult > 1) {
+      const passiveRadius = BALANCE.xp.magnetRange * magnetMult;
+      for (const pickup of pickups) {
+        if (!pickup.isCollected && distanceSq(position, pickup.position) <= passiveRadius ** 2) pickup.attract();
+      }
+    }
     if (this.tier('woodland-magnet') >= 0) {
       // Harvest Wind never rests: everything in range is drawn in continuously.
-      const radius = ABILITIES.magnet.range[ranks['woodland-magnet']];
+      const radius = ABILITIES.magnet.range[ranks['woodland-magnet']] * magnetMult;
       for (const pickup of pickups) if (!pickup.isCollected && distanceSq(position, pickup.position) <= radius ** 2) pickup.attract();
     } else if (this.ready('woodland-magnet')) {
-      const radius = ABILITIES.magnet.range[ranks['woodland-magnet']];
+      const radius = ABILITIES.magnet.range[ranks['woodland-magnet']] * magnetMult;
       for (const pickup of pickups) if (!pickup.isCollected && distanceSq(position, pickup.position) <= radius ** 2) pickup.attract();
       this.events.push({ kind: 'magnet', position: { ...position }, radius });
       this.due.set('woodland-magnet', this.elapsedMs + ABILITIES.magnet.cooldownMs[ranks['woodland-magnet']]);
@@ -175,10 +183,10 @@ export class AbilitySimulation {
       }
       if (thornwall && inThorns) {
         const ticks = this.accumulate(this.thornExposure, enemy.id, deltaMs, thornwall.tickMs);
-        if (ticks) damage(enemy, ticks * thornwall.damagePerSecond * thornwall.tickMs / 1000);
+        if (ticks) damage(enemy, ticks * thornwall.damagePerSecond * thornwall.tickMs / 1000, 'bramble-snare');
       } else this.thornExposure.delete(enemy.id);
       if (this.elapsedMs >= (this.fireflyHits.get(enemy.id) ?? 0) && this.fireflies.some(f => distanceSq(f, enemy.position) <= (enemy.radius + ABILITIES.firefly.hitRadius) ** 2)) {
-        damage(enemy, fireflyDamage);
+        damage(enemy, fireflyDamage, 'firefly-orbit');
         this.fireflyHits.set(enemy.id, this.elapsedMs + ABILITIES.firefly.hitCooldownMs);
       }
       const patches = this.spores.filter(p => distanceSq(enemy.position, p) <= p.radius ** 2);
@@ -187,14 +195,14 @@ export class AbilitySimulation {
         const coveredMs = Math.max(0, Math.min(this.elapsedMs, Math.max(...patches.map(p => p.expiresAt))) -
           Math.max(previousMs, Math.min(...patches.map(p => p.bornAt))));
         const ticks = this.accumulate(this.sporeExposure, enemy.id, coveredMs, ABILITIES.spore.tickMs);
-        if (ticks) damage(enemy, ticks * Math.max(...patches.map(p => p.strength)) * ABILITIES.spore.tickMs / 1000);
+        if (ticks) damage(enemy, ticks * Math.max(...patches.map(p => p.strength)) * ABILITIES.spore.tickMs / 1000, 'spore-trail');
       } else this.sporeExposure.delete(enemy.id);
     }
     const oakTier = this.tier('acorn-shower');
     const oak = oakTier >= 0 ? ABILITIES.acorn.oak[oakTier] : undefined;
     for (const acorn of this.acorns) {
       if (acorn.landsAt > this.elapsedMs) continue;
-      for (const enemy of enemies) if (!enemy.isDead && distanceSq(enemy.position, acorn) <= (acorn.radius + enemy.radius) ** 2) damage(enemy, acorn.damage);
+      for (const enemy of enemies) if (!enemy.isDead && distanceSq(enemy.position, acorn) <= (acorn.radius + enemy.radius) ** 2) damage(enemy, acorn.damage, 'acorn-shower');
       this.events.push({ kind: 'impact', position: acorn, radius: acorn.radius });
       if (acorn.oak && oak) {
         // Oak Fall: keep rolling away from the player, crushing whatever is in the way.
@@ -211,7 +219,7 @@ export class AbilitySimulation {
       roller.x += roller.dx * step; roller.y += roller.dy * step;
       for (const enemy of enemies) {
         if (enemy.isDead || roller.hit.has(enemy.id) || distanceSq(enemy.position, roller) > (roller.radius + enemy.radius) ** 2) continue;
-        roller.hit.add(enemy.id); damage(enemy, roller.damage);
+        roller.hit.add(enemy.id); damage(enemy, roller.damage, 'acorn-shower');
       }
       if (roller.endsAt <= this.elapsedMs) {
         // shatter into ordinary acorns around the resting point (the strongest pre-awakening acorn)
@@ -277,7 +285,7 @@ export class AbilitySimulation {
       if (anthem) {
         for (const enemy of enemies) {
           if (enemy.isDead || distanceSq(enemy.position, position) > (radius + enemy.radius) ** 2) continue;
-          damage(enemy, anthem.waveDamage);
+          damage(enemy, anthem.waveDamage, 'inspiring-shout');
         }
       }
       this.due.set('inspiring-shout', this.elapsedMs + ABILITIES.shout.cooldownMs);
@@ -286,6 +294,7 @@ export class AbilitySimulation {
     const shouting = ranks['inspiring-shout'] > 0 && this.elapsedMs < this.shoutEndsAt;
     this.stats.shoutAttackSpeedBonus = shouting ? ABILITIES.shout.attackSpeed[ranks['inspiring-shout']] : 0;
     this.stats.shoutMoveSpeedBonus = shouting ? ABILITIES.shout.moveSpeed[ranks['inspiring-shout']] : 0;
+    this.stats.shoutRemainingMs = shouting ? Math.max(0, this.shoutEndsAt - this.elapsedMs) : 0;
     const anthemTier = this.tier('inspiring-shout');
     if (shouting && anthemTier >= 0) {
       this.shoutHealCarryMs += deltaMs;
@@ -312,7 +321,7 @@ export class AbilitySimulation {
         this.spinNextTickAt = this.elapsedMs + ABILITIES.flurry.tickMs;
         for (const enemy of enemies) {
           if (enemy.isDead || distanceSq(enemy.position, position) > (this.spinRadius + enemy.radius) ** 2) continue;
-          damage(enemy, ABILITIES.flurry.damage[ranks['dizzying-flurry']]);
+          damage(enemy, ABILITIES.flurry.damage[ranks['dizzying-flurry']], 'dizzying-flurry');
         }
         this.events.push({ kind: 'impact', position: { ...position }, radius: this.spinRadius });
       }
@@ -346,7 +355,7 @@ export class AbilitySimulation {
         while (delta < -Math.PI) delta += Math.PI * 2;
         if (Math.abs(delta) > half) continue;
       }
-      damage(enemy, hurt);
+      damage(enemy, hurt, 'ribbon-sweep');
       if (knockback > 0 && enemy.displace) {
         const push = distance > 0 ? { x: dx / distance, y: dy / distance } : { x: Math.cos(angle), y: Math.sin(angle) };
         enemy.displace(push.x * knockback, push.y * knockback);

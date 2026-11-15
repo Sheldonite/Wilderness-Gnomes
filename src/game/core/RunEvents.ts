@@ -4,6 +4,24 @@ import type { Vector2Like } from './types';
 export type RunEvent = { kind: 'elite' } | { kind: 'ring'; count: number } | { kind: 'stampede'; lanes: number };
 export interface StampedeLane { from: Vector2Like; direction: Vector2Like; length: number }
 
+export interface ShrineReward {
+  heal: number;
+  frenzyMs: number;
+  attackSpeedBonus: number;
+  moveSpeedBonus: number;
+  bonusGold: number;
+  xpBurst: number;
+}
+
+export const WOODLAND_SHRINE_REWARD: ShrineReward = {
+  heal: BALANCE.events.shrineHeal,
+  frenzyMs: BALANCE.events.shrineFrenzyMs,
+  attackSpeedBonus: BALANCE.events.shrineAttackSpeedBonus,
+  moveSpeedBonus: BALANCE.events.shrineMoveSpeedBonus,
+  bonusGold: BALANCE.events.shrineBonusGold,
+  xpBurst: BALANCE.events.shrineXpBurst
+};
+
 /** Creatures in an encircling ring after this many minutes. */
 export function ringCount(minutes: number): number {
   const e = BALANCE.events;
@@ -38,8 +56,11 @@ export class RunEvents {
   private nextElite: number = BALANCE.elite.firstMs;
   private nextRing: number = BALANCE.events.ringFirstMs;
   private nextStampede: number = BALANCE.events.stampedeFirstMs;
+  private nextShrine: number = BALANCE.events.shrineFirstMs;
+  private pendingShrines = 0;
 
   get elapsedMs(): number { return this.clockMs; }
+  get nextShrineMs(): number { return this.nextShrine; }
 
   update(deltaMs: number, minutes: number): RunEvent[] {
     this.clockMs += Math.max(0, deltaMs);
@@ -56,6 +77,17 @@ export class RunEvents {
       events.push({ kind: 'stampede', lanes: minutes >= BALANCE.events.doubleStampedeMinute ? 2 : 1 });
       this.nextStampede = Math.max(this.nextStampede + BALANCE.events.stampedeEveryMs, this.clockMs);
     }
+    if (this.clockMs >= this.nextShrine) {
+      this.pendingShrines += 1;
+      this.nextShrine = Math.max(this.nextShrine + BALANCE.events.shrineEveryMs, this.clockMs);
+    }
     return events;
+  }
+
+  /** Consumes one pending Woodland Campfire/Shrine spawn triggered by the open-woods clock. */
+  consumeShrineDue(): boolean {
+    if (this.pendingShrines <= 0) return false;
+    this.pendingShrines -= 1;
+    return true;
   }
 }

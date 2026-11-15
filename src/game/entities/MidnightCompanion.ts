@@ -23,7 +23,7 @@ export class MidnightCompanion {
   }
 
   update(deltaMs: number, player: Vector2Like, enemies: CombatTarget[], damage: DealDamage): void {
-    this.behavior.update(deltaMs, player, enemies, damage);
+    this.behavior.update(deltaMs, player, enemies, (target, amount, source = 'companion') => damage(target, amount, source));
     this.sprite.setPosition(this.position.x, this.position.y);
     if (this.behavior.moving) {
       this.sprite.play(`midnight-walk-${this.behavior.facing}`, true);
