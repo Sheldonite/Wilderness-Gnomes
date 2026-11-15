@@ -28,11 +28,16 @@ export class StagBoss extends EnemyController {
       const step = this.encounter.chargeStep;
       const before = this.position;
       const wanted = { x: before.x + step.x, y: before.y + step.y };
-      const safe = this.navigation?.move(before, wanted, this.radius) ?? wanted;
+      const safeNav = this.navigation?.move(before, wanted, this.radius) ?? wanted;
+      const treeHit = this.hitTree(before, safeNav, this.radius);
+      const safe = treeHit ? treeHit.point : safeNav;
       this.sprite.setPosition(safe.x, safe.y);
-      if (Math.hypot(safe.x - before.x, safe.y - before.y) < Math.hypot(step.x, step.y) * .5 && (step.x || step.y)) {
+      if ((step.x || step.y) && (treeHit || Math.hypot(safe.x - before.x, safe.y - before.y) < Math.hypot(step.x, step.y) * .5)) {
         // Rammed a tree: he is stunned.
-        this.encounter.blocked(safe, target, this.blockedPlayerRadius, this.blockedHit);
+        this.encounter.blocked(safe, target, this.blockedPlayerRadius, this.blockedHit, true);
+        this.vulnerability = this.encounter.vulnerable ? STAG.stunVulnerability : 1;
+        this.sprite.scene?.events.emit('presentation:level', safe);
+        this.sprite.scene?.cameras?.main?.shake(200, .005);
       }
       this.face(step.x);
       this.play('stag-charge');

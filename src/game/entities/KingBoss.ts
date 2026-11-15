@@ -33,9 +33,15 @@ export class KingBoss extends EnemyController {
       const step = this.encounter.rollStep;
       const before = this.position;
       const wanted = { x: before.x + step.x, y: before.y + step.y };
-      const safe = this.navigation?.move(before, wanted, this.radius) ?? wanted;
+      const safeNav = this.navigation?.move(before, wanted, this.radius) ?? wanted;
+      const treeHit = this.hitTree(before, safeNav, this.radius);
+      const safe = treeHit ? treeHit.point : safeNav;
       this.sprite.setPosition(safe.x, safe.y);
-      if ((step.x || step.y) && Math.hypot(safe.x - before.x, safe.y - before.y) < Math.hypot(step.x, step.y) * .5) this.encounter.blocked(safe);
+      if ((step.x || step.y) && (treeHit || Math.hypot(safe.x - before.x, safe.y - before.y) < Math.hypot(step.x, step.y) * .5)) {
+        this.encounter.blocked(safe);
+        this.sprite.scene?.events.emit('presentation:level', safe);
+        this.sprite.scene?.cameras?.main?.shake(140, .004);
+      }
       this.curled();
     } else if (phase === 'curling') {
       this.curled();

@@ -85,6 +85,10 @@ const VARIANTS: Record<EnemyVariant, VariantProfile> = {
     health: BALANCE.buzzard.health, speed: BALANCE.buzzard.speed, contactDamage: BALANCE.buzzard.contactDamage, radius: BALANCE.buzzard.radius, ranged: false }
 };
 
+export interface TreeColliderLike {
+  hitTree(from: Vector2Like, to: Vector2Like, radius: number): { point: Vector2Like; normal: Vector2Like } | undefined;
+}
+
 export class EnemyController {
   protected readonly route = createNavigationRoute();
   readonly id = nextEnemyId++;
@@ -231,12 +235,22 @@ export class EnemyController {
     const step = Math.min(run.left, run.speed * Math.max(.3, this.slowMultiplier) * deltaMs / 1000);
     const before = this.position;
     const wanted = { x: before.x + run.direction.x * step, y: before.y + run.direction.y * step };
-    const safe = this.navigation?.move(before, wanted, this.radius) ?? clampToArena(wanted, this.radius);
+    const safeNav = this.navigation?.move(before, wanted, this.radius) ?? clampToArena(wanted, this.radius);
+    const treeHit = this.hitTree(before, safeNav, this.radius);
+    const safe = treeHit ? treeHit.point : safeNav;
     this.sprite.setPosition(safe.x, safe.y);
     this.updateAnimation(run.direction);
     run.left -= step;
     // A tree or the arena edge ends the gallop early.
-    if (run.left <= 0 || (step > 0 && Math.hypot(safe.x - before.x, safe.y - before.y) < step * .3)) this.run = undefined;
+    if (run.left <= 0 || treeHit || (step > 0 && Math.hypot(safe.x - before.x, safe.y - before.y) < step * .3)) {
+      if (treeHit) this.sprite.scene?.events.emit('presentation:trail', safe, 0xd8c39a);
+      this.run = undefined;
+    }
+  }
+
+  protected hitTree(from: Vector2Like, to: Vector2Like, radius: number): { point: Vector2Like; normal: Vector2Like } | undefined {
+    const collider = (this.navigation as { treeCollider?: TreeColliderLike } | undefined)?.treeCollider;
+    return collider?.hitTree(from, to, radius);
   }
 
   /** Returns a launch velocity when this squirrel is ready to throw at the target, else undefined. */
@@ -316,8 +330,20 @@ export class EnemyController {
       return false;
     }
 
-    this.health -= amount * this.vulnerability;
+    const dealt = amount * this.vulnerability;
+    this.health -= dealt;
     this.sprite.scene.events.emit('presentation:hit', this.sprite);
+    if (dealt > 0) {
+      const displayHeight = Number.isFinite(this.sprite.displayHeight) && this.sprite.displayHeight > 0 ? this.sprite.displayHeight : 36;
+      const originY = Number.isFinite(this.sprite.originY) ? this.sprite.originY : 0.5;
+      this.sprite.scene.events.emit('presentation:damage', {
+        x: this.sprite.x,
+        y: this.sprite.y - displayHeight * (originY * 0.75),
+        amount: dealt,
+        vulnerability: this.vulnerability,
+        isBoss: this.isBoss
+      });
+    }
     this.isDead = this.health <= 0;
     return this.isDead;
   }

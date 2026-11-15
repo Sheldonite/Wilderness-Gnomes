@@ -4,18 +4,137 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { LOOK, reducedMotion } from '../config/presentation';
 import type { Vector2Like } from '../core/types';
+import { clampToArena, normalize } from '../utils/math';
 
 const SIZE = GAME_CONFIG.arena.width;
 
-export class ScenerySystem {
+export interface TreeTrunk {
+  x: number;
+  y: number;
+  radius: number;
+}
+
+export interface TreeHit {
+  point: Vector2Like;
+  normal: Vector2Like;
+  trunk: TreeTrunk;
+}
+
+export interface TreeCollider {
+  readonly treeTrunks: readonly TreeTrunk[];
+  hitTree(from: Vector2Like, to: Vector2Like, radius: number): TreeHit | undefined;
+  resolveTreeBlock(from: Vector2Like, to: Vector2Like, radius: number): Vector2Like;
+}
+
+/**
+ * Swept circle-vs-circle test against tree trunks along `from -> to`.
+ * Returns the earliest contact moving into a trunk, or `undefined` if clear or moving away.
+ */
+export function hitTreeTrunk(
+  trunks: readonly TreeTrunk[],
+  from: Vector2Like,
+  to: Vector2Like,
+  radius: number
+): TreeHit | undefined {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq <= 1e-9) return undefined;
+
+  let bestT = Infinity;
+  let bestTrunk: TreeTrunk | undefined;
+
+  for (const trunk of trunks) {
+    const reach = radius + trunk.radius;
+    const fx = from.x - trunk.x;
+    const fy = from.y - trunk.y;
+    const b = fx * dx + fy * dy;
+    // Moving away from or tangent to the trunk center cannot penetrate further.
+    if (b >= 0) continue;
+
+    const c = fx * fx + fy * fy - reach * reach;
+    if (c < 0) {
+      bestT = 0;
+      bestTrunk = trunk;
+      break;
+    }
+
+    const disc = b * b - lenSq * c;
+    if (disc <= 0) continue;
+
+    const t = (-b - Math.sqrt(disc)) / lenSq;
+    if (t >= 0 && t <= 1 && t < bestT) {
+      bestT = t;
+      bestTrunk = trunk;
+    }
+  }
+
+  if (!bestTrunk) return undefined;
+
+  const point = clampToArena({ x: from.x + dx * bestT, y: from.y + dy * bestT }, radius);
+  const rawNormal = normalize(point.x - bestTrunk.x, point.y - bestTrunk.y);
+  const fallback = normalize(-dx, -dy);
+  const normal = rawNormal.x === 0 && rawNormal.y === 0 ? fallback : rawNormal;
+  return { point, normal, trunk: bestTrunk };
+}
+
+/**
+ * Resolve movement from `from` to `to` against `trunks`, sliding tangentially on contact
+ * and clamping to arena bounds.
+ */
+export function resolveTreeTrunkBlock(
+  trunks: readonly TreeTrunk[],
+  from: Vector2Like,
+  to: Vector2Like,
+  radius: number
+): Vector2Like {
+  let pos = clampToArena(to, radius);
+  const hit = hitTreeTrunk(trunks, from, pos, radius);
+  if (hit) {
+    const remX = pos.x - hit.point.x;
+    const remY = pos.y - hit.point.y;
+    const inward = remX * hit.normal.x + remY * hit.normal.y;
+    pos = inward < 0
+      ? { x: pos.x - hit.normal.x * inward, y: pos.y - hit.normal.y * inward }
+      : { ...hit.point };
+  }
+
+  for (const trunk of trunks) {
+    const reach = radius + trunk.radius;
+    const dx = pos.x - trunk.x;
+    const dy = pos.y - trunk.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq >= reach * reach) continue;
+    const n = distSq > 1e-9
+      ? { x: dx / Math.sqrt(distSq), y: dy / Math.sqrt(distSq) }
+      : normalize(from.x - trunk.x, from.y - trunk.y);
+    const push = n.x === 0 && n.y === 0 ? { x: 1, y: 0 } : n;
+    pos = { x: trunk.x + push.x * reach, y: trunk.y + push.y * reach };
+  }
+
+  return clampToArena(pos, radius);
+}
+
+export class ScenerySystem implements TreeCollider {
   private readonly random = new Phaser.Math.RandomDataGenerator(['storybook-golden-woodland-1']);
   private readonly trees: Phaser.GameObjects.Image[] = [];
+  readonly treeTrunks: TreeTrunk[] = [];
   private readonly ripples: Phaser.GameObjects.Ellipse[] = [];
-  // Scenery is decorative; direct movement avoids obstacle searches for every actor.
+  // Scenery is decorative for normal crowds; bosses and stampedes query `treeTrunks` directly.
   readonly navigation = new SceneryNavigation(false, false);
   private elapsed = 0;
   private fadeClock = 0;
-  constructor(private readonly scene: Phaser.Scene) {}
+  constructor(private readonly scene: Phaser.Scene) {
+    (this.navigation as { treeCollider?: TreeCollider }).treeCollider = this;
+  }
+
+  hitTree(from: Vector2Like, to: Vector2Like, radius: number): TreeHit | undefined {
+    return hitTreeTrunk(this.treeTrunks, from, to, radius);
+  }
+
+  resolveTreeBlock(from: Vector2Like, to: Vector2Like, radius: number): Vector2Like {
+    return resolveTreeTrunkBlock(this.treeTrunks, from, to, radius);
+  }
 
   create(): void {
     this.scene.add.tileSprite(SIZE / 2, SIZE / 2, SIZE + LOOK.worldPadding * 2, SIZE + LOOK.worldPadding * 2, LOOK.texture.ground).setDepth(LOOK.depth.ground).setTint(0xc5d09e);
@@ -83,12 +202,19 @@ export class ScenerySystem {
     } });
   }
 
+  private isDryClearPoint(x: number, y: number, treeSpacing = 145): boolean {
+    if (x < 65 || x > SIZE - 65 || y < 90 || y > SIZE - 45) return false;
+    if (Math.abs(x - riverX(y)) < 145 || Math.abs(y - pathY(x)) < 95) return false;
+    if (PONDS.some(p => Math.pow((x - p.x) / (p.rx + 100), 2) + Math.pow((y - p.y) / (p.ry + 100), 2) < 1)) return false;
+    if (this.trees.some(t => Math.hypot(t.x - x, t.y - y) < treeSpacing)) return false;
+    return true;
+  }
+
   private openPoint(clearance: number): Vector2Like | undefined {
     for (let tries = 0; tries < 150; tries++) {
       const x = this.random.between(65, SIZE - 65), y = this.random.between(90, SIZE - 45);
-      if (Math.hypot(x - 1600, y - 1600) < clearance || Math.abs(x - riverX(y)) < 145 || Math.abs(y - pathY(x)) < 95) continue;
-      if (PONDS.some(p => Math.pow((x - p.x) / (p.rx + 100), 2) + Math.pow((y - p.y) / (p.ry + 100), 2) < 1)) continue;
-      if (this.trees.some(t => Math.hypot(t.x - x, t.y - y) < 145)) continue;
+      if (Math.hypot(x - 1600, y - 1600) < clearance) continue;
+      if (!this.isDryClearPoint(x, y, 145)) continue;
       return { x, y };
     }
     return undefined;
@@ -97,18 +223,89 @@ export class ScenerySystem {
   private prop(frame: string, x: number, y: number, height: number, depth: number): Phaser.GameObjects.Image {
     const sprite = this.scene.add.image(x, y, LOOK.texture.props, frame).setOrigin(.5, 1).setDepth(depth);
     sprite.setScale(height / sprite.height).setFlipX(this.random.frac() > .5);
-    if (['oak', 'birch', 'fir'].includes(frame)) this.navigation.addCircle(x, y - 9, height * .095);
+    if (['oak', 'birch', 'fir'].includes(frame)) {
+      const trunkRadius = height * .095;
+      this.treeTrunks.push({ x, y: y - 9, radius: trunkRadius });
+      this.navigation.addCircle(x, y - 9, trunkRadius);
+    }
     if (frame === 'rock') this.navigation.addCircle(x, y - height * .28, Math.min(sprite.displayWidth * .4, height * .5));
     return sprite;
   }
 
+  private plantTree(frame: string, x: number, y: number, height: number): void {
+    this.scene.add.image(x + 15, y - 2, LOOK.texture.shadow).setDisplaySize(height * .75, height * .22).setDepth(LOOK.depth.shadow).setAlpha(.65);
+    this.trees.push(this.prop(frame, x, y, height, LOOK.depth.canopy));
+    for (let j = 0; j < 3; j++) {
+      this.prop(j === 0 ? 'mushroom' : 'fern', x + this.random.between(-85, 85), y + this.random.between(-10, 40), this.random.between(27, 52), LOOK.depth.flowers);
+    }
+  }
+
+  /**
+   * Ensure at least `targetCount` sturdy tree trunks sit inside a boss arena ring
+   * so bosses like Wonky and King Rumbles always have solid trees to crash into.
+   */
+  ensureArenaTrees(center: Vector2Like, arenaRadius = 520, targetCount = 3, avoid: Vector2Like[] = []): number {
+    const minDist = 135;
+    const maxDist = Math.max(minDist + 40, arenaRadius - 95);
+    let existing = 0;
+    for (const trunk of this.treeTrunks) {
+      const d = Math.hypot(trunk.x - center.x, trunk.y - center.y);
+      if (d >= minDist && d <= maxDist) existing++;
+    }
+    let added = 0;
+    const needed = Math.max(0, targetCount - existing);
+    for (let i = 0; i < needed; i++) {
+      let placed = false;
+      for (let attempt = 0; attempt < 36; attempt++) {
+        const angle = ((i + attempt * 0.37) / Math.max(1, needed)) * Math.PI * 2 + this.random.realInRange(-0.4, 0.4);
+        const dist = this.random.realInRange(180, Math.max(200, maxDist - 15));
+        const x = center.x + Math.cos(angle) * dist;
+        const y = center.y + Math.sin(angle) * dist;
+        if (!this.isDryClearPoint(x, y, 150)) continue;
+        if (avoid.some(p => Math.hypot(p.x - x, p.y - y) < 115)) continue;
+        this.plantTree(this.random.pick(['oak', 'birch']), x, y, this.random.between(235, 305));
+        added++;
+        placed = true;
+        break;
+      }
+      if (!placed) {
+        // Fallback: relax river/path checks slightly while keeping ponds, bounds, and actors clear.
+        for (let attempt = 0; attempt < 24; attempt++) {
+          const angle = (i + attempt * 0.45) * Math.PI * 2 / Math.max(1, needed);
+          const dist = this.random.realInRange(180, Math.max(200, maxDist - 15));
+          const x = center.x + Math.cos(angle) * dist;
+          const y = center.y + Math.sin(angle) * dist;
+          if (x < 65 || x > SIZE - 65 || y < 90 || y > SIZE - 45) continue;
+          if (PONDS.some(p => Math.pow((x - p.x) / (p.rx + 85), 2) + Math.pow((y - p.y) / (p.ry + 85), 2) < 1)) continue;
+          if (this.trees.some(t => Math.hypot(t.x - x, t.y - y) < 140)) continue;
+          if (avoid.some(p => Math.hypot(p.x - x, p.y - y) < 110)) continue;
+          this.plantTree(this.random.pick(['oak', 'birch']), x, y, this.random.between(235, 305));
+          added++;
+          break;
+        }
+      }
+    }
+    return added;
+  }
+
   private createPlanting(): void {
-    for (let i = 0; i < LOOK.limit.canopies; i++) {
+    // Plant 5 sturdy oak/birch trees in the 200-420px ring around center so Wonky & stampedes meet real cover.
+    const innerTargets = 5;
+    for (let i = 0; i < innerTargets; i++) {
+      for (let tries = 0; tries < 40; tries++) {
+        const angle = (i / innerTargets) * Math.PI * 2 + this.random.realInRange(-0.35, 0.35);
+        const dist = this.random.realInRange(205, 415);
+        const x = 1600 + Math.cos(angle) * dist;
+        const y = 1600 + Math.sin(angle) * dist;
+        if (!this.isDryClearPoint(x, y, 165)) continue;
+        this.plantTree(i % 2 === 0 ? 'oak' : 'birch', x, y, this.random.between(240, 320));
+        break;
+      }
+    }
+    const remainingCanopies = Math.max(0, LOOK.limit.canopies - this.trees.length);
+    for (let i = 0; i < remainingCanopies; i++) {
       const point = this.openPoint(370); if (!point) continue;
-      const height = this.random.between(205, 330);
-      this.scene.add.image(point.x + 15, point.y - 2, LOOK.texture.shadow).setDisplaySize(height * .75, height * .22).setDepth(LOOK.depth.shadow).setAlpha(.65);
-      this.trees.push(this.prop(this.random.pick(['oak', 'birch', 'fir']), point.x, point.y, height, LOOK.depth.canopy));
-      for (let j = 0; j < 3; j++) this.prop(j === 0 ? 'mushroom' : 'fern', point.x + this.random.between(-85, 85), point.y + this.random.between(-10, 40), this.random.between(27, 52), LOOK.depth.flowers);
+      this.plantTree(this.random.pick(['oak', 'birch', 'fir']), point.x, point.y, this.random.between(205, 330));
     }
     for (let i = 0; i < 55; i++) {
       const point = this.openPoint(300); if (point) this.prop('rock', point.x, point.y, this.random.between(38, 75), -5);
