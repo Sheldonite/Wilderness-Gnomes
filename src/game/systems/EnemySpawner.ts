@@ -47,9 +47,61 @@ export class EnemySpawner {
     this.spawnTimerMs = 0;
     const batch = Math.min(spawnBatch(difficultyMinutes), maxEnemies - enemies.length);
     for (let i = 0; i < batch; i++) {
-      const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel));
+      const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel) as EnemyVariant, playerLevel);
       if (enemy) enemies.push(enemy);
     }
+  }
+
+  /**
+   * Spawns an opening ambush pack of 6–8 brown squirrels off-screen from two opposite flanks
+   * closing in immediately when a run begins.
+   */
+  spawnOpeningPack(
+    playerPosition: Vector2Like,
+    camera: Phaser.Cameras.Scene2D.Camera,
+    difficultyMinutes: number,
+    enemies: EnemyController[],
+    count = 7
+  ): EnemyController[] {
+    const view = camera.worldView;
+    const padding = BALANCE.spawner.spawnOutsideViewPadding;
+    const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius, BALANCE.armadillo.radius);
+    const targetCount = Math.max(1, count);
+    const spawned: EnemyController[] = [];
+    const spanY = Math.max(120, (view.bottom - view.top) * 0.65);
+
+    for (let i = 0; i < targetCount; i++) {
+      const flank = i % 2 === 0 ? -1 : 1; // -1 = left flank, +1 = right flank
+      const slot = Math.floor(i / 2);
+      const slotsOnFlank = Math.max(1, Math.ceil(targetCount / 2));
+      const offsetRatio = slotsOnFlank === 1 ? 0 : slot / (slotsOnFlank - 1) - 0.5;
+      const candidateX = flank < 0 ? view.left - padding - (slot % 2) * 24 : view.right + padding + (slot % 2) * 24;
+      const candidateY = playerPosition.y + offsetRatio * spanY;
+
+      const x = Phaser.Math.Clamp(candidateX, margin, GAME_CONFIG.arena.width - margin);
+      const y = Phaser.Math.Clamp(candidateY, margin, GAME_CONFIG.arena.height - margin);
+      const spot = this.navigation?.nearest({ x, y }, margin) ?? { x, y };
+      const outside =
+        spot.x <= view.left - padding ||
+        spot.x >= view.right + padding ||
+        spot.y <= view.top - padding ||
+        spot.y >= view.bottom + padding;
+
+      if (outside && !this.navigation?.blocked(spot, margin)) {
+        const squirrel = new EnemyController(this.scene, spot.x, spot.y, difficultyMinutes, this.navigation, undefined, 'brown', 1);
+        enemies.push(squirrel);
+        spawned.push(squirrel);
+        continue;
+      }
+
+      const fallback = this.spawnEnemy(playerPosition, camera, difficultyMinutes, 'brown', 1);
+      if (fallback) {
+        enemies.push(fallback);
+        spawned.push(fallback);
+      }
+    }
+
+    return spawned;
   }
 
   /** One creature of the given kind just outside the camera, for set pieces such as elites. */
@@ -57,7 +109,8 @@ export class EnemySpawner {
     playerPosition: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera,
     difficultyMinutes: number,
-    variant: EnemyVariant
+    variant: EnemyVariant,
+    _playerLevel = 1
   ): EnemyController | undefined {
     const view = camera.worldView;
     const padding = BALANCE.spawner.spawnOutsideViewPadding;

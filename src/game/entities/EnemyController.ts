@@ -23,15 +23,117 @@ import { RangedSquirrelBehavior } from '../core/SquirrelBehavior';
 import { ArmadilloBehavior } from '../core/ArmadilloBehavior';
 import { BuzzardFlight } from '../core/BuzzardFlight';
 import { FRANKIE_DIVE_KEY, FRANKIE_FLAP_KEY, FRANKIE_SPRITE_KEY } from '../config/frankieKeys';
-import { clampToArena, normalize, spriteHeading } from '../utils/math';
+import { clampToArena, distanceSq, normalize, spriteHeading } from '../utils/math';
 
 let nextEnemyId = 1;
 
 /**
- * Brown squirrels charge, grey squirrels throw acorns, deer from level 10, armadillos roll in from
- * level 20, and buzzards swoop down once King Frankie has fallen at level 25.
+ * Brown squirrels charge, scout squirrels dart in fast, grey squirrels throw acorns, hedgehogs
+ * curl and roll, deer arrive from level 10, armadillos roll in from level 20, and buzzards swoop
+ * down once King Frankie has fallen at level 25.
  */
-export type EnemyVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck' | 'armadillo' | 'buzzard';
+export type EnemyVariant = 'brown' | 'grey' | 'scout' | 'hedgehog' | 'doe' | 'fawn' | 'buck' | 'armadillo' | 'buzzard';
+
+const SCOUT_DEFAULTS = {
+  health: 18,
+  speed: 152,
+  contactDamage: 10,
+  radius: 13,
+  scale: 0.82,
+  tint: 0xf4b46c,
+  xpValue: 10
+};
+
+const HEDGEHOG_DEFAULTS = {
+  health: 48,
+  walkSpeed: 88,
+  rollSpeed: 370,
+  rollDistance: 240,
+  windupRange: 230,
+  curlMs: 420,
+  recoverMs: 500,
+  cooldownMs: 1800,
+  walkDamage: 10,
+  rollDamage: 18,
+  radius: 15,
+  scale: 0.95,
+  tint: 0xa87858,
+  curlTint: 0xffd27d,
+  xpValue: 16
+};
+
+function getScoutConfig() {
+  return { ...SCOUT_DEFAULTS, ...((BALANCE as Record<string, unknown>).scout as Partial<typeof SCOUT_DEFAULTS> | undefined) };
+}
+
+function getHedgehogConfig() {
+  return { ...HEDGEHOG_DEFAULTS, ...((BALANCE as Record<string, unknown>).hedgehog as Partial<typeof HEDGEHOG_DEFAULTS> | undefined) };
+}
+
+type RollerPhase = 'approaching' | 'curling' | 'rolling' | 'recovering';
+
+/** Walks in, telegraphs a curl, then rolls in a straight locked line. */
+class HedgehogRoller {
+  phase: RollerPhase = 'approaching';
+  facing: Vector2Like = { x: 1, y: 0 };
+  private timer = 0;
+  private cooldownMs = 0;
+  private travelled = 0;
+  private rollDir: Vector2Like = { x: 1, y: 0 };
+
+  get rolling(): boolean { return this.phase === 'rolling'; }
+  get curling(): boolean { return this.phase === 'curling'; }
+
+  update(deltaMs: number, position: Vector2Like, player: Vector2Like): Vector2Like {
+    const h = getHedgehogConfig();
+    this.cooldownMs = Math.max(0, this.cooldownMs - deltaMs);
+    const toward = normalize(player.x - position.x, player.y - position.y);
+    if (toward.x !== 0 || toward.y !== 0) this.facing = toward;
+
+    if (this.phase === 'rolling') {
+      const step = (h.rollSpeed * deltaMs) / 1000;
+      this.travelled += step;
+      if (this.travelled >= h.rollDistance) {
+        this.phase = 'recovering';
+        this.timer = h.recoverMs;
+        this.cooldownMs = h.cooldownMs;
+        return { x: 0, y: 0 };
+      }
+      return { x: this.rollDir.x * step, y: this.rollDir.y * step };
+    }
+
+    this.timer -= deltaMs;
+    if (this.phase === 'curling') {
+      if (this.timer <= 0) {
+        this.phase = 'rolling';
+        this.travelled = 0;
+        this.rollDir = this.facing.x === 0 && this.facing.y === 0 ? { x: 1, y: 0 } : { ...this.facing };
+      }
+      return { x: 0, y: 0 };
+    }
+    if (this.phase === 'recovering') {
+      if (this.timer <= 0) this.phase = 'approaching';
+      return { x: 0, y: 0 };
+    }
+
+    const range = Math.sqrt(distanceSq(position, player));
+    if (this.cooldownMs <= 0 && range <= h.windupRange && range >= 8) {
+      this.phase = 'curling';
+      this.timer = h.curlMs;
+      return { x: 0, y: 0 };
+    }
+    const step = (h.walkSpeed * deltaMs) / 1000;
+    return { x: this.facing.x * step, y: this.facing.y * step };
+  }
+
+  blocked(): void {
+    if (this.phase !== 'rolling') return;
+    const h = getHedgehogConfig();
+    this.phase = 'recovering';
+    this.timer = h.recoverMs;
+    this.cooldownMs = h.cooldownMs;
+  }
+}
 
 /** Buzzards flap whichever way they fly; the sheet faces right and is flipped for left. */
 const BUZZARD_ANIMATIONS: Record<string, string> = Object.fromEntries(
@@ -73,6 +175,16 @@ const VARIANTS: Record<EnemyVariant, VariantProfile> = {
     health: BALANCE.enemy.health, speed: BALANCE.enemy.speed, contactDamage: BALANCE.enemy.contactDamage, radius: BALANCE.enemy.radius, ranged: false },
   grey: { textureKey: GREY_ENEMY_SPRITE_KEY, walkAnimations: GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION, scale: 0.72,
     health: BALANCE.rangedEnemy.health, speed: BALANCE.rangedEnemy.speed, contactDamage: BALANCE.enemy.contactDamage, radius: BALANCE.enemy.radius, ranged: true },
+  scout: (() => {
+    const s = getScoutConfig();
+    return { textureKey: ENEMY_SPRITE_KEY, walkAnimations: ENEMY_WALK_ANIMATION_BY_DIRECTION, scale: s.scale,
+      health: s.health, speed: s.speed, contactDamage: s.contactDamage, radius: s.radius, ranged: false };
+  })(),
+  hedgehog: (() => {
+    const h = getHedgehogConfig();
+    return { textureKey: ENEMY_SPRITE_KEY, walkAnimations: ENEMY_WALK_ANIMATION_BY_DIRECTION, scale: h.scale,
+      health: h.health, speed: h.walkSpeed, contactDamage: h.walkDamage, radius: h.radius, ranged: false };
+  })(),
   doe: { textureKey: DOE_SPRITE_KEY, walkAnimations: DOE_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.doe.scale,
     health: BALANCE.deer.doe.health, speed: BALANCE.deer.doe.speed, contactDamage: BALANCE.deer.doe.contactDamage, radius: BALANCE.deer.doe.radius, ranged: false },
   fawn: { textureKey: FAWN_SPRITE_KEY, walkAnimations: FAWN_WALK_ANIMATION_BY_DIRECTION, scale: BALANCE.deer.fawn.scale,
@@ -113,6 +225,7 @@ export class EnemyController {
   private rootMs = 0;
   private readonly ranged?: RangedSquirrelBehavior;
   private readonly armadillo?: ArmadilloBehavior;
+  private readonly hedgehog?: HedgehogRoller;
   private readonly flight?: BuzzardFlight;
   private readonly profile: VariantProfile;
   private readonly walkAnimations: Record<string, string>;
@@ -122,12 +235,13 @@ export class EnemyController {
    * ordinary spawns pick everything from their `variant`.
    */
   constructor(scene: Phaser.Scene, x: number, y: number, difficultyMinutes: number, protected readonly navigation?: SceneryNavigation,
-    appearance?: EnemyAppearance, readonly variant: EnemyVariant = 'brown') {
+    appearance?: EnemyAppearance, readonly variant: EnemyVariant = 'brown', playerLevel = 1) {
     const profile = VARIANTS[variant];
     this.profile = profile;
     this.radius = appearance?.radius ?? profile.radius;
     this.baseContact = profile.contactDamage;
-    this.contactMultiplier = contactScale(difficultyMinutes);
+    const damagePerLevel = (BALANCE.enemy as { damagePerLevel?: number }).damagePerLevel ?? 0.03;
+    this.contactMultiplier = contactScale(difficultyMinutes) * (1 + Math.max(0, playerLevel - 1) * damagePerLevel);
     this.isBoss = Boolean(appearance?.boss);
     this.bossContact = appearance?.boss?.contactDamage;
     this.scale = appearance?.scale ?? profile.scale;
@@ -141,6 +255,11 @@ export class EnemyController {
     this.health = this.maxHealth = Math.round(profile.health + difficultyMinutes * BALANCE.enemy.healthPerMinute);
     if (profile.ranged) this.ranged = new RangedSquirrelBehavior();
     if (variant === 'armadillo') this.armadillo = new ArmadilloBehavior();
+    if (variant === 'scout' && !appearance) this.setBaseTint(getScoutConfig().tint);
+    if (variant === 'hedgehog' && !appearance) {
+      this.hedgehog = new HedgehogRoller();
+      this.setBaseTint(getHedgehogConfig().tint);
+    }
     if (variant === 'buzzard' && !appearance) {
       this.flight = new BuzzardFlight();
       // Fliers are drawn above their shadow and above the creatures on the ground.
@@ -151,13 +270,17 @@ export class EnemyController {
 
   get contactDamage(): number {
     if (this.bossContact !== undefined) return this.bossContact;
-    const base = this.armadillo?.rolling ? BALANCE.armadillo.rollDamage : this.flight?.swooping ? BALANCE.buzzard.swoopDamage : this.baseContact;
+    const base = this.armadillo?.rolling ? BALANCE.armadillo.rollDamage
+      : this.hedgehog?.rolling ? getHedgehogConfig().rollDamage
+      : this.flight?.swooping ? BALANCE.buzzard.swoopDamage : this.baseContact;
     return Math.round(base * this.contactMultiplier * (this.elite ? BALANCE.elite.damageMultiplier : 1));
   }
 
   /** Crystals this creature is worth when it falls. */
   get xpValue(): number {
-    return BALANCE.enemyXp[this.variant] * (this.elite ? BALANCE.elite.xpMultiplier : 1);
+    const xpMap = BALANCE.enemyXp as Record<string, number>;
+    const baseXp = xpMap[this.variant] ?? (this.variant === 'hedgehog' ? getHedgehogConfig().xpValue : getScoutConfig().xpValue);
+    return baseXp * (this.elite ? BALANCE.elite.xpMultiplier : 1);
   }
 
   /** Slow actually applied: bosses never drop below the floor. */
@@ -200,6 +323,7 @@ export class EnemyController {
     if (this.run) { this.updateRun(deltaMs); return; }
     if (this.rootMs > 0) { this.rootMs -= deltaMs; this.sprite.anims.pause(); return; }
     if (this.armadillo) { this.updateArmadillo(deltaMs, target); return; }
+    if (this.hedgehog) { this.updateHedgehog(deltaMs, target); return; }
     if (this.flight) { this.updateFlight(deltaMs, target, difficultyMinutes); return; }
     const speed = (this.profile.speed + speedBonus(this.profile.speed, difficultyMinutes)) * this.slowMultiplier;
     const direction = this.ranged
@@ -307,6 +431,38 @@ export class EnemyController {
     this.sprite.setScale(this.scale);
     const moved = normalize(safe.x - before.x, safe.y - before.y);
     this.updateAnimation(moved.x === 0 && moved.y === 0 ? this.armadillo!.facing : moved);
+  }
+
+  private updateHedgehog(deltaMs: number, target: Vector2Like): void {
+    const h = getHedgehogConfig();
+    const before = this.position;
+    const step = this.hedgehog!.update(deltaMs, before, target);
+    const next = { x: before.x + step.x, y: before.y + step.y };
+    const rolling = this.hedgehog!.rolling;
+    const curling = this.hedgehog!.curling;
+    const moving = step.x !== 0 || step.y !== 0;
+    const safe = !moving ? before : rolling
+      ? (this.navigation?.move(before, next, this.radius) ?? clampToArena(next, this.radius))
+      : (this.navigation?.toward(before, target, Math.hypot(step.x, step.y), this.radius, this.route) ?? clampToArena(next, this.radius));
+    if (rolling && moving && (safe.x - before.x) ** 2 + (safe.y - before.y) ** 2 < 0.2) {
+      this.hedgehog!.blocked();
+    }
+    this.sprite.setPosition(safe.x, safe.y);
+    if (curling) {
+      this.sprite.setScale(this.scale * 1.1, this.scale * 0.84);
+      this.sprite.setTint(h.curlTint);
+      this.sprite.anims.pause();
+      return;
+    }
+    this.sprite.setScale(this.scale);
+    if (!this.elite) this.sprite.setTint(h.tint);
+    if (!moving && !rolling) {
+      this.updateAnimation(this.hedgehog!.facing);
+      this.sprite.anims.pause();
+      return;
+    }
+    const moved = normalize(safe.x - before.x, safe.y - before.y);
+    this.updateAnimation(moved.x === 0 && moved.y === 0 ? this.hedgehog!.facing : moved);
   }
 
   protected updateAnimation(direction: Vector2Like): void {

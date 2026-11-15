@@ -242,7 +242,7 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 #ui-root .status-pill small{font-size:12px;color:#edd7a0;font-weight:600}
 #ui-root .dash-pill{pointer-events:auto;cursor:pointer;appearance:none}
 #ui-root .dash-pill:hover{background:linear-gradient(180deg,#4d331d,#2c1c0f)}
-#ui-root .dash-pill .pill-progress{position:absolute;left:0;bottom:0;height:2px;width:100%;transform-origin:left;background:linear-gradient(90deg,#9ad36c,var(--gold));pointer-events:none}
+#ui-root .status-pill .pill-progress{position:absolute;left:0;bottom:0;height:2px;width:100%;transform-origin:left;background:linear-gradient(90deg,#9ad36c,var(--gold));pointer-events:none}
 #ui-root .dash-pill.is-ready{border-color:#9ad36cc8;color:#f6ffd9}
 #ui-root .dash-pill.is-cooling{opacity:.84;border-color:#9a7a52a8}
 .ward-pips{display:inline-flex;align-items:center;gap:3px}
@@ -254,6 +254,16 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 #ui-root .harvest-pill{border-color:#8cc45e;color:#e4f9ca}
 #ui-root .boss-milestone-pill{border-color:#d6854d}
 #ui-root .boss-milestone-pill svg{color:#ffb86b}
+#ui-root .waking-pill{border-color:#8cc45e;color:#e7f9cf}
+#ui-root .waking-pill svg{color:#9ad36c}
+#ui-root .waking-pill strong{color:#fff6d2;font-weight:700}
+#ui-root .waking-pill .pill-progress{background:linear-gradient(90deg,#7ec850,var(--gold))}
+#ui-root .waking-pill.is-complete{border-color:var(--gold);background:linear-gradient(180deg,#4c3618f0,#2c1e0cf0);color:#ffe9a6;box-shadow:var(--panel-shadow),0 0 10px #f2c86544}
+#ui-root .waking-pill.is-complete svg{color:var(--gold)}
+#ui-root .combo-pill{border-color:#e89b3c;color:#ffe6b3}
+#ui-root .combo-pill svg{color:#ffbe55}
+#ui-root .combo-pill .pill-progress{background:linear-gradient(90deg,#ff8c3a,#ffd466)}
+#ui-root .combo-pill.is-hot{border-color:#ffbe55;box-shadow:var(--panel-shadow),0 0 10px #ff9d3b44}
 /* level-up reroll & skip bar */
 .levelup-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin-top:14px}
 .levelup-action-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 16px;

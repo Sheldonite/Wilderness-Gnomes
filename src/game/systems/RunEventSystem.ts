@@ -14,7 +14,8 @@ interface PendingStampede { lane: StampedeLane; warnMs: number; count: number; v
 export interface WoodlandShrine { position: Vector2Like; spawnedAtMs: number; collected: boolean }
 
 const VARIANT_NAMES: Record<EnemyVariant, string> = {
-  brown: 'squirrel', grey: 'acorn-thrower', doe: 'doe', fawn: 'fawn', buck: 'buck', armadillo: 'armadillo', buzzard: 'buzzard'
+  brown: 'squirrel', grey: 'acorn-thrower', scout: 'scout squirrel', hedgehog: 'hedgehog',
+  doe: 'doe', fawn: 'fawn', buck: 'buck', armadillo: 'armadillo', buzzard: 'buzzard'
 };
 
 /**
