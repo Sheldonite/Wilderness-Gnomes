@@ -336,7 +336,7 @@ test('StagBoss charging into a tree stuns Wonky, enables stun vulnerability, and
   assert.equal(emittedDamage[0].isBoss, true);
 });
 
-test('KingBoss rolling into a tree bounces direction and spawns a shockwave ripple', () => {
+test('KingBoss rolls straight through tree trunks without bouncing', () => {
   const { load, createMockScene } = createHarness();
   const { KingBoss } = load('src/game/entities/KingBoss.ts');
   const { KingEncounter } = load('src/game/core/KingEncounter.ts');
@@ -368,20 +368,18 @@ test('KingBoss rolling into a tree bounces direction and spawns a shockwave ripp
     radius: 24
   });
 
-  let bounced = false;
-  for (let i = 0; i < 25; i++) {
+  const start = { ...king.position };
+  for (let i = 0; i < 12; i++) {
     encounter.update(25, { x: king.position.x, y: king.position.y }, player, 18, 1, arena, quiet);
     king.update(25, player, 0);
     const dot = encounter.direction.x * initialDir.x + encounter.direction.y * initialDir.y;
-    if (encounter.ripples.length > 0 && dot < 0) {
-      bounced = true;
-      break;
-    }
+    assert.ok(dot > 0.99, 'King Rumbles keeps rolling in the same direction through the tree');
+    assert.equal(encounter.ripples.length, 0, 'no tree ripple');
   }
-
-  assert.equal(bounced, true, 'rolling King Rumbles should reverse off a tree trunk and emit a ripple');
-  assert.ok(scene.cameras.main.shakeCalls.length > 0);
-  assert.ok(events.emitted.some((e) => e.event === 'presentation:level'));
+  const travelled = (king.position.x - start.x) * initialDir.x + (king.position.y - start.y) * initialDir.y;
+  assert.ok(travelled > 154, `rolled past the trunk (travelled ${travelled})`);
+  assert.equal(scene.cameras.main.shakeCalls.length, 0);
+  assert.ok(!events.emitted.some((e) => e.event === 'presentation:level'));
 });
 
 test('stampeding deer break against tree trunks and halt their stampede', () => {
