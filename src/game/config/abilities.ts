@@ -136,7 +136,14 @@ export function describeAbility(id: AbilityId, rank: AbilityRank, weaponId: Weap
   if (isAwakened(rank)) return describeAwakening(id, rank, weaponId);
   switch (id) {
     case 'ricochet-charm': {
-      return `Shots bounce to ${rank} additional ${rank === 1 ? 'enemy' : 'enemies'}, retaining 70% damage each bounce. Crossbow shots also keep their built-in pierce.`;
+      const weaponNote = weaponId === 'crossbow'
+        ? ' Crossbow shots also keep their built-in pierce.'
+        : weaponId === 'boomerang'
+        ? ' Boomerangs also keep their built-in pierce.'
+        : weaponId === 'lantern'
+        ? ' Wisps burst on every bounce.'
+        : '';
+      return `Shots bounce to ${rank} additional ${rank === 1 ? 'enemy' : 'enemies'}, retaining 70% damage each bounce.${weaponNote}`;
     }
     case 'firefly-orbit': return `${ABILITIES.firefly.count[rank]} golden fireflies orbit you, dealing 8 contact damage. Each foe can be hit every 0.5s.`;
     case 'bramble-snare': return `Every 5s, grow roots that slow foes by ${Math.round(ABILITIES.bramble.slow[rank] * 100)}% for ${ABILITIES.bramble.lifeMs[rank] / 1000}s.`;

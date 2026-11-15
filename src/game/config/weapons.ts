@@ -151,12 +151,12 @@ export const CROSSBOW_STAT_UPGRADES: Partial<Record<string, { title: string; des
 export const WEAPON_STAT_UPGRADES: Partial<Record<WeaponId, Partial<Record<string, { title: string; description: string; icon: string }>>>> = {
   crossbow: CROSSBOW_STAT_UPGRADES,
   boomerang: {
-    'projectile-damage': { title: 'Seasoned Edge', description: '+8 boomerang damage', icon: 'bolt' },
+    'projectile-damage': { title: 'Seasoned Edge', description: '+8 boomerang damage', icon: 'boomerang' },
     'fire-rate': { title: 'Quick Wrist', description: 'Throw 15% faster', icon: 'clock' },
     'projectile-count': { title: 'Twin Arcs', description: '+1 boomerang per cast (up to 4 picks)', icon: 'split' }
   },
   lantern: {
-    'projectile-damage': { title: 'Brighter Wicks', description: '+8 wisp & splash damage', icon: 'bolt' },
+    'projectile-damage': { title: 'Brighter Wicks', description: '+8 wisp & splash damage', icon: 'lantern' },
     'fire-rate': { title: 'Fanned Flame', description: 'Cast 15% faster', icon: 'clock' },
     'projectile-count': { title: 'Lantern Swarm', description: '+1 wisp per cast (up to 4 picks)', icon: 'split' }
   }

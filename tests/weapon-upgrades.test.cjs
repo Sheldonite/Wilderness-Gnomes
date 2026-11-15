@@ -3,8 +3,9 @@ const { GameManager } = require('../artifacts/ability-tests/game/core/GameManage
 const { UpgradeSystem } = require('../artifacts/ability-tests/game/systems/UpgradeSystem.js');
 const { weaponUpgrades } = require('../artifacts/ability-tests/game/core/WeaponUpgrades.js');
 const { ProjectileFlight } = require('../artifacts/ability-tests/game/core/ProjectileFlight.js');
-const { ABILITY_IDS } = require('../artifacts/ability-tests/game/config/abilities.js');
-const { upgradeChanges, upgradePreview } = require('../artifacts/ability-tests/game/core/UpgradeProgress.js');
+const { ABILITY_IDS, describeAbility } = require('../artifacts/ability-tests/game/config/abilities.js');
+const { WEAPON_IDS, WEAPON_STAT_UPGRADES } = require('../artifacts/ability-tests/game/config/weapons.js');
+const { upgradeChanges, upgradeName, upgradePreview, upgradeSummary } = require('../artifacts/ability-tests/game/core/UpgradeProgress.js');
 const foe = (id, x, y) => ({ id, position: { x, y }, radius: 10, isDead: false });
 function flight(weapon, rank) {
   const stats = new GameManager(weapon).playerStats; stats.abilityRanks['ricochet-charm'] = rank;
@@ -72,4 +73,68 @@ test('both weapons offer and apply every ability rank, companion, stat, and boss
       choice.apply(stats); assert.equal(stats.bossAbilityRanks[choice.id], 1);
     }
   }
+});
+
+test('switching across all 4 weapons never leaks another weapon upgrade title, summary, or description', () => {
+  const upgrades = new UpgradeSystem();
+  const expectedByWeapon = {
+    spell: {
+      titles: ['Sharper Spell', 'Quicker Hex', 'Split Charm'],
+      damageSummary: '+8 damage per shot.',
+      countSummary: '+1 shot per volley.',
+      forbidden: /Honed Quarrels|Swift String|Twin Quarrels|Seasoned Edge|Quick Wrist|Twin Arcs|Brighter Wicks|Fanned Flame|Lantern Swarm|Crossbow|Boomerang|Wisp|quarrel|boomerang|wisp/i
+    },
+    crossbow: {
+      titles: ['Honed Quarrels', 'Swift String', 'Twin Quarrels'],
+      damageSummary: '+8 quarrel damage.',
+      countSummary: '+1 quarrel per volley (up to 4 picks).',
+      forbidden: /Sharper Spell|Quicker Hex|Split Charm|Seasoned Edge|Quick Wrist|Twin Arcs|Brighter Wicks|Fanned Flame|Lantern Swarm|Boomerang|Wisp/i
+    },
+    boomerang: {
+      titles: ['Seasoned Edge', 'Quick Wrist', 'Twin Arcs'],
+      damageSummary: '+8 boomerang damage.',
+      countSummary: '+1 boomerang per cast (up to 4 picks).',
+      forbidden: /Sharper Spell|Quicker Hex|Split Charm|Honed Quarrels|Swift String|Twin Quarrels|Brighter Wicks|Fanned Flame|Lantern Swarm|Crossbow|quarrel|Wisp/i
+    },
+    lantern: {
+      titles: ['Brighter Wicks', 'Fanned Flame', 'Lantern Swarm'],
+      damageSummary: '+8 wisp & splash damage.',
+      countSummary: '+1 wisp per cast (up to 4 picks).',
+      forbidden: /Sharper Spell|Quicker Hex|Split Charm|Honed Quarrels|Swift String|Twin Quarrels|Seasoned Edge|Quick Wrist|Twin Arcs|Crossbow|quarrel|Boomerang/i
+    }
+  };
+
+  for (const weapon of WEAPON_IDS) {
+    const stats = new GameManager(weapon).playerStats;
+    const available = upgrades.getAvailable(stats);
+    const review = upgrades.getReviewChoices(stats);
+    const spec = expectedByWeapon[weapon];
+
+    for (const id of ['projectile-damage', 'fire-rate', 'projectile-count']) {
+      const choice = available.find(c => c.id === id);
+      assert.ok(choice, `${weapon}: missing ${id}`);
+      assert.equal(choice.title, upgradeName(id, stats));
+      assert.ok(spec.titles.includes(choice.title), `${weapon} ${id} title was ${choice.title}`);
+      const summary = upgradeSummary(choice, stats);
+      assert.doesNotMatch(choice.title, spec.forbidden);
+      assert.doesNotMatch(choice.description, spec.forbidden);
+      assert.doesNotMatch(summary, spec.forbidden);
+    }
+
+    const dmgChoice = available.find(c => c.id === 'projectile-damage');
+    const countChoice = available.find(c => c.id === 'projectile-count');
+    assert.equal(upgradeSummary(dmgChoice, stats), spec.damageSummary);
+    assert.equal(upgradeSummary(countChoice, stats), spec.countSummary);
+
+    const reviewDamage = review.find(c => c.id === 'projectile-damage');
+    assert.equal(reviewDamage.title, upgradeName('projectile-damage', stats));
+    assert.doesNotMatch(reviewDamage.title, spec.forbidden);
+
+    const ricochetDesc = describeAbility('ricochet-charm', 1, weapon);
+    assert.doesNotMatch(ricochetDesc, spec.forbidden);
+  }
+
+  assert.equal(WEAPON_STAT_UPGRADES.crossbow['projectile-damage'].icon, 'bolt');
+  assert.equal(WEAPON_STAT_UPGRADES.boomerang['projectile-damage'].icon, 'boomerang');
+  assert.equal(WEAPON_STAT_UPGRADES.lantern['projectile-damage'].icon, 'lantern');
 });

@@ -319,7 +319,11 @@ export class MarketScene extends Phaser.Scene {
       const item=MARKET_ITEMS.find(item=>item.id===boughtId)!;
       if (result.status==='purchased') {
         audioSystem.play('upgrade-pick');
-        this.status=`${item.name} is yours. ${marketItemBenefit(item.id,result.rank)}.${item.kind==='cosmetic'?' Equip it here to wear it.':''}${result.saved?'':' Saved for this preview or session.'}`;
+        const weaponTarget = item.kind==='weapon' ? WEAPON_BY_MARKET_ITEM[item.id] : undefined;
+        if (weaponTarget && this.progress.equipWeapon(weaponTarget)) {
+          this.weaponId = weaponTarget;
+        }
+        this.status=`${item.name} is yours. ${ weaponTarget ? `${weaponLabel(weaponTarget)} equipped for your next adventure.` : `${marketItemBenefit(item.id,result.rank)}.` }${item.kind==='cosmetic'?' Equip it here to wear it.':''}${result.saved?'':' Saved for this preview or session.'}`;
       } else {
         audioSystem.play('ui-click');
         if (result.status==='insufficient-rocks') {
@@ -369,7 +373,7 @@ export class MarketScene extends Phaser.Scene {
     if(button){button.textContent=this.zoomed?'−':'+';button.setAttribute('aria-label',this.zoomed?'See the whole square':'Look closer at the square');}
   }
 
-  private returnToTitle():void {if(this.leaving)return;this.leaving=true;this.scene.start('StartScene',{skipReview:true});}
+  private returnToTitle():void {if(this.leaving)return;this.leaving=true;this.scene.start('StartScene',{skipReview:true,characterId:this.character.id,weaponId:this.weaponId});}
   private startAdventure():void {if(this.leaving)return;this.leaving=true;this.scene.start('GameScene',{characterId:this.character.id,weaponId:this.weaponId,skipReview:true});}
   private cleanup():void {
     window.removeEventListener('keydown',this.onKey);this.scale.off('resize',this.onResize);

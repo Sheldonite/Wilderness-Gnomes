@@ -119,12 +119,13 @@ export function upgradeSummary(choice: UpgradeDefinition, stats: PlayerStats): s
       case 'dizzying-flurry': return `${c.flurry.vortex[tier].durationMs / 1000}s spin that drags foes in and slows them ${pct(c.flurry.vortex[tier].slow)}%.`;
     }
   }
+  const weaponStatCopy = WEAPON_STAT_UPGRADES[stats.weaponId]?.[id];
   switch (id) {
-    case 'projectile-damage': return '+8 damage per shot.';
-    case 'fire-rate': return `Shot cooldown: ${(stats.weaponCooldownMs / 1000).toFixed(2)}s → ${(Math.max(160, Math.floor(stats.weaponCooldownMs * .85)) / 1000).toFixed(2)}s.`;
+    case 'projectile-damage': return weaponStatCopy ? `${weaponStatCopy.description}.` : '+8 damage per shot.';
+    case 'fire-rate': return `${weaponStatCopy?.description ?? 'Shot cooldown'}: ${(stats.weaponCooldownMs / 1000).toFixed(2)}s → ${(Math.max(160, Math.floor(stats.weaponCooldownMs * .85)) / 1000).toFixed(2)}s.`;
     case 'move-speed': return '+24 movement speed.';
     case 'max-health': return '+20 max health. Heal 20. +1 HP/5s.';
-    case 'projectile-count': return '+1 shot per volley.';
+    case 'projectile-count': return weaponStatCopy ? `${weaponStatCopy.description}.` : '+1 shot per volley.';
     case 'ribbon-sweep': return `Wide ribbon arc: ${c.ribbon.damage[rank]} damage, knocks foes back ${c.ribbon.knockback[rank]}.`;
     case 'inspiring-shout': return `Rally for ${c.shout.durationMs / 1000}s: +${pct(c.shout.attackSpeed[rank])}% attack speed, +${pct(c.shout.moveSpeed[rank])}% movement.`;
     case 'dizzying-flurry': return `Staff spin: ${c.flurry.damage[rank]} damage a hit within ${c.flurry.radius[rank]} pixels.`;

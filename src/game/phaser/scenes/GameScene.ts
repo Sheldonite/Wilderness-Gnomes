@@ -160,10 +160,11 @@ export class GameScene extends Phaser.Scene {
     const reviewWeapon = import.meta.env.DEV && !data.skipReview
       ? new URLSearchParams(location.search).get('weapon')
       : null;
-    this.selectedWeaponId = getWeapon(reviewWeapon ?? data.weaponId).id;
     this.practiceRun = import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).has('review');
+    const activeProfile = this.practiceRun ? emptyMarketProfile() : marketProgress.refresh();
+    this.selectedWeaponId = getWeapon(reviewWeapon ?? data.weaponId ?? activeProfile.equippedWeapon).id;
     this.cosmetic = new CosmeticGlow(this);
-    this.gameManager = new GameManager(this.selectedWeaponId, this.practiceRun ? emptyMarketProfile() : marketProgress.refresh(), this.selectedCharacter.id);
+    this.gameManager = new GameManager(this.selectedWeaponId, activeProfile, this.selectedCharacter.id);
     const rawDamagePlayer = this.gameManager.damagePlayer.bind(this.gameManager);
     this.gameManager.damagePlayer = (amount: number, source: 'contact' | 'direct' = 'direct') => {
       if (!this.finishingReviewRun) {
@@ -606,7 +607,7 @@ export class GameScene extends Phaser.Scene {
       this.gameManager.level = 2;
       this.gameManager.xpToNextLevel = 33;
       this.gameManager.state = 'LevelUpPaused';
-      this.reviewChoices = this.upgradeSystem.getReviewChoices();
+      this.reviewChoices = this.upgradeSystem.getReviewChoices(this.gameManager.playerStats);
     } else if (review === 'gameover') {
       this.gameManager.elapsedMs = 187000; this.gameManager.kills = 42; this.gameManager.level = 6;
       this.gameManager.xpToNextLevel = xpThreshold(6);

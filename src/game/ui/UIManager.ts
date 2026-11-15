@@ -7,7 +7,7 @@ import type { PlayerCharacterDefinition } from '../config/playerCharacters';
 import { formatTime } from '../utils/math';
 import { icon, UPGRADE_ICONS } from './icons';
 import { ABILITY_IDS, ABILITY_NAMES, describeAbility, MAX_ABILITY_RANK } from '../config/abilities';
-import { CROSSBOW_STAT_UPGRADES, WEAPONS } from '../config/weapons';
+import { CROSSBOW_STAT_UPGRADES, WEAPON_STAT_UPGRADES, WEAPONS } from '../config/weapons';
 import { COMPANION_NAMES, MAX_COMPANION_RANK, describeCompanionRank, levelForCompanionRank } from '../config/companions';
 
 export interface HudUiOptions {
@@ -368,8 +368,10 @@ export class UIManager {
     const stats = this.gameManager.playerStats;
     list.insertAdjacentHTML('beforeend', `<p class="companion-journal">${icon('paw')} ${COMPANION_NAMES[stats.companionId]} · rank ${stats.companionRank} of ${MAX_COMPANION_RANK} · ${describeCompanionRank(stats.companionId, stats.companionRank, stats)}</p>`);
     const owned = ownedUpgrades(stats);
-    if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your upgrades">${owned.map(id =>
-      `<div class="journal-ability"><span class="journal-icon">${icon(UPGRADE_ICONS[id])}</span><span><strong>${upgradeName(id, stats)}</strong><small>${isRanked(id) ? `Rank ${upgradeRank(id, stats)} of ${upgradeMaxRank(id)}${isBossAbility(id) ? ' · BOSS RELIC' : upgradeRank(id, stats) === MAX_ABILITY_RANK ? ' · ASCENDED' : upgradeRank(id, stats) >= 5 ? ' · AWAKENED' : ''}` : `Upgraded ${upgradeRank(id, stats)} times`}</small><span class="journal-description">${upgradeBenefit(id, stats)}</span></span></div>`).join('')}</div>`);
+    if (owned.length) list.insertAdjacentHTML('beforeend', `<div class="ability-journal" role="region" tabindex="0" aria-label="Your upgrades">${owned.map(id => {
+      const journalIcon = WEAPON_STAT_UPGRADES[stats.weaponId]?.[id]?.icon ?? UPGRADE_ICONS[id];
+      return `<div class="journal-ability"><span class="journal-icon">${icon(journalIcon)}</span><span><strong>${upgradeName(id, stats)}</strong><small>${isRanked(id) ? `Rank ${upgradeRank(id, stats)} of ${upgradeMaxRank(id)}${isBossAbility(id) ? ' · BOSS RELIC' : upgradeRank(id, stats) === MAX_ABILITY_RANK ? ' · ASCENDED' : upgradeRank(id, stats) >= 5 ? ' · AWAKENED' : ''}` : `Upgraded ${upgradeRank(id, stats)} times`}</small><span class="journal-description">${upgradeBenefit(id, stats)}</span></span></div>`;
+    }).join('')}</div>`);
     this.addButton(list, 'Back to the woods', onResume, true);
     this.addButton(list, 'Main Menu', onMainMenu, false);
     list.insertAdjacentHTML('beforeend', '<p class="overlay-hint">Returning to the menu ends this run. Earned gold and rocks are kept.</p>');
@@ -404,9 +406,9 @@ export class UIManager {
         button.className = `upgrade-card ${progress.current ? 'owned-upgrade' : 'new-upgrade'}`;
         if (isBossAbility(choice.id)) button.classList.add('boss-relic');
         if (rerolled) button.classList.add('is-rerolled');
-        const artIcon = this.gameManager.playerStats.weaponId === 'crossbow'
-          ? (CROSSBOW_STAT_UPGRADES[choice.id]?.icon ?? UPGRADE_ICONS[choice.id])
-          : UPGRADE_ICONS[choice.id];
+        const artIcon = WEAPON_STAT_UPGRADES[this.gameManager.playerStats.weaponId]?.[choice.id]?.icon
+          ?? (this.gameManager.playerStats.weaponId === 'crossbow' ? CROSSBOW_STAT_UPGRADES[choice.id]?.icon : undefined)
+          ?? UPGRADE_ICONS[choice.id];
         const summary = upgradeSummary(choice, this.gameManager.playerStats);
         const changes = progress.current ? upgradeChanges(choice, this.gameManager.playerStats) : '';
         button.title = choice.description;
@@ -414,8 +416,9 @@ export class UIManager {
         const select = () => {
           if (selected) return; selected = true;
           this.clearOverlay(); onChoose(choice); this.refreshBuild();
+          const receiptTitle = isAbility(choice.id) ? choice.title : upgradeName(choice.id, this.gameManager.playerStats);
           this.showReceipt(
-            `${choice.title} · Rank ${progress.next}${progress.capped ? `/${progress.maxRank}` : ''}`,
+            `${receiptTitle} · Rank ${progress.next}${progress.capped ? `/${progress.maxRank}` : ''}`,
             `${progress.before} &rarr; ${progress.after}`
           );
         };
@@ -861,7 +864,7 @@ export class UIManager {
 
   private refreshBuild(): void {
     const stats = this.gameManager.playerStats;
-    const key = JSON.stringify([stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.companionId, stats.companionRank, stats.frankieCount, stats.frankieFeatherBonus]);
+    const key = JSON.stringify([stats.weaponId, stats.abilityRanks, stats.bossAbilityRanks, stats.upgradeCounts, stats.companionId, stats.companionRank, stats.frankieCount, stats.frankieFeatherBonus]);
     if (key === this.buildFingerprint) return;
     this.buildFingerprint = key;
     const name = COMPANION_NAMES[stats.companionId];

@@ -55,7 +55,7 @@ export class StartScene extends Phaser.Scene {
 
   constructor() { super('StartScene'); }
 
-  create(data: { skipReview?: boolean } = {}): void {
+  create(data: { skipReview?: boolean; characterId?: PlayerCharacterId; weaponId?: AnyWeaponId } = {}): void {
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'ron-sprites') { showRonReview(this); return; }
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'sheldon') { showSheldonReview(this); return; }
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'market') {
@@ -66,8 +66,11 @@ export class StartScene extends Phaser.Scene {
     if (import.meta.env.DEV && !data.skipReview && new URLSearchParams(location.search).get('review') === 'sprites') { showSpriteReview(this); return; }
     this.starting = false;
     marketProgress.refresh();
+    if (data.characterId && marketProgress.characterUnlocked(data.characterId)) this.selectedCharacterId = data.characterId;
     if (!marketProgress.characterUnlocked(this.selectedCharacterId)) this.selectedCharacterId = 'wizard';
-    this.selectedWeaponId = marketProgress.equippedWeapon;
+    this.selectedWeaponId = (data.weaponId && marketProgress.weaponUnlocked(data.weaponId))
+      ? data.weaponId
+      : marketProgress.equippedWeapon;
     audioSystem.attachScene(this);
     audioSystem.setMusicMode('title');
     this.soundMuted = audioSystem.isMuted();

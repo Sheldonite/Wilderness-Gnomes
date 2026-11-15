@@ -144,7 +144,8 @@ export class UpgradeSystem {
     return copy ? { ...upgrade, title: copy.title, description: copy.description } : upgrade;
   }
 
-  getReviewChoices(): UpgradeDefinition[] {
-    return this.upgrades.filter(upgrade => ['projectile-damage', 'move-speed', 'max-health'].includes(upgrade.id));
+  getReviewChoices(stats?: PlayerStats): UpgradeDefinition[] {
+    const base = this.upgrades.filter(upgrade => ['projectile-damage', 'move-speed', 'max-health'].includes(upgrade.id));
+    return stats ? base.map(u => this.flavor(u, stats)) : base;
   }
 }
