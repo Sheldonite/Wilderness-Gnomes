@@ -10,25 +10,25 @@ function seeded(seed) {
   return () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 }
 
-test('chests roll once per level, including skipped levels, with a 40 percent threshold', () => {
+test('chests roll once per level (with level 3 guaranteed), including skipped levels, with a 40 percent threshold', () => {
   const rolls = [0, .399, .4, .8, .99];
   let count = 0;
   const drops = new ChestDrops(ground, () => rolls[count++]);
   drops.advanceToLevel(1); drops.advanceToLevel(5);
-  assert.equal(drops.pending, 2); assert.equal(count, 5);
+  assert.equal(drops.pending, 3); assert.equal(count, 4);
   for (let i = 0; i < 100; i++) drops.advanceToLevel(5);
   drops.advanceToLevel(3);
-  assert.equal(drops.pending, 2); assert.equal(count, 5);
+  assert.equal(drops.pending, 3); assert.equal(count, 4);
 });
 
-test('random drops average two chests per five levels across many runs', () => {
+test('random drops average 2.6 chests per five levels (4 rolls at 40% + guaranteed level 3) across many runs', () => {
   const random = seeded(7321);
   let total = 0;
   for (let run = 0; run < 10000; run++) {
     const drops = new ChestDrops(ground, random);
     drops.advanceToLevel(5); total += drops.pending;
   }
-  assert.ok(total / 10000 > 1.95 && total / 10000 < 2.05, `Average: ${total / 10000}`);
+  assert.ok(total / 10000 > 2.55 && total / 10000 < 2.65, `Average: ${total / 10000}`);
 });
 
 test('placement stays nearby on reachable ground, inside arena edges, without overlapping chests', () => {
@@ -74,7 +74,7 @@ test('one chest gives one real upgrade, freezes the run, and leaves level and XP
   game.resumeAfterUpgrade();
   assert.equal(game.playerStats.upgradeCounts[choices[0].id], 1);
   assert.equal(game.state, 'Playing'); assert.equal(game.level, 1); assert.equal(game.playerStats.level, 1);
-  assert.equal(game.xp, 8); assert.equal(game.xpToNextLevel, 24);
+  assert.equal(game.xp, 8); assert.equal(game.xpToNextLevel, 18);
   assert.equal(drops.chests.length, 0);
 });
 
@@ -118,5 +118,5 @@ test('chest upgrades respect ability level gates and new runs have no old drops 
   const fresh = new GameManager(), drops = new ChestDrops(ground, () => .8);
   assert.equal(fresh.state, 'Playing'); assert.equal(fresh.upgradeSource, 'level');
   assert.equal(drops.pending, 0); assert.deepEqual(drops.chests, []);
-  drops.advanceToLevel(5); assert.equal(drops.pending, 0);
+  drops.advanceToLevel(5); assert.equal(drops.pending, 1);
 });

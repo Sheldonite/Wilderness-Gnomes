@@ -8,10 +8,12 @@ export interface ChestDrop { id: number; position: Vector2Like; kind: 'chest' | 
 
 /** One independent roll per level, including the starting level. Unplaced drops wait for clear ground. */
 export class ChestDrops {
+  private static readonly guaranteedLevel = 3;
   readonly chests: ChestDrop[] = [];
   pending = 0;
   private lastLevel = 0;
   private nextId = 0;
+  private guaranteedLevelGranted = false;
 
   constructor(private readonly navigation: Pick<SceneryNavigation, 'blocked' | 'clear'>,
     private readonly random: () => number = Math.random) {}
@@ -20,7 +22,12 @@ export class ChestDrops {
     const chance = Math.max(0, Math.min(1, BALANCE.chest.chancePerLevel + bonusChance));
     while (this.lastLevel < level) {
       this.lastLevel++;
-      if (this.random() < chance) this.pending++;
+      if (this.lastLevel === ChestDrops.guaranteedLevel && !this.guaranteedLevelGranted) {
+        this.guaranteedLevelGranted = true;
+        this.pending++;
+      } else if (this.random() < chance) {
+        this.pending++;
+      }
     }
   }
 

@@ -34,7 +34,7 @@ export class RangedSquirrelBehavior {
   }
 }
 
-export type SpawnVariant = 'brown' | 'grey' | 'doe' | 'fawn' | 'buck' | 'armadillo' | 'buzzard';
+export type SpawnVariant = 'brown' | 'grey' | 'scout' | 'hedgehog' | 'doe' | 'fawn' | 'buck' | 'armadillo' | 'buzzard';
 
 /**
  * Which creature a fresh spawn should be. From the deer level most spawns are deer, but a share of
@@ -48,6 +48,10 @@ export function rollSpawnVariant(playerLevel: number, random: () => number = Mat
     return random() < BALANCE.deer.fawnChance ? 'fawn' : 'doe';
   }
   if (playerLevel >= BALANCE.rangedEnemy.unlockLevel && random() < BALANCE.rangedEnemy.spawnChance) return 'grey';
+  if (playerLevel < BALANCE.deer.unlockLevel) {
+    if (playerLevel >= BALANCE.hedgehog.unlockLevel && random() < BALANCE.hedgehog.spawnChance) return 'hedgehog';
+    if (playerLevel >= BALANCE.scout.unlockLevel && random() < BALANCE.scout.spawnChance) return 'scout';
+  }
   return 'brown';
 }
 

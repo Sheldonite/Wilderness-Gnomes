@@ -121,4 +121,12 @@ export interface HudSnapshot {
   harvestBonus?: number;
   nextBossLevel?: number;
   nextBossName?: string;
+  wakingProgress?: number;
+  wakingRemainingMs?: number;
+  wakingKills?: number;
+  wakingGoal?: number;
+  wakingCompleted?: boolean;
+  comboCount?: number;
+  comboMultiplier?: number;
+  comboTimerRatio?: number;
 }

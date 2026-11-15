@@ -9,7 +9,7 @@ export const BALANCE = {
     radius: 15,
     health: 28,
     speed: 92,
-    contactDamage: 8,
+    contactDamage: 11,
     contactDamageCooldownMs: 520,
     separationRadius: 34,
     xpValue: 8,
@@ -19,14 +19,16 @@ export const BALANCE = {
     speedPerMinute: 6,
     maxSpeedBonus: 0.4,
     /** Contact damage grows by this fraction per minute, so late foes stay dangerous without outrunning you. */
-    damagePerMinute: 0.04
+    damagePerMinute: 0.04,
+    /** Subtle per-level contact damage scaling so enemy danger grows with player level too. */
+    damagePerLevel: 0.03
   },
   /** Crystals dropped per creature: sturdier foes are worth more. */
-  enemyXp: { brown: 8, grey: 10, fawn: 8, doe: 14, buck: 30, armadillo: 35, buzzard: 26 },
+  enemyXp: { brown: 8, grey: 10, scout: 10, hedgehog: 16, fawn: 8, doe: 14, buck: 30, armadillo: 35, buzzard: 26 },
   /** Bosses shrug off shoves and pulls, and are never slowed below this multiplier. */
   boss: { slowFloor: 0.7 },
   elite: {
-    firstMs: 150000,
+    firstMs: 45000,
     everyMs: 75000,
     healthMultiplier: 5,
     damageMultiplier: 1.3,
@@ -36,13 +38,13 @@ export const BALANCE = {
   },
   /** Timed set pieces between bosses. Their clocks only run while the woods are open. */
   events: {
-    ringFirstMs: 180000,
+    ringFirstMs: 75000,
     ringEveryMs: 90000,
     ringRadius: 640,
-    ringBase: 16,
+    ringBase: 10,
     ringPerMinute: 2,
     ringMax: 36,
-    stampedeFirstMs: 225000,
+    stampedeFirstMs: 120000,
     stampedeEveryMs: 90000,
     stampedeWarnMs: 1400,
     stampedeCount: 6,
@@ -54,7 +56,7 @@ export const BALANCE = {
     /** Set pieces may exceed the spawner's cap by this many creatures, never more. */
     capAllowance: 40,
     /** Woodland Campfire/Shrine cadence and blessing rewards. */
-    shrineFirstMs: 150000,
+    shrineFirstMs: 90000,
     shrineEveryMs: 150000,
     shrineHeal: 25,
     shrineFrenzyMs: 6000,
@@ -112,7 +114,7 @@ export const BALANCE = {
     scale: 1.2
   },
   rangedEnemy: {
-    unlockLevel: 5,
+    unlockLevel: 2,
     spawnChance: 0.2,
     health: 22,
     speed: 84,
@@ -125,18 +127,45 @@ export const BALANCE = {
     acornRadius: 7,
     acornLifetimeMs: 4000   // 1440px of travel
   },
+  scout: {
+    unlockLevel: 1,
+    spawnChance: 0.14,
+    health: 18,
+    speed: 152,
+    contactDamage: 10,
+    radius: 13,
+    xpValue: 10
+  },
+  hedgehog: {
+    unlockLevel: 3,
+    spawnChance: 0.16,
+    health: 48,
+    walkSpeed: 88,
+    rollSpeed: 370,
+    rollDistance: 240,
+    windupRange: 230,
+    curlMs: 420,
+    recoverMs: 500,
+    cooldownMs: 1800,
+    walkDamage: 10,
+    rollDamage: 18,
+    radius: 15,
+    xpValue: 16
+  },
   spawner: {
-    initialSpawnIntervalMs: 1200,
+    initialSpawnIntervalMs: 700,
     minSpawnIntervalMs: 260,
     spawnIntervalReductionPerMinute: 260,
-    initialMaxEnemies: 45,
+    initialMaxEnemies: 70,
     maxEnemiesCap: 180,
     maxEnemiesAddedPerMinute: 24,
     spawnOutsideViewPadding: 90,
+    /** Initial pack spawned when a run opens so action starts immediately. */
+    openingPackCount: 7,
     /** From this minute each spawn tick brings a small group, growing every few minutes. */
-    batchFromMinute: 6,
-    batchEveryMinutes: 4,
-    maxBatch: 3
+    batchFromMinute: 0,
+    batchEveryMinutes: 2,
+    maxBatch: 4
   },
   weapon: {
     cooldownMs: 850,
@@ -148,7 +177,7 @@ export const BALANCE = {
     spreadRadians: 0.22
   },
   companion: {
-    mysteryDamage: 64,
+    mysteryDamage: 40,
     mysteryCooldownMs: 1100,
     mysteryPounceRange: 420,
     mysteryPounceSpeed: 620,
@@ -218,11 +247,11 @@ export const BALANCE = {
     maxOrbs: 220,
     magnetRange: 150,
     collectRange: 24,
-    idleSpeed: 0,
+    idleSpeed: 42,
     magnetSpeed: 420
   },
   leveling: {
-    baseThreshold: 24,
+    baseThreshold: 18,
     thresholdGrowth: 1.22,
     linearFromLevel: 10,        // past here each level needs a fixed amount more, not a percentage
     linearStepXp: 30,

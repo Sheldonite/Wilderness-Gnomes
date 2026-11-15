@@ -55,6 +55,14 @@ export class GameManager {
   private slowFactor = 1;
   rerollsRemaining: number;
   bonusGold = 0;
+  readonly wakingWindowMs = 90000;
+  readonly wakingGoal = 28;
+  wakingKills = 0;
+  wakingCompleted = false;
+  wakingRewardPending = false;
+  readonly comboWindowMs = 2200;
+  comboCount = 0;
+  comboTimerMs = 0;
   private shrineFrenzyRemainingMs = 0;
   private readonly damageBySource = new Map<DamageSourceId, number>();
 
@@ -171,6 +179,12 @@ export class GameManager {
         this.playerStats.shrineMoveSpeedBonus = 0;
       }
     }
+    if (this.comboTimerMs > 0 && deltaMs > 0) {
+      this.comboTimerMs = Math.max(0, this.comboTimerMs - deltaMs);
+      if (this.comboTimerMs === 0) {
+        this.comboCount = 0;
+      }
+    }
   }
 
   private barkGrown = false;
@@ -188,7 +202,40 @@ export class GameManager {
   }
 
   addKill(): void {
+    this.recordKill();
+  }
+
+  /** Records a kill for total kills, kill-streak combo, and the 90s "Woods are waking" goal. */
+  recordKill(): void {
     this.kills += 1;
+    this.comboCount += 1;
+    this.comboTimerMs = this.comboWindowMs;
+    if (!this.wakingCompleted && this.elapsedMs <= this.wakingWindowMs) {
+      this.wakingKills = Math.min(this.wakingGoal, this.wakingKills + 1);
+      if (this.wakingKills >= this.wakingGoal) {
+        this.wakingCompleted = true;
+        this.wakingRewardPending = true;
+        this.rerollsRemaining += 1;
+        this.bonusGold += 8;
+      }
+    }
+  }
+
+  /** Drains the one-shot notification flag when the "Woods are waking" goal is completed. */
+  consumeWakingReward(): boolean {
+    if (!this.wakingRewardPending) return false;
+    this.wakingRewardPending = false;
+    return true;
+  }
+
+  /** Damage multiplier from active kill-streak combo (1.0x up to 1.35x). */
+  getComboDamageMultiplier(): number {
+    return 1 + Math.min(0.35, Math.floor(this.comboCount / 5) * 0.05);
+  }
+
+  /** XP multiplier from active kill-streak combo (1.0x up to 1.35x). */
+  getComboXpMultiplier(): number {
+    return this.getComboDamageMultiplier();
   }
 
   addXp(amount: number): boolean {
@@ -196,7 +243,8 @@ export class GameManager {
       return false;
     }
 
-    this.xp += amount;
+    const gained = amount > 0 ? Math.round(amount * this.getComboXpMultiplier()) : amount;
+    this.xp += gained;
     if (this.xp < this.xpToNextLevel || this.bossGate.required(this.level)) {
       return false;
     }
@@ -266,7 +314,7 @@ export class GameManager {
     this.playerStats.shrineAttackSpeedBonus = reward.attackSpeedBonus;
     this.playerStats.shrineMoveSpeedBonus = reward.moveSpeedBonus;
     if (reward.xpBurst > 0) {
-      this.addXp(reward.xpBurst);
+      this.xp += reward.xpBurst;
     }
   }
 
@@ -392,7 +440,15 @@ export class GameManager {
       shoutRemainingMs: this.playerStats.shoutRemainingMs ?? 0,
       harvestBonus: this.playerStats.harvestBonus,
       nextBossLevel: milestone.level,
-      nextBossName: milestone.name
+      nextBossName: milestone.name,
+      wakingProgress: Math.min(1, this.wakingKills / this.wakingGoal),
+      wakingRemainingMs: Math.max(0, this.wakingWindowMs - this.elapsedMs),
+      wakingKills: this.wakingKills,
+      wakingGoal: this.wakingGoal,
+      wakingCompleted: this.wakingCompleted,
+      comboCount: this.comboCount,
+      comboMultiplier: this.getComboDamageMultiplier(),
+      comboTimerRatio: this.comboCount > 0 ? Math.max(0, Math.min(1, this.comboTimerMs / this.comboWindowMs)) : 0
     };
   }
 }
