@@ -694,3 +694,95 @@ test('touch virtual joystick reveals on touchstart, normalizes vector [-1..1], a
     domCoarse.teardown();
   }
 });
+
+test('Woods are Waking meter and Kill-Streak Combo badge render, update, complete, and hide cleanly', () => {
+  const dom = setupDom();
+  try {
+    const game = new GameManager('spell', undefined, 'wizard');
+    const ui = new UIManager(game, () => {}, CHARACTER, 'p.png', 'c.png');
+
+    // Omitted fields -> both pills remain hidden
+    const baseSnap = game.getHudSnapshot();
+    ui.update(baseSnap);
+    const wakingPill = dom.uiRoot.querySelector('.waking-pill');
+    const comboPill = dom.uiRoot.querySelector('.combo-pill');
+    assert.equal(wakingPill.hidden, true);
+    assert.equal(comboPill.hidden, true);
+
+    // Active waking meter (>60s) + combo below threshold (<2)
+    ui.update({
+      ...baseSnap,
+      wakingKills: 12,
+      wakingGoal: 28,
+      wakingRemainingMs: 72000,
+      wakingProgress: 12 / 28,
+      wakingCompleted: false,
+      comboCount: 1,
+      comboMultiplier: 1,
+      comboTimerRatio: 0.9
+    });
+    assert.equal(dom.uiRoot.querySelector('.status-strip').hidden, false);
+    assert.equal(wakingPill.hidden, false);
+    assert.match(wakingPill.textContent, /12 \/ 28/);
+    assert.match(wakingPill.textContent, /1:12/);
+    assert.equal(wakingPill.querySelector('.pill-progress').style.transform, 'scaleX(0.429)');
+    assert.equal(comboPill.hidden, true, 'Combo badge stays hidden below 2x');
+
+    // Update waking meter (<60s) + active combo without bonus multiplier
+    ui.update({
+      ...baseSnap,
+      wakingKills: 24,
+      wakingGoal: 28,
+      wakingRemainingMs: 45000,
+      wakingProgress: 24 / 28,
+      wakingCompleted: false,
+      comboCount: 4,
+      comboMultiplier: 1,
+      comboTimerRatio: 0.75
+    });
+    assert.match(wakingPill.textContent, /24 \/ 28/);
+    assert.match(wakingPill.textContent, /45s/);
+    assert.equal(comboPill.hidden, false);
+    assert.match(comboPill.textContent, /4x Streak/);
+    assert.equal(comboPill.classList.contains('is-hot'), false);
+    assert.equal(comboPill.querySelector('.pill-progress').style.transform, 'scaleX(0.750)');
+
+    // Waking completed celebration + hot combo with multiplier
+    ui.update({
+      ...baseSnap,
+      wakingKills: 28,
+      wakingGoal: 28,
+      wakingRemainingMs: 0,
+      wakingProgress: 1,
+      wakingCompleted: true,
+      comboCount: 10,
+      comboMultiplier: 1.1,
+      comboTimerRatio: 0.5
+    });
+    assert.equal(wakingPill.hidden, false);
+    assert.ok(wakingPill.classList.contains('is-complete'));
+    assert.match(wakingPill.textContent, /Woods Awakened! \+1 Reroll · \+8g/);
+    assert.equal(comboPill.hidden, false);
+    assert.ok(comboPill.classList.contains('is-hot'));
+    assert.match(comboPill.textContent, /10x Streak · \+10%/);
+    assert.equal(comboPill.querySelector('.pill-progress').style.transform, 'scaleX(0.500)');
+
+    // Expired / reset -> both hide cleanly
+    ui.update({
+      ...baseSnap,
+      wakingKills: 28,
+      wakingGoal: 28,
+      wakingRemainingMs: 0,
+      wakingCompleted: false,
+      comboCount: 0,
+      comboMultiplier: 1,
+      comboTimerRatio: 0
+    });
+    assert.equal(wakingPill.hidden, true);
+    assert.equal(comboPill.hidden, true);
+
+    ui.destroy();
+  } finally {
+    dom.teardown();
+  }
+});

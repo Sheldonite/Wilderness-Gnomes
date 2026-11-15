@@ -40,6 +40,14 @@ interface ExtendedHudSnapshot extends HudSnapshot {
   harvestBonus?: number;
   nextBossLevel?: number;
   nextBossName?: string;
+  wakingProgress?: number;
+  wakingRemainingMs?: number;
+  wakingKills?: number;
+  wakingGoal?: number;
+  wakingCompleted?: boolean;
+  comboCount?: number;
+  comboMultiplier?: number;
+  comboTimerRatio?: number;
 }
 
 const TOUCH_DEADZONE_PX = 4;
@@ -63,6 +71,8 @@ export class UIManager {
   private readonly shoutPill: HTMLElement;
   private readonly harvestPill: HTMLElement;
   private readonly bossMilestonePill: HTMLElement;
+  private readonly wakingPill: HTMLElement;
+  private readonly comboPill: HTMLElement;
   private readonly touchControls: HTMLElement;
   private readonly joystickEl: HTMLElement;
   private readonly joystickBase: HTMLElement;
@@ -214,6 +224,8 @@ export class UIManager {
           <div class="status-pill buff-pill shout-pill" hidden></div>
           <div class="status-pill buff-pill harvest-pill" hidden></div>
           <div class="status-pill boss-milestone-pill" hidden></div>
+          <div class="status-pill waking-pill" hidden></div>
+          <div class="status-pill combo-pill" hidden></div>
         </div>
         <div class="run-stats"><span class="time-stat" aria-label="Time in the woods">${icon('clock')}<b>0:00</b></span><span class="kill-stat" aria-label="Foes defeated">${icon('leaf')}<b>0</b></span></div>
         <div class="hud-controls">
@@ -243,6 +255,8 @@ export class UIManager {
     this.shoutPill = this.query('.shout-pill');
     this.harvestPill = this.query('.harvest-pill');
     this.bossMilestonePill = this.query('.boss-milestone-pill');
+    this.wakingPill = this.query('.waking-pill');
+    this.comboPill = this.query('.combo-pill');
     this.touchControls = this.query('.touch-controls');
     this.joystickEl = this.query('.touch-joystick');
     this.joystickBase = this.query('.joystick-base');
@@ -679,12 +693,43 @@ export class UIManager {
     const nextBossLevel = typeof ext.nextBossLevel === 'number' && ext.nextBossLevel > 0 ? ext.nextBossLevel : undefined;
     const nextBossName = typeof ext.nextBossName === 'string' && ext.nextBossName ? ext.nextBossName : undefined;
 
+    const wakingCompleted = Boolean(ext.wakingCompleted);
+    const wakingRemainingMs = typeof ext.wakingRemainingMs === 'number' && Number.isFinite(ext.wakingRemainingMs)
+      ? Math.max(0, ext.wakingRemainingMs)
+      : 0;
+    const wakingKills = typeof ext.wakingKills === 'number' && Number.isFinite(ext.wakingKills)
+      ? Math.max(0, Math.floor(ext.wakingKills))
+      : undefined;
+    const wakingGoal = typeof ext.wakingGoal === 'number' && Number.isFinite(ext.wakingGoal) && ext.wakingGoal > 0
+      ? Math.floor(ext.wakingGoal)
+      : undefined;
+    const wakingVisible = wakingCompleted || (wakingRemainingMs > 0 && wakingKills !== undefined && wakingGoal !== undefined);
+    const wakingProgress = wakingCompleted
+      ? 1
+      : typeof ext.wakingProgress === 'number' && Number.isFinite(ext.wakingProgress)
+        ? Math.max(0, Math.min(1, ext.wakingProgress))
+        : (wakingKills !== undefined && wakingGoal !== undefined ? Math.max(0, Math.min(1, wakingKills / wakingGoal)) : 0);
+
+    const comboCount = typeof ext.comboCount === 'number' && Number.isFinite(ext.comboCount)
+      ? Math.max(0, Math.floor(ext.comboCount))
+      : 0;
+    const comboVisible = comboCount >= 2;
+    const comboMultiplier = typeof ext.comboMultiplier === 'number' && Number.isFinite(ext.comboMultiplier)
+      ? Math.max(1, ext.comboMultiplier)
+      : 1;
+    const comboTimerRatio = typeof ext.comboTimerRatio === 'number' && Number.isFinite(ext.comboTimerRatio)
+      ? Math.max(0, Math.min(1, ext.comboTimerRatio))
+      : 0;
+
     const statusKey = JSON.stringify([
       dashVisible, dashRatio !== undefined ? Math.round(dashRatio * 100) : null,
       wardVisible, wardStatus, wardLeaves, wardMaxLeaves,
       shoutVisible, Math.ceil(shoutRemainingMs / 100), Math.round(shoutAttackSpeedBonus * 100),
       harvestVisible, Math.round(harvestBonus * 100),
-      nextBossLevel ?? null, nextBossName ?? null
+      nextBossLevel ?? null, nextBossName ?? null,
+      wakingVisible, wakingCompleted, wakingKills ?? null, wakingGoal ?? null,
+      Math.ceil(wakingRemainingMs / 1000), Math.round(wakingProgress * 100),
+      comboVisible, comboCount, Math.round(comboMultiplier * 100), Math.round(comboTimerRatio * 100)
     ]);
     if (statusKey === this.lastStatusFingerprint) return;
     this.lastStatusFingerprint = statusKey;
@@ -759,7 +804,40 @@ export class UIManager {
       }
     }
 
-    this.statusStrip.hidden = !(dashVisible || wardVisible || shoutVisible || harvestVisible || nextBossLevel !== undefined);
+    if (this.wakingPill) {
+      this.wakingPill.hidden = !wakingVisible;
+      if (wakingVisible) {
+        this.wakingPill.classList.toggle('is-complete', wakingCompleted);
+        this.wakingPill.classList.toggle('is-active', !wakingCompleted);
+        if (wakingCompleted) {
+          const rewardText = 'Woods Awakened! +1 Reroll · +8g';
+          this.wakingPill.innerHTML = `${icon('leaf')}<span>${rewardText}</span><i class="pill-progress" style="transform:scaleX(1)"></i>`;
+          this.wakingPill.setAttribute('aria-label', rewardText);
+        } else {
+          const totalSec = Math.ceil(wakingRemainingMs / 1000);
+          const timeText = totalSec >= 60
+            ? `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, '0')}`
+            : `${totalSec}s`;
+          this.wakingPill.innerHTML = `${icon('leaf')}<span>Woods Waking</span><strong>${wakingKills} / ${wakingGoal}</strong><small>${timeText}</small><i class="pill-progress" style="transform:scaleX(${wakingProgress.toFixed(3)})"></i>`;
+          this.wakingPill.setAttribute('aria-label', `Woods are waking: ${wakingKills} of ${wakingGoal} foes, ${timeText} remaining`);
+        }
+      }
+    }
+
+    if (this.comboPill) {
+      this.comboPill.hidden = !comboVisible;
+      if (comboVisible) {
+        const bonusPct = Math.round((comboMultiplier - 1) * 100);
+        const label = comboMultiplier > 1 && bonusPct > 0
+          ? `${comboCount}x Streak · +${bonusPct}%`
+          : `${comboCount}x Streak`;
+        this.comboPill.classList.toggle('is-hot', comboMultiplier > 1 && bonusPct > 0);
+        this.comboPill.innerHTML = `${icon('crownfire')}<span>${label}</span><i class="pill-progress" style="transform:scaleX(${comboTimerRatio.toFixed(3)})"></i>`;
+        this.comboPill.setAttribute('aria-label', `Kill streak: ${label}`);
+      }
+    }
+
+    this.statusStrip.hidden = !(dashVisible || wardVisible || shoutVisible || harvestVisible || nextBossLevel !== undefined || wakingVisible || comboVisible);
   }
 
   private showReceipt(heading: string, detail: string): void {
