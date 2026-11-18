@@ -8,8 +8,9 @@ const { SceneryNavigation } = require('../artifacts/ability-tests/game/core/Scen
 
 const ground = new SceneryNavigation(false);
 
-test('BALANCE reflects faster, more dangerous early pacing and new scout/hedgehog configs', () => {
+test('BALANCE reflects early enemy health, spawn pacing, and attack configs', () => {
   assert.equal(BALANCE.enemy.contactDamage, 11);
+  assert.equal(BALANCE.enemy.health, 20);
   assert.equal(BALANCE.enemy.damagePerLevel, 0.03);
   assert.equal(BALANCE.spawner.initialSpawnIntervalMs, 700);
   assert.equal(BALANCE.spawner.initialMaxEnemies, 70);
@@ -18,10 +19,11 @@ test('BALANCE reflects faster, more dangerous early pacing and new scout/hedgeho
   assert.equal(BALANCE.spawner.maxBatch, 4);
   assert.equal(BALANCE.spawner.openingPackCount, 7);
   assert.equal(BALANCE.rangedEnemy.unlockLevel, 2);
+  assert.equal(BALANCE.rangedEnemy.health, 17);
   assert.deepEqual(BALANCE.scout, {
     unlockLevel: 1,
     spawnChance: 0.14,
-    health: 18,
+    health: 14,
     speed: 152,
     contactDamage: 10,
     radius: 13,
@@ -30,7 +32,7 @@ test('BALANCE reflects faster, more dangerous early pacing and new scout/hedgeho
   assert.deepEqual(BALANCE.hedgehog, {
     unlockLevel: 3,
     spawnChance: 0.16,
-    health: 48,
+    health: 36,
     walkSpeed: 88,
     rollSpeed: 370,
     rollDistance: 240,
@@ -50,10 +52,21 @@ test('BALANCE reflects faster, more dangerous early pacing and new scout/hedgeho
   assert.equal(BALANCE.events.ringBase, 10);
   assert.equal(BALANCE.events.stampedeFirstMs, 120000);
   assert.equal(BALANCE.events.shrineFirstMs, 90000);
-  assert.equal(BALANCE.xp.idleSpeed, 42);
-  assert.equal(BALANCE.leveling.baseThreshold, 18);
   assert.equal(BALANCE.companion.mysteryDamage, 40);
-  assert.equal(xpThreshold(1), 18);
+});
+
+test('XP costs rise from the opening through endless levels', () => {
+  assert.equal(xpThreshold(1), 116);
+  assert.equal(xpThreshold(10), 695);
+  assert.equal(xpThreshold(40), 6455);
+  assert.equal(xpThreshold(41) - xpThreshold(40), 192);
+
+  const game = new GameManager();
+  assert.equal(game.addXp(14 * BALANCE.enemyXp.brown), false);
+  assert.equal(game.level, 1);
+  assert.equal(game.addXp(BALANCE.enemyXp.brown), true);
+  assert.equal(game.level, 2);
+  assert.equal(game.xp, 4);
 });
 
 test('rollSpawnVariant introduces scout at Lv 1, grey at Lv 2, and hedgehog at Lv 3', () => {

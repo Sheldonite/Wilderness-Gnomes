@@ -30,7 +30,7 @@ let nextEnemyId = 1;
 /**
  * Brown squirrels charge, scout squirrels dart in fast, grey squirrels throw acorns, hedgehogs
  * curl and roll, deer arrive from level 10, armadillos roll in from level 20, and buzzards swoop
- * down once King Frankie has fallen at level 25.
+ * down from level 25.
  */
 export type EnemyVariant = 'brown' | 'grey' | 'scout' | 'hedgehog' | 'doe' | 'fawn' | 'buck' | 'armadillo' | 'buzzard';
 
@@ -166,10 +166,6 @@ const VARIANTS: Record<EnemyVariant, VariantProfile> = {
     health: BALANCE.buzzard.health, speed: BALANCE.buzzard.speed, contactDamage: BALANCE.buzzard.contactDamage, radius: BALANCE.buzzard.radius, ranged: false }
 };
 
-export interface TreeColliderLike {
-  hitTree(from: Vector2Like, to: Vector2Like, radius: number): { point: Vector2Like; normal: Vector2Like } | undefined;
-}
-
 export class EnemyController {
   protected readonly route = createNavigationRoute();
   readonly id = nextEnemyId++;
@@ -213,7 +209,8 @@ export class EnemyController {
     this.isBoss = Boolean(appearance?.boss);
     this.bossContact = appearance?.boss?.contactDamage;
     this.scale = appearance?.scale ?? profile.scale;
-    const spawn = navigation?.nearest({ x, y }, this.radius) ?? { x, y };
+    const position = { x, y };
+    const spawn = this.isBoss ? position : (navigation?.nearest(position, this.radius) ?? position);
     this.sprite = scene.add.sprite(spawn.x, spawn.y, appearance?.texture ?? profile.textureKey, 0);
     this.walkAnimations = profile.walkAnimations;
     this.sprite.setDepth(10);
@@ -305,16 +302,13 @@ export class EnemyController {
       return;
     }
 
-    const next = clampToArena(
-      {
-        x: this.sprite.x + direction.x * speed * dt,
-        y: this.sprite.y + direction.y * speed * dt
-      },
-      this.radius
-    );
+    const next = {
+      x: this.sprite.x + direction.x * speed * dt,
+      y: this.sprite.y + direction.y * speed * dt
+    };
     // Ranged squirrels steer away from the player at times, so route toward their chosen point rather than the player.
     const goal = this.ranged ? next : target;
-    const safe = this.navigation?.toward(this.position, goal, speed * dt, this.radius, this.route) ?? next;
+    const safe = this.navigation?.toward(this.position, goal, speed * dt, this.radius, this.route) ?? clampToArena(next, this.radius);
     const actual = normalize(safe.x - this.sprite.x, safe.y - this.sprite.y);
     this.sprite.setPosition(safe.x, safe.y);
     this.updateAnimation(actual.x === 0 && actual.y === 0 ? direction : actual);
@@ -325,22 +319,13 @@ export class EnemyController {
     const step = Math.min(run.left, run.speed * Math.max(.3, this.slowMultiplier) * deltaMs / 1000);
     const before = this.position;
     const wanted = { x: before.x + run.direction.x * step, y: before.y + run.direction.y * step };
-    const safeNav = this.navigation?.move(before, wanted, this.radius) ?? clampToArena(wanted, this.radius);
-    const treeHit = this.hitTree(before, safeNav, this.radius);
-    const safe = treeHit ? treeHit.point : safeNav;
+    const safe = this.navigation?.move(before, wanted, this.radius) ?? clampToArena(wanted, this.radius);
     this.sprite.setPosition(safe.x, safe.y);
     this.updateAnimation(run.direction);
     run.left -= step;
-    // A tree or the arena edge ends the gallop early.
-    if (run.left <= 0 || treeHit || (step > 0 && Math.hypot(safe.x - before.x, safe.y - before.y) < step * .3)) {
-      if (treeHit) this.sprite.scene?.events.emit('presentation:trail', safe, 0xd8c39a);
+    if (run.left <= 0 || (step > 0 && Math.hypot(safe.x - before.x, safe.y - before.y) < step * .3)) {
       this.run = undefined;
     }
-  }
-
-  protected hitTree(from: Vector2Like, to: Vector2Like, radius: number): { point: Vector2Like; normal: Vector2Like } | undefined {
-    const collider = (this.navigation as { treeCollider?: TreeColliderLike } | undefined)?.treeCollider;
-    return collider?.hitTree(from, to, radius);
   }
 
   /** Returns a launch velocity when this squirrel is ready to throw at the target, else undefined. */
@@ -349,14 +334,14 @@ export class EnemyController {
     return this.ranged.tryThrow(this.position, target);
   }
 
-  /** Buzzards fly straight over scenery; only the edge of the world stops them. */
+  /** Buzzards fly straight over scenery. */
   private updateFlight(deltaMs: number, target: Vector2Like, difficultyMinutes: number): void {
     const flight = this.flight!;
     const speed = (this.profile.speed + speedBonus(this.profile.speed, difficultyMinutes)) * this.slowMultiplier;
     const before = this.position;
     const step = flight.update(deltaMs, before, target, speed);
     const wanted = { x: before.x + step.x, y: before.y + step.y };
-    const safe = clampToArena(wanted, this.radius);
+    const safe = this.navigation?.unbounded ? wanted : clampToArena(wanted, this.radius);
     if (flight.swooping && (safe.x !== wanted.x || safe.y !== wanted.y)) flight.blocked();
     this.sprite.setPosition(safe.x, safe.y);
     const heading = step.x || step.y ? step : flight.facing;

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { ChestDrops } = require('../artifacts/ability-tests/game/core/ChestDrops.js');
-const { GameManager } = require('../artifacts/ability-tests/game/core/GameManager.js');
+const { GameManager, xpThreshold } = require('../artifacts/ability-tests/game/core/GameManager.js');
 const { SceneryNavigation } = require('../artifacts/ability-tests/game/core/SceneryNavigation.js');
 const { UpgradeSystem } = require('../artifacts/ability-tests/game/systems/UpgradeSystem.js');
 const origin = { x: 1600, y: 1600 };
@@ -31,6 +31,22 @@ test('random drops average 2.6 chests per five levels (4 rolls at 40% + guarante
   assert.ok(total / 10000 > 2.55 && total / 10000 < 2.65, `Average: ${total / 10000}`);
 });
 
+test('the featured level-3 carrier survives a failed spawn and dispatches before outstanding ordinary carriers', () => {
+  const drops = new ChestDrops(ground, () => 0);
+  drops.advanceToLevel(4);
+  assert.equal(drops.pending, 4);
+
+  const attempted = [];
+  assert.equal(drops.dispatchCarrier(kind => { attempted.push(kind); return false; }), false);
+  assert.equal(drops.pending, 4);
+  for (let i = 0; i < 4; i++) {
+    assert.equal(drops.dispatchCarrier(kind => { attempted.push(kind); return true; }), true);
+  }
+  drops.advanceToLevel(4);
+  assert.equal(drops.dispatchCarrier(() => assert.fail('no carrier is owed')), false);
+  assert.deepEqual(attempted, ['featured-hedgehog', 'featured-hedgehog', 'elite', 'elite', 'elite']);
+});
+
 test('placement stays nearby on reachable ground, inside arena edges, without overlapping chests', () => {
   const nav = new SceneryNavigation();
   for (const player of [origin, { x: 30, y: 30 }, { x: 2200, y: 2000 }]) {
@@ -57,6 +73,18 @@ test('failed placement preserves the reward and can retry when ground is availab
   assert.ok(drops.spawnNear(origin)); assert.equal(drops.pending, 0);
 });
 
+test('open-woods chest placement skips water and keeps signed coordinates', () => {
+  const player = { x: -900, y: 4300 };
+  const nav = new SceneryNavigation(false, false, true, position => position.x <= player.x);
+  const values = [0, 0, .5, 0];
+  const drops = new ChestDrops({ blocked: (position, radius) => !nav.isDry(position, radius),
+    clear: (from, to, radius) => nav.clear(from, to, radius) }, () => values.shift());
+  drops.pending = 1;
+  const chest = drops.spawnNear(player);
+  assert.ok(chest.position.x < player.x && chest.position.y > 3200);
+  assert.equal(drops.collectNearby(chest.position, new GameManager()), chest);
+});
+
 test('one chest gives one real upgrade, freezes the run, and leaves level and XP unchanged', () => {
   const drops = new ChestDrops(ground, seeded(56)), game = new GameManager(), upgrades = new UpgradeSystem(seeded(12));
   game.addXp(8); drops.pending = 1;
@@ -74,7 +102,7 @@ test('one chest gives one real upgrade, freezes the run, and leaves level and XP
   game.resumeAfterUpgrade();
   assert.equal(game.playerStats.upgradeCounts[choices[0].id], 1);
   assert.equal(game.state, 'Playing'); assert.equal(game.level, 1); assert.equal(game.playerStats.level, 1);
-  assert.equal(game.xp, 8); assert.equal(game.xpToNextLevel, 18);
+  assert.equal(game.xp, 8); assert.equal(game.xpToNextLevel, xpThreshold(1));
   assert.equal(drops.chests.length, 0);
 });
 
@@ -96,7 +124,7 @@ test('paused, dead and leveling players cannot consume chests; walls prevent col
 test('queued XP rewards finish before a waiting chest, without losing either kind of upgrade', () => {
   const game = new GameManager(), drops = new ChestDrops(ground, seeded(19));
   drops.pending = 1; const chest = drops.spawnNear(origin);
-  game.addXp(60);
+  game.addXp(xpThreshold(1) + xpThreshold(2) + 10);
   assert.equal(game.level, 2);
   assert.equal(drops.collectNearby(chest.position, game), undefined);
   game.resumeAfterUpgrade();

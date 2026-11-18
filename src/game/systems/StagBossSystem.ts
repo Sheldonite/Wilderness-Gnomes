@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { STAG, STAG_LOOK } from '../config/stagBoss';
-import { scaledBossHealth } from '../core/BossGate';
+import { scaledBossHealth } from '../core/BossSchedule';
 import { StagEncounter, type StagHit } from '../core/StagEncounter';
 import type { GameManager } from '../core/GameManager';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
@@ -40,24 +40,15 @@ export class StagBossSystem {
     this.fill = this.hud.querySelector('i')!; this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
-  spawnEncore(player: Vector2Like, enemies: EnemyController[], healthMultiplier: number): void {
+  spawnEncounter(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    if (this.boss && !this.boss.isDead && !this.encounter.defeated) return;
     this.encounter = new StagEncounter();
-    this.encounter.spawned = true;
     this.celebrationMs = 0;
     this.shoutMs = 0;
     this.shout = '';
     this.roarMs = -1;
     this.rutShown = false;
-    this.spawnBoss(player, enemies, healthMultiplier);
-  }
-
-  private spawnBoss(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
-    let spawn = this.navigation.nearest({ x: player.x - STAG.spawnDistance, y: player.y }, STAG.radius);
-    for (let i = 0; i < 16; i++) {
-      const angle = Math.PI + i * Math.PI / 8;
-      const candidate = { x: player.x + Math.cos(angle) * STAG.spawnDistance, y: player.y + Math.sin(angle) * STAG.spawnDistance };
-      if (this.navigation.clear(player, candidate, STAG.radius)) { spawn = candidate; break; }
-    }
+    const spawn = { x: player.x - STAG.spawnDistance, y: player.y };
     const health = Math.round(scaledBossHealth(STAG.health, STAG.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier);
     this.boss = new StagBoss(this.scene, spawn, this.navigation, this.encounter, health); enemies.push(this.boss);
     this.lastPhase = undefined;
@@ -66,10 +57,7 @@ export class StagBossSystem {
     this.scene.events.emit('audio:play', 'boss-spawn');
   }
 
-  update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
-    if (this.game.bossGate.required(this.game.level) === 'stag' && this.encounter.shouldSpawn(this.game.level)) {
-      this.spawnBoss(player, enemies);
-    }
+  update(deltaMs: number, player: Vector2Like, playerRadius: number): void {
     this.graphics.clear();
     if (this.encounter.defeated) {
       this.celebrationMs = Math.max(0, this.celebrationMs - deltaMs);
@@ -77,7 +65,6 @@ export class StagBossSystem {
       return;
     }
     if (!this.boss || this.boss.isDead) return;
-    this.boss.blockedPlayerRadius = playerRadius; this.boss.blockedHit = this.hitPlayer;
     const fraction = this.boss.health / this.boss.maxHealth;
     this.encounter.update(deltaMs, this.boss.position, player, playerRadius, fraction, this.hitPlayer);
     if (this.encounter.pendingStampedes) {
@@ -106,12 +93,12 @@ export class StagBossSystem {
       : phase === 'arrival' ? 'Wonky, the lopsided old stag!'
       : feint ? 'A feint! The lane swung. Move!'
       : phase === 'windup' ? 'He lowers his crooked crown. Step out of the lane!'
-      : phase === 'charging' ? 'CHARGE!' : phase === 'stunned' ? 'Antlers stuck in a tree! Hit him hard!'
+      : phase === 'charging' ? 'CHARGE!' : this.encounter.vulnerable ? 'Wonky is winded! Strike now!'
       : phase === 'sweepWindup' ? 'Too close! He swings his antlers!'
       : phase === 'volleyWindup' ? 'He shakes his velvet. Shards incoming!'
       : phase === 'bellowWindup' ? 'He rears to bellow. Get clear of the ring!'
       : this.encounter.rut ? 'Frenzied: three charges at a time!'
-      : this.encounter.enraged ? 'Enraged! Double charges, and some are feints.' : 'Keep moving. Lure him into a tree!';
+      : this.encounter.enraged ? 'Enraged! Double charges, and some are feints.' : 'Dodge the charge, then strike while he recovers.';
     if (this.caption.textContent !== message) this.caption.textContent = message;
     this.fill.style.transform = `scaleX(${Math.max(0, fraction)})`;
     this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuenow', String(Math.max(0, Math.ceil(this.boss.health))));
@@ -128,7 +115,7 @@ export class StagBossSystem {
       ], true);
       this.graphics.lineStyle(3, edge, .8).lineBetween(from.x + nx * half, from.y + ny * half, end.x + nx * half, end.y + ny * half)
         .lineBetween(from.x - nx * half, from.y - ny * half, end.x - nx * half, end.y - ny * half);
-      this.graphics.lineStyle(2, fill, .9).strokeCircle(end.x, end.y, STAG.stompRadius * .35);
+      this.graphics.lineStyle(2, fill, .7).strokeCircle(end.x, end.y, STAG.stompRadius);
     }
     const aim = this.encounter.volleyAim;
     if (aim && phase === 'volleyWindup') {
@@ -162,7 +149,7 @@ export class StagBossSystem {
       this.graphics.fillStyle(STAG_LOOK.laneColor, .2).fillPoints(points, true);
       this.graphics.lineStyle(3, STAG_LOOK.laneEdge, .85).strokePoints(points, true);
     }
-    if (phase === 'stunned') {
+    if (this.encounter.vulnerable) {
       // Little stars circling his head.
       const head = { x: this.boss.position.x, y: this.boss.position.y - STAG_LOOK.height * .8 };
       for (let i = 0; i < 3; i++) {
@@ -179,8 +166,6 @@ export class StagBossSystem {
       this.lastPhase = phase;
       if (phase === 'windup' || phase === 'sweepWindup' || phase === 'volleyWindup' || phase === 'bellowWindup') {
         this.scene.events.emit('audio:play', 'boss-warn');
-      } else if (phase === 'stunned') {
-        this.scene.events.emit('audio:play', 'boss-impact');
       }
     }
     if (this.encounter.bellowed || this.encounter.swept || this.encounter.impacts.length > 0) {

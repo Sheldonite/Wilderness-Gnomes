@@ -2,14 +2,13 @@ import Phaser from 'phaser';
 import { OVEN, OVEN_LOOK } from '../config/ovenBoss';
 import { OVEN_TEXTURE } from '../config/ovenSprite';
 import { reducedMotion } from '../config/presentation';
-import { scaledBossHealth } from '../core/BossGate';
+import { scaledBossHealth } from '../core/BossSchedule';
 import { OvenEncounter, type OvenPhase } from '../core/OvenEncounter';
 import type { GameManager } from '../core/GameManager';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import type { Vector2Like } from '../core/types';
 import type { EnemyController } from '../entities/EnemyController';
 import { OvenBoss } from '../entities/OvenBoss';
-import { clampToArena } from '../utils/math';
 import type { SummonAdds } from './BossSummons';
 
 export class OvenBossSystem {
@@ -47,41 +46,24 @@ export class OvenBossSystem {
     this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
-  spawnEncore(player: Vector2Like, enemies: EnemyController[], healthMultiplier: number): void {
+  spawnEncounter(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    if (this.boss && !this.boss.isDead && !this.encounter.defeated) return;
     this.encounter = new OvenEncounter();
-    this.encounter.spawned = true;
     this.celebrationMs = 0;
     this.shoutMs = 0;
     this.shout = '';
     this.hotShown = false;
-    this.spawnBoss(player, enemies, healthMultiplier);
-  }
-
-  private spawnBoss(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
-    // Prefer a clear point on the player's bank, away from contact range.
-    let spawn = this.navigation.nearest({ x: player.x + OVEN.spawnDistance, y: player.y }, OVEN.radius);
-    for (let i = 0; i < 16; i++) {
-      const angle = i * Math.PI / 8;
-      const candidate = { x: player.x + Math.cos(angle) * OVEN.spawnDistance, y: player.y + Math.sin(angle) * OVEN.spawnDistance };
-      if (this.navigation.clear(player, candidate, OVEN.radius)) {
-        spawn = candidate;
-        break;
-      }
-    }
+    const spawn = { x: player.x + OVEN.spawnDistance, y: player.y };
     const health = Math.round(scaledBossHealth(OVEN.health, OVEN.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier);
     this.boss = new OvenBoss(this.scene, spawn, this.navigation, this.encounter, health);
     enemies.push(this.boss);
     this.lastPhase = undefined;
-    this.hotShown = false;
     this.hud.querySelector('[role="progressbar"]')!.setAttribute('aria-valuemax', String(health));
     this.hud.hidden = false;
     this.scene.events.emit('audio:play', 'boss-spawn');
   }
 
-  update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
-    if (this.game.bossGate.required(this.game.level) === 'oven' && this.encounter.shouldSpawn(this.game.level)) {
-      this.spawnBoss(player, enemies);
-    }
+  update(deltaMs: number, player: Vector2Like, playerRadius: number): void {
     this.graphics.clear();
     this.tacos.forEach(t => t.setVisible(false));
     if (this.encounter.defeated) {
@@ -98,8 +80,7 @@ export class OvenBossSystem {
       player,
       playerRadius,
       fraction,
-      damage => this.game.damagePlayer(damage),
-      (point, radius) => this.navigation.nearest(clampToArena(point, radius), radius)
+      damage => this.game.damagePlayer(damage)
     );
 
     if (this.encounter.pendingAdds) {
@@ -109,7 +90,7 @@ export class OvenBossSystem {
       if (does > 0) this.summon('doe', does, OVEN.addTint);
       if (greys > 0) this.summon('grey', greys, OVEN.addTint);
       this.encounter.pendingAdds = 0;
-      this.shout = 'Order up! The Lv. 10 kitchen crew rushes in!';
+      this.shout = 'Order up! The kitchen crew rushes in!';
       this.shoutMs = 2600;
     }
 

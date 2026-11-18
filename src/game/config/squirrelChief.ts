@@ -1,6 +1,5 @@
-/** Squirrel Chief: the level 5 woodland mini-boss. */
+/** Squirrel Chief: the first woodland boss. */
 export const SQUIRREL_CHIEF = {
-  level: 5,
   name: 'Squirrel Chief',
   health: 1100,
   healthPerMinute: 0,

@@ -8,6 +8,7 @@ const ts = require('typescript');
 const { SQUIRREL_CHIEF } = require('../artifacts/ability-tests/game/config/squirrelChief.js');
 const { SquirrelChiefEncounter } = require('../artifacts/ability-tests/game/core/SquirrelChiefEncounter.js');
 const { SceneryNavigation } = require('../artifacts/ability-tests/game/core/SceneryNavigation.js');
+const { BALANCE } = require('../artifacts/ability-tests/game/config/balance.js');
 
 function createHarness() {
   const phaser = {
@@ -147,7 +148,7 @@ test('Scout Squirrel and Hedgehog Roller variants behave as specified in EnemyCo
 
   const scout = new EnemyController(scene, 200, 200, 0, undefined, undefined, 'scout', 1);
   assert.equal(scout.variant, 'scout');
-  assert.equal(scout.health, 18);
+  assert.equal(scout.health, BALANCE.scout.health);
   assert.equal(scout.contactDamage, 10);
   assert.equal(scout.sprite.scaleX, 0.82);
   assert.ok(scout.sprite.tint, 'scout squirrel has distinct highlight tint');
@@ -179,9 +180,6 @@ test('Scout Squirrel and Hedgehog Roller variants behave as specified in EnemyCo
 
 test('SquirrelChiefEncounter rotates Acorn Barrage and Chief Charge with 900ms 1.3x catch-breath window', () => {
   const encounter = new SquirrelChiefEncounter();
-  assert.equal(encounter.shouldSpawn(4), false);
-  assert.equal(encounter.shouldSpawn(5), true);
-  assert.equal(encounter.shouldSpawn(6), false, 'spawns only once');
 
   const boss = { x: 400, y: 400 };
   const player = { x: 600, y: 400 };
@@ -238,7 +236,7 @@ test('SquirrelChiefBoss and SquirrelChiefSystem wire 1.3x vulnerability, acorns,
 
   const acornsFired = [];
   const game = { level: 5, getDifficultyMinutes: () => 0 };
-  const nav = new SceneryNavigation(false, false);
+  const nav = new SceneryNavigation(false, false, true);
   const sys = new SquirrelChiefSystem(
     scene,
     game,
@@ -248,41 +246,59 @@ test('SquirrelChiefBoss and SquirrelChiefSystem wire 1.3x vulnerability, acorns,
   );
 
   const enemies = [];
-  const player = { x: 1000, y: 1000 };
-  sys.update(16, player, 18, enemies);
+  const player = { x: -3500, y: 4050 };
+  sys.update(10000, player, 18);
+  assert.equal(enemies.length, 0, 'updates alone cannot spawn the chief');
+  sys.spawnEncounter(player, enemies);
+  const firstEncounter = sys.encounter;
+  sys.spawnEncounter(player, enemies);
+  assert.equal(sys.encounter, firstEncounter, 'a duplicate spawn preserves the active fight');
+  sys.update(16, player, 18);
   assert.equal(enemies.length, 1);
   const chief = sys.boss;
   assert.ok(chief.isBoss);
   assert.equal(chief.health, 1100);
   assert.equal(chief.sprite.scaleX, 1.7);
   assert.equal(chief.sprite.tint, 0xffb36b);
+  assert.equal(chief.position.x, player.x - SQUIRREL_CHIEF.spawnDistance);
+  assert.equal(chief.position.y, player.y);
   assert.ok(emitted.some(e => e[0] === 'audio:play' && e[1] === 'boss-spawn'));
 
   // Advance to barrage fire
-  sys.update(SQUIRREL_CHIEF.introductionMs, player, 18, enemies);
-  sys.update(SQUIRREL_CHIEF.stalkMs, player, 18, enemies);
+  sys.update(SQUIRREL_CHIEF.introductionMs, player, 18);
+  sys.update(SQUIRREL_CHIEF.stalkMs, player, 18);
   assert.ok(emitted.some(e => e[0] === 'audio:play' && e[1] === 'boss-warn'));
-  sys.update(SQUIRREL_CHIEF.barrageWindupMs, player, 18, enemies);
+  sys.update(SQUIRREL_CHIEF.barrageWindupMs, player, 18);
   assert.equal(acornsFired.length, 1);
   assert.equal(acornsFired[0].dirs.length, 5);
 
   // Advance through charge into catchBreath -> boss.vulnerability becomes 1.3
-  sys.update(SQUIRREL_CHIEF.stalkMs + SQUIRREL_CHIEF.barrageRestMs, player, 18, enemies);
-  sys.update(SQUIRREL_CHIEF.chargeWindupMs, player, 18, enemies);
+  sys.update(SQUIRREL_CHIEF.stalkMs + SQUIRREL_CHIEF.barrageRestMs, player, 18);
+  sys.update(SQUIRREL_CHIEF.chargeWindupMs, player, 18);
+  const { from, direction, length } = sys.encounter.lane;
   while (sys.encounter.phase === 'charging') {
-    sys.update(50, player, 18, enemies);
+    sys.update(50, player, 18);
     chief.update(50, player);
   }
+  assert.ok(Math.abs(chief.position.x - from.x - direction.x * length) < 0.0001);
+  assert.ok(Math.abs(chief.position.y - from.y - direction.y * length) < 0.0001);
   chief.update(16, player);
   assert.equal(chief.vulnerability, 1.3);
   assert.ok(emitted.some(e => e[0] === 'audio:play' && e[1] === 'boss-impact'));
 
+  chief.isDead = true;
   sys.defeated();
   assert.equal(sys.encounter.defeated, true);
+  enemies.length = 0;
+  sys.spawnEncounter(player, enemies, 1.5);
+  assert.equal(enemies.length, 1);
+  assert.notEqual(sys.encounter, firstEncounter);
+  assert.equal(sys.encounter.phase, 'arrival');
+  assert.equal(sys.boss.maxHealth, 1650);
   sys.destroy();
 });
 
-test('EnemySpawner.spawnOpeningPack spawns 6-8 brown squirrels on opposite flanks outside camera', () => {
+test('opening squirrels arrive in two flanks, with the reinforcements using active gameplay time', () => {
   const { load, scene } = createHarness();
   const { EnemySpawner } = load('src/game/systems/EnemySpawner.ts');
   const spawner = new EnemySpawner(scene, new SceneryNavigation(false, false));
@@ -290,46 +306,75 @@ test('EnemySpawner.spawnOpeningPack spawns 6-8 brown squirrels on opposite flank
   const player = { x: 1600, y: 1600 };
   const enemies = [];
 
-  const pack = spawner.spawnOpeningPack(player, camera, 0, enemies, 7);
-  assert.equal(pack.length, 7);
-  assert.equal(enemies.length, 7);
-  let leftFlank = 0;
-  let rightFlank = 0;
-  for (const e of pack) {
-    assert.equal(e.variant, 'brown');
-    if (e.position.x <= camera.worldView.left) leftFlank++;
-    if (e.position.x >= camera.worldView.right) rightFlank++;
+  spawner.spawnEnemy = () => undefined; // Isolate the opening from concurrent ambient spawns.
+  const lead = spawner.spawnOpeningPack(player, camera, 0, enemies);
+  assert.equal(lead.length, 3);
+  assert.equal(enemies.length, 3);
+  for (const squirrel of lead) {
+    assert.equal(squirrel.variant, 'brown');
+    assert.ok(squirrel.position.x < player.x);
+    const distance = Math.hypot(squirrel.position.x - player.x, squirrel.position.y - player.y);
+    assert.ok(distance >= 220 && distance <= 260);
   }
-  assert.ok(leftFlank >= 3 && rightFlank >= 3, 'pack spawns across both opposite flanks');
 
-  // Frame-0 unpopulated camera.worldView ({ left: 0, right: 0, top: 0, bottom: 0 }) still flanks player
-  const unreadyCamera = { width: 1280, height: 720, worldView: { left: 0, right: 0, top: 0, bottom: 0 } };
-  const frame0Enemies = [];
-  const frame0Pack = spawner.spawnOpeningPack(player, unreadyCamera, 0, frame0Enemies, 7);
-  assert.equal(frame0Pack.length, 7);
-  let frame0Left = 0;
-  let frame0Right = 0;
-  for (const e of frame0Pack) {
-    if (e.position.x <= player.x - 640) frame0Left++;
-    if (e.position.x >= player.x + 640) frame0Right++;
-    assert.ok(Math.abs(e.position.x - player.x) < 900, `expected spawn near camera edge around player, got x=${e.position.x}`);
+  // There is no wall-clock timer. Paused/review updates do not reach EnemySpawner.update.
+  spawner.update(BALANCE.spawner.openingReinforcementDelayMs - 1, player, camera, enemies, 0, 1);
+  assert.equal(enemies.length, 3);
+  const movedPlayer = { x: player.x + 100, y: player.y + 100 };
+  spawner.update(1, movedPlayer, camera, enemies, 0, 1);
+  assert.equal(enemies.length, 7);
+  for (const squirrel of enemies.slice(3)) {
+    assert.equal(squirrel.variant, 'brown');
+    assert.ok(squirrel.position.x > movedPlayer.x);
+    assert.ok(Math.abs(Math.hypot(squirrel.position.x - movedPlayer.x, squirrel.position.y - movedPlayer.y) -
+      BALANCE.spawner.openingReinforcementDistance) < 0.001);
   }
-  assert.ok(frame0Left >= 3 && frame0Right >= 3, 'frame-0 unpopulated worldView still flanks both sides of player');
+  spawner.update(BALANCE.spawner.openingReinforcementDelayMs, movedPlayer, camera, enemies, 0, 1);
+  assert.equal(enemies.length, 7, 'reinforcements arrive once');
 });
 
-test('XPOrb drifts slowly outside magnet range, Mystery scales with mysteryRank, and pre-Lv10 stampedes use fawns', () => {
+test('the opening uses available ground at an arena corner in a portrait viewport', () => {
+  const { load, scene } = createHarness();
+  const { EnemySpawner } = load('src/game/systems/EnemySpawner.ts');
+  const navigation = new SceneryNavigation(false, false);
+  const spawner = new EnemySpawner(scene, navigation);
+  const camera = { width: 390, height: 750, worldView: { left: 0, right: 0, top: 0, bottom: 0 } };
+  const player = { x: 40, y: 40 };
+  const enemies = [];
+  spawner.spawnEnemy = () => undefined;
+
+  assert.equal(spawner.spawnOpeningPack(player, camera, 0, enemies).length, 3);
+  spawner.update(BALANCE.spawner.openingReinforcementDelayMs, player, camera, enemies, 0, 1);
+  assert.equal(enemies.length, 7);
+  for (const squirrel of enemies) assert.equal(navigation.blocked(squirrel.position, squirrel.radius), false);
+});
+
+test('XP crystals stay put outside pickup range and still respond to nearby or explicit attraction', () => {
   const { load, scene } = createHarness();
   const { XPOrb } = load('src/game/entities/XPOrb.ts');
+  const orb = new XPOrb(scene, 100, 100, 8);
+  orb.update(1000, { x: 600, y: 100 }, 1);
+  orb.update(10_000, { x: 600, y: 100 }, 1);
+  assert.equal(orb.position.x, 100);
+
+  orb.update(1000, { x: 150, y: 100 }, 1);
+  assert.equal(orb.position.x, 150);
+  orb.update(1000, { x: 600, y: 100 }, 1);
+  assert.equal(orb.position.x, 150);
+
+  orb.attract();
+  orb.update(100, { x: 600, y: 100 }, 1);
+  assert.ok(orb.position.x > 150 && orb.position.x < 600);
+  assert.equal(orb.position.y, 100);
+});
+
+test('Mystery scales with mysteryRank and pre-Lv10 stampedes use fawns', () => {
+  const { load, scene } = createHarness();
   const { MysteryCompanion } = load('src/game/entities/MysteryCompanion.ts');
   const { EnemyController } = load('src/game/entities/EnemyController.ts');
   const { RunEventSystem } = load('src/game/systems/RunEventSystem.ts');
 
-  // 1. XPOrb slow drift outside magnet range
-  const orb = new XPOrb(scene, 100, 100, 8);
-  orb.update(1000, { x: 600, y: 100 }, 1);
-  assert.ok(orb.position.x > 130 && orb.position.x < 160, `expected ~42px drift, got ${orb.position.x - 100}`);
-
-  // 2. MysteryCompanion rank-scaled damage
+  // MysteryCompanion rank-scaled damage
   const target = new EnemyController(scene, 120, 100, 0);
   let dealtRank1 = 0;
   let dealtRank4 = 0;
@@ -352,7 +397,7 @@ test('XPOrb drifts slowly outside magnet range, Mystery scales with mysteryRank,
   m4.update(100, { x: 100, y: 100 }, { x: 1, y: 0 }, [target], (_t, amt) => { dealtRank4 = amt; });
   assert.ok(dealtRank4 > dealtRank1 * 1.4, `expected rank 4 damage (${dealtRank4}) > rank 1 (${dealtRank1})`);
 
-  // 3. Pre-Lv10 stampedes spawn fawns
+  // Pre-Lv10 stampedes spawn fawns
   const events = new RunEventSystem(scene, new SceneryNavigation(false, false));
   const stampedeEnemies = [];
   events.launchStampede({ x: 1600, y: 1600 }, 1, 5, 4);

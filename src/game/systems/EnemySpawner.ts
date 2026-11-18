@@ -5,6 +5,9 @@ import { GAME_CONFIG } from '../config/gameConfig';
 import type { Vector2Like } from '../core/types';
 import { EnemyController, type EnemyVariant } from '../entities/EnemyController';
 import { rollSpawnVariant } from '../core/SquirrelBehavior';
+import { distanceSq } from '../utils/math';
+
+const openingFlankOffsets = [0, 1, -1, 2, -2, 3, -3, 4].map(step => step * Math.PI / 4);
 
 /** Creatures per spawn tick: one at first, then a growing group once the late game begins. */
 export function spawnBatch(difficultyMinutes: number): number {
@@ -33,6 +36,7 @@ function cameraViewBounds(
 
 export class EnemySpawner {
   private spawnTimerMs = 0;
+  private openingReinforcements?: { count: number; angle: number; delayMs: number };
 
   constructor(private readonly scene: Phaser.Scene, private readonly navigation?: SceneryNavigation) {}
 
@@ -58,6 +62,17 @@ export class EnemySpawner {
       )
     );
 
+    const reinforcements = this.openingReinforcements;
+    if (reinforcements) {
+      reinforcements.delayMs -= deltaMs;
+      if (reinforcements.delayMs <= 0 && enemies.length + reinforcements.count <= maxEnemies) {
+        const spawned = this.spawnOpeningFlank(playerPosition, difficultyMinutes, enemies, reinforcements.count,
+          BALANCE.spawner.openingReinforcementDistance, reinforcements.angle, playerLevel);
+        if (spawned.length) this.openingReinforcements = undefined;
+        else reinforcements.delayMs = spawnIntervalMs;
+      }
+    }
+
     if (this.spawnTimerMs < spawnIntervalMs || enemies.length >= maxEnemies) {
       return;
     }
@@ -65,75 +80,81 @@ export class EnemySpawner {
     this.spawnTimerMs = 0;
     const batch = Math.min(spawnBatch(difficultyMinutes), maxEnemies - enemies.length);
     for (let i = 0; i < batch; i++) {
-      const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel), playerLevel);
+      const enemy = this.spawnEnemy(playerPosition, camera, difficultyMinutes, rollSpawnVariant(playerLevel), playerLevel, enemies);
       if (enemy) enemies.push(enemy);
     }
   }
 
-  /**
-   * Spawns an opening ambush pack of 6–8 brown squirrels off-screen from two opposite flanks
-   * closing in immediately when a run begins.
-   */
+  /** Start with a close lead flank. The active gameplay update releases the other flank. */
   spawnOpeningPack(
     playerPosition: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera,
     difficultyMinutes: number,
     enemies: EnemyController[],
-    count = 7
+    count: number = BALANCE.spawner.openingPackCount
   ): EnemyController[] {
-    const view = cameraViewBounds(playerPosition, camera);
-    const padding = BALANCE.spawner.spawnOutsideViewPadding;
-    const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius, BALANCE.armadillo.radius);
+    const view = this.navigation?.unbounded ? undefined : cameraViewBounds(playerPosition, camera);
     const targetCount = Math.max(1, count);
-    const spawned: EnemyController[] = [];
-    const spanY = Math.max(120, (view.bottom - view.top) * 0.65);
-
-    for (let i = 0; i < targetCount; i++) {
-      const flank = i % 2 === 0 ? -1 : 1; // -1 = left flank, +1 = right flank
-      const slot = Math.floor(i / 2);
-      const slotsOnFlank = Math.max(1, Math.ceil(targetCount / 2));
-      const offsetRatio = slotsOnFlank === 1 ? 0 : slot / (slotsOnFlank - 1) - 0.5;
-      const candidateX = flank < 0 ? view.left - padding - (slot % 2) * 24 : view.right + padding + (slot % 2) * 24;
-      const candidateY = playerPosition.y + offsetRatio * spanY;
-
-      const x = Phaser.Math.Clamp(candidateX, margin, GAME_CONFIG.arena.width - margin);
-      const y = Phaser.Math.Clamp(candidateY, margin, GAME_CONFIG.arena.height - margin);
-      const spot = this.navigation?.nearest({ x, y }, margin) ?? { x, y };
-      const outside =
-        spot.x <= view.left - padding ||
-        spot.x >= view.right + padding ||
-        spot.y <= view.top - padding ||
-        spot.y >= view.bottom + padding;
-
-      if (outside && !this.navigation?.blocked(spot, margin)) {
-        const squirrel = new EnemyController(this.scene, spot.x, spot.y, difficultyMinutes, this.navigation, undefined, 'brown', 1);
-        enemies.push(squirrel);
-        spawned.push(squirrel);
-        continue;
-      }
-
-      const fallback = this.spawnEnemy(playerPosition, camera, difficultyMinutes, 'brown', 1);
-      if (fallback) {
-        enemies.push(fallback);
-        spawned.push(fallback);
-      }
-    }
-
-    return spawned;
+    const leadCount = Math.min(targetCount, BALANCE.spawner.openingLeadCount);
+    const angle = view && view.right - view.left < view.bottom - view.top ? -Math.PI / 2 : Math.PI;
+    const lead = this.spawnOpeningFlank(playerPosition, difficultyMinutes, enemies, leadCount,
+      BALANCE.spawner.openingLeadDistance, angle, 1);
+    const remaining = targetCount - lead.length;
+    const leadCenter = lead[Math.floor(lead.length / 2)]?.position;
+    const leadAngle = leadCenter ? Math.atan2(leadCenter.y - playerPosition.y, leadCenter.x - playerPosition.x) : angle;
+    this.openingReinforcements = remaining > 0
+      ? { count: remaining, angle: leadAngle + Math.PI, delayMs: BALANCE.spawner.openingReinforcementDelayMs }
+      : undefined;
+    return lead;
   }
 
-  /** One creature of the given kind just outside the camera, for set pieces such as elites. */
+  private spawnOpeningFlank(player: Vector2Like, minutes: number, enemies: EnemyController[], count: number,
+    distance: number, angle: number, level: number): EnemyController[] {
+    const { radius } = BALANCE.enemy;
+    const { width, height } = GAME_CONFIG.arena;
+    for (const offset of openingFlankOffsets) {
+      const positions = Array.from({ length: count }, (_, index) => {
+        const direction = angle + offset + (index - (count - 1) / 2) * 0.19;
+        return { x: player.x + Math.cos(direction) * distance, y: player.y + Math.sin(direction) * distance };
+      });
+      // Try a nearby angle if the entire flank cannot fit without putting a squirrel on an obstacle or another enemy.
+      const clear = positions.every(point => (this.navigation?.unbounded || (point.x >= radius && point.x <= width - radius &&
+        point.y >= radius && point.y <= height - radius)) && !this.navigation?.blocked(point, radius) &&
+        !enemies.some(enemy => !enemy.isDead && distanceSq(enemy.position, point) < (enemy.radius + radius) ** 2));
+      if (!clear) continue;
+      const spawned = positions.map(point => new EnemyController(this.scene, point.x, point.y, minutes,
+        this.navigation, undefined, 'brown', level));
+      enemies.push(...spawned);
+      return spawned;
+    }
+    return [];
+  }
+
+  /** One creature of the given kind, using a world-space distance in the wilds. */
   spawnEnemy(
     playerPosition: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera,
     difficultyMinutes: number,
     variant: EnemyVariant,
-    playerLevel = 1
+    playerLevel = 1,
+    enemies: readonly EnemyController[] = []
   ): EnemyController | undefined {
+    const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius, BALANCE.armadillo.radius);
+    if (this.navigation?.unbounded) {
+      const { spawnMinDistance, spawnMaxDistance } = BALANCE.spawner;
+      const angle = Math.random() * Math.PI * 2;
+      const range = spawnMinDistance + Math.random() * (spawnMaxDistance - spawnMinDistance);
+      for (const offset of openingFlankOffsets) {
+        const direction = angle + offset;
+        const spot = { x: playerPosition.x + Math.cos(direction) * range, y: playerPosition.y + Math.sin(direction) * range };
+        if (enemies.some(enemy => !enemy.isDead && distanceSq(enemy.position, spot) < (enemy.radius + margin) ** 2)) continue;
+        return new EnemyController(this.scene, spot.x, spot.y, difficultyMinutes, this.navigation, undefined, variant, playerLevel);
+      }
+      return undefined;
+    }
     const view = cameraViewBounds(playerPosition, camera);
     const padding = BALANCE.spawner.spawnOutsideViewPadding;
     const firstSide = Phaser.Math.Between(0, 3);
-    const margin = Math.max(BALANCE.enemy.radius, BALANCE.deer.buck.radius, BALANCE.armadillo.radius);
     // Try every side before retrying samples. Arena edges and navigation corrections
     // can move an otherwise off-screen candidate back into the camera.
     for (let attempt = 0; attempt < 16; attempt++) {

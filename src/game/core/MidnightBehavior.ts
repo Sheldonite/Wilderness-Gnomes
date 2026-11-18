@@ -26,14 +26,14 @@ export class MidnightBehavior {
   private aim: Vector2Like = { x: 0, y: 1 };
 
   constructor(playerPosition: Vector2Like, private readonly navigation?: SceneryNavigation, private readonly stats?: PlayerStats) {
-    this.position = navigation?.nearest(this.followPoint(playerPosition), 12) ?? this.followPoint(playerPosition);
+    this.position = this.followPoint(playerPosition);
   }
 
   update(deltaMs: number, player: Vector2Like, enemies: CombatTarget[], damage: DealDamage): void {
     const b = BALANCE.companion, power = this.swatPower;
     this.moving = false;
     this.cooldownMs = Math.max(0, this.cooldownMs - deltaMs);
-    const follow = this.navigation?.nearest(this.followPoint(player), 12) ?? this.followPoint(player);
+    const follow = this.followPoint(player);
     if (this.state === 'swatting') {
       // Following continues independently of the swing; its aim stays locked.
       this.move(follow, deltaMs);
@@ -85,7 +85,9 @@ export class MidnightBehavior {
   }
 
   private followPoint(player: Vector2Like): Vector2Like {
-    return clampToArena({ x: player.x + BALANCE.companion.midnightFollowDistance, y: player.y + BALANCE.companion.midnightFollowDistance * .55 }, 12);
+    const reach = BALANCE.companion.midnightFollowDistance;
+    const point = { x: player.x + reach, y: player.y + reach * .55 };
+    return this.navigation?.nearest(point, 12) ?? clampToArena(point, 12);
   }
 
   private move(target: Vector2Like, deltaMs: number, stop = 5): void {

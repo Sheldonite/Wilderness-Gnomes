@@ -16,7 +16,6 @@ const player = { x: 1850, y: 1600 };
 
 function ready(health = 1) {
   const fight = new OvenEncounter();
-  fight.shouldSpawn(10);
   fight.update(OVEN.introductionMs, boss, player, 18, health, () => {});
   fight.update(OVEN.arrivalWalkMs, boss, player, 18, health, () => {});
   return fight;
@@ -165,28 +164,47 @@ function loadOvenSystemsWithMock() {
   return { scene, emittedEvents, hudElements, load };
 }
 
-test('level ten unlocks exactly one boss, including skipped levels and new runs', () => {
-  const fight = new OvenEncounter();
-  for (let i = 1; i < 10; i++) assert.equal(fight.shouldSpawn(i), false);
-  assert.equal(fight.shouldSpawn(10), true);
-  assert.equal(fight.shouldSpawn(11), false);
-  fight.defeat();
-  assert.equal(fight.shouldSpawn(12), false);
-  assert.equal(new OvenEncounter().shouldSpawn(12), true);
-});
-
-test('the real level-ten upgrade pause precedes the boss encounter', () => {
+test('the Oven system only spawns on request and starts a fresh encounter after defeat', () => {
+  const { scene, emittedEvents, load } = loadOvenSystemsWithMock();
+  const { OvenBossSystem } = load('src/game/systems/OvenBossSystem.ts');
   const game = new GameManager();
-  game.level = 9;
-  game.addXp(game.xpToNextLevel);
-  assert.equal(game.level, 10);
-  assert.equal(game.state, 'LevelUpPaused');
-  game.resumeAfterUpgrade();
-  assert.equal(game.state, 'Playing');
-  assert.equal(new OvenEncounter().shouldSpawn(game.level), true);
+  const navigation = new SceneryNavigation(false, false, true);
+  const system = new OvenBossSystem(scene, game, navigation);
+  const enemies = [];
+
+  system.update(OVEN.introductionMs, player, 18);
+  assert.equal(system.boss, undefined);
+  assert.equal(enemies.length, 0);
+
+  system.spawnEncounter(player, enemies);
+  const firstBoss = system.boss;
+  const firstFight = system.encounter;
+  assert.deepEqual(enemies, [firstBoss]);
+  assert.equal(firstFight.phase, 'arrival');
+  system.update(OVEN.introductionMs, player, 18);
+  assert.equal(firstFight.phase, 'walking');
+  system.spawnEncounter(player, enemies, 1.5);
+  assert.deepEqual(enemies, [firstBoss]);
+  assert.equal(system.encounter, firstFight);
+  assert.equal(firstFight.phase, 'walking');
+
+  firstBoss.destroy();
+  enemies.length = 0;
+  system.defeated();
+  system.update(3500, player, 18);
+  assert.equal(enemies.length, 0);
+
+  system.spawnEncounter(player, enemies, 1.5);
+  assert.deepEqual(enemies, [system.boss]);
+  assert.notEqual(system.boss, firstBoss);
+  assert.notEqual(system.encounter, firstFight);
+  assert.equal(system.encounter.phase, 'arrival');
+  assert.equal(system.encounter.defeated, false);
+  assert.equal(system.boss.maxHealth, Math.round(OVEN.health * 1.5));
+  assert.equal(emittedEvents.filter(event => event.event === 'audio:play' && event.args[0] === 'boss-spawn').length, 2);
 });
 
-test('OVEN constants reflect fast Lv. 10 tactical tuning and reduced HP sponge', () => {
+test('OVEN constants preserve fast tactical tuning and recovery windows', () => {
   assert.equal(OVEN.name, 'Oven');
   assert.equal(OVEN.health, 3800);
   assert.equal(OVEN.healthPerMinute, 80);
@@ -231,8 +249,7 @@ test('stationary taco toss aims directly at player, locks warnings, and hits onc
 
 test('predictive leading taco toss leads straight-line kiting and ignores huge teleports', () => {
   const fight = new OvenEncounter();
-  fight.shouldSpawn(10);
-  const kiter = { x: 1850, y: 1500 };
+  const kiter = { x: 1850, y: 1460 };
   const speedY = 220; // px/s
 
   // Advance through introduction + arrival while steadily kiting south at 220 px/s.
@@ -258,12 +275,11 @@ test('predictive leading taco toss leads straight-line kiting and ignores huge t
 
   // Huge single-frame teleport should reset tracked velocity safely instead of leading miles away.
   const tpFight = new OvenEncounter();
-  tpFight.shouldSpawn(10);
-  tpFight.update(OVEN.introductionMs, boss, { x: 1850, y: 1600 }, 18, 1, () => {});
-  tpFight.update(OVEN.arrivalWalkMs, boss, { x: 2850, y: 1600 }, 18, 1, () => {});
+  tpFight.update(OVEN.introductionMs, boss, { x: 1150, y: 1600 }, 18, 1, () => {});
+  tpFight.update(OVEN.arrivalWalkMs, boss, { x: 2050, y: 1600 }, 18, 1, () => {});
   assert.equal(tpFight.phase, 'windup');
   assert.equal(tpFight.playerVelocity.x, 0);
-  assert.deepEqual(tpFight.warnings[1], { x: 2850, y: 1600 });
+  assert.deepEqual(tpFight.warnings[1], { x: 2050, y: 1600 });
 });
 
 test('center-trap double ring blasts stationary center in Wave 0 and outer ring in Wave 1 in both normal and hot phases', () => {
@@ -447,14 +463,15 @@ test('Phase 2 (<= 50% HP) cuts cooldowns, throws 5-taco volleys, and chains Toas
   fight.update(1, boss, player, 18, 0.45, () => {});
   assert.equal(fight.phase, 'slamming');
 
-  fight.update(OVEN.slamFlightMs, boss, { x: 1000, y: 1000 }, 18, 0.45, () => {});
+  const sidestep = { x: 1500, y: 1800 };
+  fight.update(OVEN.slamFlightMs, boss, sidestep, 18, 0.45, () => {});
   assert.equal(fight.phase, 'walking', 'Phase 2 slam skips overheated and enters 350ms stutter transition');
   assert.equal(fight.vulnerable, false);
   assert.equal(fight.chainingCone, true);
 
-  fight.update(OVEN.hotChainDelayMs - 1, boss, { x: 1000, y: 1000 }, 18, 0.45, () => {});
+  fight.update(OVEN.hotChainDelayMs - 1, boss, sidestep, 18, 0.45, () => {});
   assert.equal(fight.phase, 'walking');
-  fight.update(1, boss, { x: 1000, y: 1000 }, 18, 0.45, () => {});
+  fight.update(1, boss, sidestep, 18, 0.45, () => {});
   assert.equal(fight.phase, 'windup');
   assert.equal(fight.attack, 'cone', 'chained directly into Flame Sweep');
   assert.equal(fight.chainingCone, false);
@@ -521,33 +538,38 @@ test('defeat cancels every warning, taco, slam, shockwave, cone, and salsa and s
   fight.update(10000, boss, player, 18, 0, () => assert.fail('post-defeat damage'));
 });
 
-test('OvenBoss and OvenBossSystem wire 1.6x overheat vulnerability, mid-air contact immunity, Lv. 10 adds, and boss audio events', () => {
+test('OvenBoss and OvenBossSystem wire 1.6x overheat vulnerability, mid-air contact immunity, kitchen crew, and boss audio events', () => {
   const { scene, emittedEvents, hudElements, load } = loadOvenSystemsWithMock();
   const { OvenBossSystem } = load('src/game/systems/OvenBossSystem.ts');
 
   const game = new GameManager();
-  game.level = 10;
-  const nav = new SceneryNavigation(false);
+  const nav = new SceneryNavigation(false, false, true);
   const summoned = [];
   const enemies = [];
   const system = new OvenBossSystem(scene, game, nav, (variant, count, tint) => summoned.push({ variant, count, tint }));
+  const wanderer = { x: -8000, y: 6000 };
 
-  system.update(16, player, 18, enemies);
+  system.spawnEncounter(wanderer, enemies);
   assert.ok(system.boss);
+  assert.deepEqual({ ...system.boss.position }, { x: wanderer.x + OVEN.spawnDistance, y: wanderer.y });
   assert.equal(system.boss.maxHealth, OVEN.health);
   assert.ok(emittedEvents.some(e => e.event === 'audio:play' && e.args[0] === 'boss-spawn'));
 
   // Advance until slam -> shockwave -> overheated (normal HP > 50% -> slam enters overheated directly).
   emittedEvents.length = 0;
   for (let i = 0; i < 200 && system.encounter.phase !== 'overheated'; i++) {
-    system.update(50, player, 18, enemies);
-    system.boss.update(50, player);
+    system.update(50, wanderer, 18);
+    system.boss.update(50, wanderer);
     if (system.encounter.phase === 'slamming' && system.encounter.slamArc > 0.25) {
       assert.equal(system.boss.contactDamage, 0, 'mid-air leaping Oven has zero body-contact damage');
       assert.ok(system.boss.sprite.originY > 1, 'leaping Oven elevates sprite via originY while shadow stays grounded');
     }
   }
   assert.equal(system.encounter.phase, 'overheated');
+  assert.deepEqual({ ...system.boss.position }, wanderer, 'the final step reaches the landing point');
+  for (const ember of system.encounter.salsa) {
+    assert.ok(ember.x < 0 && ember.y > 3200, 'the ember lands in the same area as the fight');
+  }
   assert.equal(system.boss.vulnerability, OVEN.overheatVulnerability);
   assert.equal(system.boss.contactDamage, OVEN.contactDamage);
   assert.equal(system.boss.sprite.originY, 1);
@@ -564,11 +586,27 @@ test('OvenBoss and OvenBossSystem wire 1.6x overheat vulnerability, mid-air cont
   assert.ok(dmgEvt);
   assert.equal(dmgEvt.args[0].vulnerability, OVEN.overheatVulnerability);
 
-  // Threshold cross summons Lv. 10 doe + grey kitchen crew tinted OVEN.addTint.
+  // Threshold cross summons doe + grey kitchen crew tinted OVEN.addTint.
   system.boss.health = system.boss.maxHealth * 0.65;
-  system.update(16, player, 18, enemies);
+  system.update(16, wanderer, 18);
   assert.deepEqual(summoned, [
     { variant: 'doe', count: 4, tint: OVEN.addTint },
     { variant: 'grey', count: 3, tint: OVEN.addTint }
   ]);
+});
+
+test('the Oven closes a large gap before locking taco warnings in the open woods', () => {
+  const fight = new OvenEncounter();
+  const distantBoss = { x: -8600, y: 6100 };
+  const wanderer = { x: -8000, y: 6100 };
+  fight.update(OVEN.introductionMs, distantBoss, wanderer, 18, 1, () => {});
+  fight.update(OVEN.arrivalWalkMs, distantBoss, wanderer, 18, 1, () => {});
+  assert.equal(fight.phase, 'walking');
+  assert.equal(fight.warnings.length, 0);
+
+  const nearBoss = { x: -8300, y: 6100 };
+  fight.update(1, nearBoss, wanderer, 18, 1, () => {});
+  assert.equal(fight.phase, 'windup');
+  assert.deepEqual(fight.warnings[1], wanderer);
+  assert.ok(fight.warnings.every(warning => warning.x < 0 && warning.y > 3200));
 });

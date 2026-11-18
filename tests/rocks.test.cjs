@@ -61,3 +61,22 @@ test('rocks require proximity, collect once, stay on the ground, and cap active 
   assert.equal(drops.collectNearby(rock.position), undefined);
   assert.equal(new RareRockDrops(clearGround).rocks.length, 0);
 });
+
+test('left-behind rocks stay collectible and do not cap new rolls in a distant part of the wilds', () => {
+  let sequence = 0, forceRoll = false;
+  const drops = new RareRockDrops({ ...clearGround, unbounded: true }, () => {
+    if (forceRoll) { forceRoll = false; return 0; }
+    return (sequence++ * .37) % 1;
+  });
+  for (let i = 0; i < 10; i++) drops.spawnNear(player);
+  assert.equal(drops.rocks.length, RARE_ROCKS.maxActive);
+  const old = drops.rocks[0];
+  assert.equal(drops.spawnNear(player), undefined);
+
+  const distantPlayer = { x: -2600, y: 5600 };
+  forceRoll = true;
+  const fresh = drops.update(RARE_ROCKS.rollMs, distantPlayer, true);
+  assert.ok(fresh.position.x < 0 && fresh.position.y > 3200);
+  assert.equal(drops.rocks.length, RARE_ROCKS.maxActive + 1);
+  assert.equal(drops.collectNearby(old.position), old);
+});

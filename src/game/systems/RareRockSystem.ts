@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { LOOK, reducedMotion } from '../config/presentation';
 import { RareRockDrops, type RareRock } from '../core/RareRockDrops';
-import { SceneryNavigation } from '../core/SceneryNavigation';
+import type { SceneryNavigation } from '../core/SceneryNavigation';
 import { createRunId, type MarketProgress } from '../core/MarketProgress';
 import type { Vector2Like } from '../core/types';
 import { icon } from '../ui/icons';
@@ -15,9 +15,8 @@ export class RareRockSystem {
   private noticeUntil = 0;
   constructor(private readonly scene: Phaser.Scene, navigation: SceneryNavigation,
     private readonly wallet: MarketProgress, private readonly preview = false) {
-    const ground = new SceneryNavigation();
-    this.drops = new RareRockDrops({ blocked: (p, r) => ground.blocked(p, r) || navigation.blocked(p, r),
-      clear: (a, b, r) => navigation.clear(a, b, r) });
+    this.drops = new RareRockDrops({ blocked: (p, r) => !navigation.isDry(p, r) || navigation.blocked(p, r),
+      clear: (a, b, r) => navigation.clear(a, b, r), unbounded: navigation.unbounded });
     this.hud = document.createElement('div');
     this.hud.className = 'rare-rock-toast';
     this.hud.innerHTML = `${icon('rock')}<span><strong></strong><small></small></span>`;

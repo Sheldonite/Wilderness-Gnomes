@@ -301,7 +301,7 @@ test('AudioSystem gracefully no-ops when AudioContext is missing, throws, or is 
   suspended.destroy();
 });
 
-test('AudioSystem synthesizes all 19 SFX cleanly with and without optional Web Audio nodes', () => {
+test('AudioSystem synthesizes every SFX cleanly with and without optional Web Audio nodes', () => {
   const ctx = createFakeAudioContext();
   const audio = new AudioSystem({
     preferences: new SoundPreferences(null),
@@ -427,6 +427,54 @@ test('AudioSystem mute, volume changes, and ambient music modes start/stop clean
   audio.destroy();
   assert.equal(ctx.closed, true);
   assert.equal(audio.play('ui-click'), false);
+});
+
+test('Boss music fades in with percussion and harmony, then fades out without restarting each frame', (t) => {
+  const ctx = createFakeAudioContext({ currentTime: 3 });
+  const audio = new AudioSystem({ preferences: new SoundPreferences(null), createContext: () => ctx });
+  t.after(() => audio.destroy());
+
+  audio.setMusicMode('woods');
+  const woodsVoices = [...ctx.oscillators];
+  const woodsTrack = ctx.connections.find(([, dest]) => dest === ctx.gains[2])[0];
+
+  audio.setMusicMode('boss');
+  const bossTrack = ctx.connections.filter(([, dest]) => dest === ctx.gains[2])[1][0];
+  const battleVoices = ctx.oscillators.slice(woodsVoices.length);
+  assert.equal(battleVoices.filter(voice => voice.type === 'sawtooth').length, 3);
+  assert.ok(battleVoices.some(voice => voice.frequency.calls.some(call => call.op === 'exp' && call.value === 44)));
+  const [drumTransient] = ctx.bufferSources;
+  assert.ok(drumTransient);
+  assert.deepEqual(woodsTrack.gain.calls.at(-1), { op: 'linear', value: 0, endTime: 3.24 });
+  assert.deepEqual(bossTrack.gain.calls.at(-1), { op: 'linear', value: 1, endTime: 3.24 });
+  assert.ok(woodsVoices.every(voice => voice.stoppedCount === 1));
+
+  audio.setMusicMode('boss');
+  assert.equal(ctx.oscillators.length, woodsVoices.length + battleVoices.length);
+  woodsVoices.forEach(voice => voice.onended());
+  assert.equal(woodsTrack.disconnected, true);
+
+  ctx.currentTime = 4;
+  audio.setMusicMode('woods');
+  assert.deepEqual(bossTrack.gain.calls.at(-1), { op: 'linear', value: 0, endTime: 4.24 });
+  audio.setMuted(true);
+  assert.equal(bossTrack.disconnected, true);
+  assert.equal(drumTransient.disconnected, true);
+  assert.ok(battleVoices.every(voice => voice.disconnected && voice.stoppedCount === 2));
+});
+
+test('Switching modes while the audio context is suspended clears both sides of a crossfade', (t) => {
+  const ctx = createFakeAudioContext();
+  const audio = new AudioSystem({ preferences: new SoundPreferences(null), createContext: () => ctx });
+  t.after(() => audio.destroy());
+
+  audio.setMusicMode('woods');
+  audio.setMusicMode('boss');
+  const tracks = ctx.connections.filter(([, dest]) => dest === ctx.gains[2]).map(([track]) => track);
+  assert.equal(tracks.length, 2);
+  ctx.state = 'suspended';
+  audio.setMusicMode('woods');
+  assert.ok(tracks.every(track => track.disconnected));
 });
 
 test('attachScene wires presentation and audio:play events, unlocks on gesture, and cleans up on shutdown', async () => {

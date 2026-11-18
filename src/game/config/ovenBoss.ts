@@ -1,5 +1,4 @@
 export const OVEN = {
-  level: 10,
   name: 'Oven',
   health: 3800,
   healthPerMinute: 80,

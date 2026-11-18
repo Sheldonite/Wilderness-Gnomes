@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ashvault</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#090809;color:#e4d2ae;font:16px Georgia,serif;overflow:hidden}canvas{display:block;width:100vw;height:100dvh;touch-action:none}h1,h2,p{margin:0}header{position:absolute;top:25px;left:28px;pointer-events:none}h1{font-size:32px;letter-spacing:.17em;color:#eed7a1}small{color:#b4a38d}#quest{position:absolute;top:26px;right:26px;text-align:right;color:#dfbc81}footer{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:9px;align-items:center;width:max-content;max-width:100%;justify-content:center}button{cursor:pointer;border:1px solid #796047;background:linear-gradient(#2e2523,#171217);color:#f4ddad;font:inherit;padding:9px}button:hover,button:focus-visible{border-color:#f0c980}button:disabled{opacity:.46}.orb{--fill:100%;--liquid:#ac2929;width:82px;height:82px;border-radius:50%;border:4px double #b29260;background:radial-gradient(circle at 35% 26%,#ffffff40,transparent 45%),linear-gradient(to top,var(--liquid) var(--fill),#171218 var(--fill));display:grid;place-items:center;font-weight:bold;text-shadow:0 1px 4px black}#mana{--liquid:#395db8}.skill{height:57px;min-width:60px;font-size:13px}.skill b{display:block;color:#e4a657}#xp{position:absolute;bottom:0;left:0;height:4px;background:#c6984c}dialog{color:#ead6af;background:#1d181b;border:1px solid #9d7850;width:min(500px,92vw);padding:26px}dialog::backdrop{background:#080709a0}dialog p{margin:12px 0;line-height:1.5}#items{display:grid;gap:6px;max-height:40vh;overflow:auto}#toast{position:absolute;bottom:116px;left:50%;transform:translateX(-50%);color:#ffd88c;text-align:center;pointer-events:none;text-shadow:0 2px 4px black}@media(max-width:640px){header{left:12px;top:12px}h1{font-size:21px}#quest{top:14px;right:12px;font-size:12px}.orb{width:48px;height:48px;font-size:11px}footer{gap:3px}.skill{min-width:38px;font-size:10px;padding:3px}}
+</style>
+<canvas aria-label="Ashvault dungeon"></canvas>
+<header><h1>ASHVAULT</h1><small id="stats"></small></header>
+<div id="quest"></div><div id="toast" role="status"></div><div id="xp"></div>
+<footer><div id="life" class="orb"></div><button class="skill" data-skill="primary"><b>LMB</b>Cleave</button><button class="skill" data-skill="nova"><b>RMB</b>Cinder</button><button class="skill" data-skill="dash"><b>Q</b>Rush</button><button class="skill" data-skill="heal"><b>1</b>Tonic</button><button class="skill" id="bag"><b>I</b>Gear</button><div id="mana" class="orb"></div></footer>
+<dialog id="intro"><h2>The Ashvault</h2><p>The Warden has sealed the vault. Clear its chambers, claim fallen gear, and break the seal.</p><p>Click the floor to move. Click enemies to close in and cleave. Right-click for Cinder, Q to rush toward the cursor, and 1 for a healing tonic. Walk over loot to collect it. Press I to equip it.</p><button id="begin">Enter the vault</button></dialog>
+<dialog id="inventory"><h2>Equipment</h2><p id="equipped"></p><div id="items"></div><p><button id="close">Return to dungeon</button></p></dialog>
+<dialog id="result"><h2 id="resultTitle"></h2><p id="resultText"></p><button id="again"></button></dialog>
+<script type="module">
+const el = id => document.getElementById(id)
+const canvas = document.querySelector('canvas')
+const ctx = canvas.getContext('2d')
+const intro = el('intro'), inventory = el('inventory'), result = el('result')
+const tiers = ['#cec1aa','#70adfc','#f0cb61','#f68c49']
+const roomSize = 620
+const rooms = [[0,0],[1,0],[1,1],[2,1]]
+const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y)
+let player, enemies, drops, effects, floor, room, gold, gear, bag, aim, target, destination, toastTime, clock, attackTime, dashTime, potionTime, camera, width, height, scale, started = false
+const keys = new Set()
+const pointer = {x:0,y:0}
+function reset(keepGear=false) {
+  floor = keepGear ? floor+1 : 1
+  gear = keepGear ? gear : {weapon:{name:'Iron cleaver',power:12,slot:'weapon',tier:0},armor:{name:'Vault leathers',power:0,slot:'armor',tier:0}}
+  bag = keepGear ? bag : []
+  gold = keepGear ? gold : 0
+  player = {x:310,y:310,hp:100,mana:40,level:keepGear ? player.level : 1,xp:keepGear ? player.xp : 0,facing:1,hit:0}
+  enemies=[]; drops=[]; effects=[]; room=-1; clock=attackTime=dashTime=potionTime=toastTime=0
+  aim=destination=target=null
+  camera={x:player.x,y:player.y}
+  player.hp=maxHealth()
+  enterRoom(0)
+}
+function maxHealth(){return 100+(player.level-1)*12+gear.armor.power*3}
+function announce(message){el('toast').textContent=message;toastTime=3}
+function enterRoom(index){
+  room=index
+  const [rx,ry]=rooms[index]
+  const boss=index===rooms.length-1
+  const count=boss ? 4 : 5+index
+  for(let i=0;i<count;i++){
+    const angle=(i/count)*Math.PI*2+Math.random()*0.35
+    const kind=boss&&i===0?'warden':i%4===1?'adept':i%4===2?'brute':'husk'
+    const hp=({warden:420,brute:75,adept:34,husk:30})[kind]+(floor-1)*15
+    enemies.push({kind,hp,max:hp,x:rx*roomSize+310+Math.cos(angle)*150,y:ry*roomSize+310+Math.sin(angle)*150,attack:0,cast:0,hit:0})
+  }
+  announce(['Vault entrance','The Ossuary','Cinder gallery','The Ash Warden'][index])
+}
+function cell(x,y){return rooms.findIndex(([rx,ry])=>rx===Math.floor(x/roomSize)&&ry===Math.floor(y/roomSize))}
+function walkable(x,y){
+  const index=cell(x,y)
+  if(index<0||index>room+1||(index>room&&enemies.length))return false
+  const lx=(x%roomSize+roomSize)%roomSize, ly=(y%roomSize+roomSize)%roomSize
+  if(lx>26&&lx<594&&ly>26&&ly<594)return true
+  if(ly>245&&ly<375)return (lx<=26&&cell(x-30,y)>=0&&cell(x-30,y)<=room+Number(!enemies.length))||(lx>=594&&cell(x+30,y)>=0&&cell(x+30,y)<=room+Number(!enemies.length))
+  if(lx>245&&lx<375)return (ly<=26&&cell(x,y-30)>=0&&cell(x,y-30)<=room+Number(!enemies.length))||(ly>=594&&cell(x,y+30)>=0&&cell(x,y+30)<=room+Number(!enemies.length))
+  return false
+}
+function move(entity,dx,dy){
+  if(walkable(entity.x+dx,entity.y))entity.x+=dx
+  if(walkable(entity.x,entity.y+dy))entity.y+=dy
+}
+function toward(entity,point,speed){
+  const d=distance(entity,point)
+  if(d>0.01)move(entity,(point.x-entity.x)*Math.min(1,speed/d),(point.y-entity.y)*Math.min(1,speed/d))
+}
+function float(x,y,label,color){effects.push({x,y,label,color,life:.65,max:.65})}
+function ring(x,y,r,color,life=.35){effects.push({x,y,r,color,life,max:life})}
+function loot(enemy){
+  const rarityRoll=Math.random()
+  const tier=enemy.kind==='warden'?3:rarityRoll<.08?3:rarityRoll<.29?2:rarityRoll<.66?1:0
+  const slot=Math.random()<.62?'weapon':'armor'
+  const name=(['Weathered','Etched','Gilded','Emberbound'][tier])+' '+(slot==='weapon'?['Cleaver','Falchion','Maul'][Math.floor(Math.random()*3)]:['Mail','Mantle','Plate'][Math.floor(Math.random()*3)])
+  return {x:enemy.x+12,y:enemy.y+8,name,tier,slot,power:(slot==='weapon'?13:2)+tier*(slot==='weapon'?5:3)+floor*3+Math.floor(Math.random()*4)}
+}
+function hit(enemy,amount){
+  if(enemy.hp<=0)return
+  const damage=Math.round(amount*(.9+Math.random()*.22))
+  enemy.hp-=damage;enemy.hit=.14
+  float(enemy.x,enemy.y-32,String(damage),'#ffe5a0')
+  if(enemy.hp>0)return
+  gold+=enemy.kind==='warden'?100:5+floor
+  player.xp+=enemy.kind==='warden'?90:enemy.kind==='brute'?20:12
+  if(enemy.kind==='warden'||Math.random()<.52)drops.push(loot(enemy))
+  if(player.xp>=player.level*50){
+    player.xp-=player.level*50;player.level++;player.hp=maxHealth();player.mana=100
+    announce('Level '+player.level)
+  }
+  enemies=enemies.filter(unit=>unit!==enemy)
+  if(!enemies.length)announce(room===3?'The seal is broken. Claim your gear.':'Chamber cleared. Follow the golden doorway.')
+}
+function hurt(amount){
+  if(player.hit>0)return
+  player.hp=Math.max(0,player.hp-Math.max(2,amount-gear.armor.power*.5))
+  player.hit=.42
+  if(!player.hp)finish(false)
+}
+function cast(skill){
+  if(!started||document.querySelector('dialog[open]'))return
+  const power=gear.weapon.power+player.level*2
+  if(skill==='primary'&&attackTime<=clock){
+    attackTime=clock+.36;player.mana=Math.min(100,player.mana+12)
+    ring(player.x,player.y,82,'#efbf8a',.22)
+    for(const enemy of enemies.filter(unit=>distance(player,unit)<=83))hit(enemy,power)
+  }
+  if(skill==='nova'&&player.mana>=35){
+    player.mana-=35;ring(player.x,player.y,165,'#ff8244',.46)
+    for(const enemy of enemies.filter(unit=>distance(player,unit)<165))hit(enemy,power*2.65)
+  }
+  if(skill==='dash'&&dashTime<=clock){
+    dashTime=clock+3;target=destination=null
+    const point=aim?unproject(pointer.x,pointer.y):{x:player.x+player.facing*180,y:player.y}
+    player.hit=.35
+    for(let i=0;i<12;i++)toward(player,point,18)
+    ring(player.x,player.y,115,'#e4a780')
+    for(const enemy of enemies.filter(unit=>distance(player,unit)<115))hit(enemy,power*1.55)
+  }
+  if(skill==='heal'&&potionTime<=clock&&player.hp<maxHealth()){
+    potionTime=clock+18;player.hp=Math.min(maxHealth(),player.hp+maxHealth()*.55)
+    ring(player.x,player.y,95,'#8dd295')
+  }
+}
+function finish(won){
+  el('resultTitle').textContent=won?'Vault conquered':'Fallen in the vault'
+  el('resultText').textContent='Depth '+floor+' · Level '+player.level+' · '+gold+' gold'
+  el('again').textContent=won?'Descend deeper':'Restart'
+  el('again').onclick=()=>{result.close();reset(won)}
+  result.showModal()
+}
+function update(dt){
+  clock+=dt;player.hit-=dt;toastTime-=dt
+  if(toastTime<0)el('toast').textContent=''
+  player.mana=Math.min(100,player.mana+dt*6)
+  if(target?.hp<=0)target=null
+  let x=Number(keys.has('d'))-Number(keys.has('a')), y=Number(keys.has('s'))-Number(keys.has('w'))
+  if(x||y){target=destination=null;toward(player,{x:player.x+x*100,y:player.y+y*100},dt*235)}
+  else if(target){
+    player.facing=Math.sign(target.x-player.x)||player.facing
+    if(distance(player,target)>73)toward(player,target,dt*235)
+    else cast('primary')
+  }else if(destination){
+    player.facing=Math.sign(destination.x-player.x)||player.facing
+    toward(player,destination,dt*235)
+    if(distance(player,destination)<2)destination=null
+  }
+  if(cell(player.x,player.y)===room+1&&!enemies.length)enterRoom(room+1)
+  for(const enemy of enemies){
+    if(!player.hp)break
+    enemy.hit-=dt
+    const d=distance(player,enemy)
+    const ranged=enemy.kind==='adept', boss=enemy.kind==='warden'
+    const reach=ranged?210:boss?120:48
+    if(enemy.cast){
+      if(clock>=enemy.cast){
+        if(distance(player,enemy.mark)<enemy.radius)hurt(boss?34:ranged?15:12)
+        ring(enemy.mark.x,enemy.mark.y,enemy.radius,boss?'#ff583b':'#db7c66')
+        enemy.cast=0;enemy.attack=clock+(boss?1.1:.8)
+      }
+    }else if(d>reach)toward(enemy,player,dt*(ranged?72:boss?96:enemy.kind==='brute'?83:120))
+    else if(clock>=enemy.attack){
+      enemy.mark={x:player.x,y:player.y};enemy.radius=boss?97:ranged?50:33;enemy.cast=clock+(boss?.8:.48)
+    }
+  }
+  for(const item of drops.filter(item=>distance(item,player)<32)){bag.push(item);announce('Picked up '+item.name)}
+  drops=drops.filter(item=>distance(item,player)>=32)
+  for(const effect of effects)effect.life-=dt
+  effects=effects.filter(effect=>effect.life>0)
+  camera.x+=(player.x-camera.x)*Math.min(1,dt*8);camera.y+=(player.y-camera.y)*Math.min(1,dt*8)
+  if(room===3&&!enemies.length&&!drops.length&&player.hp)finish(true)
+}
+function project(x,y){return [width/2+(x-camera.x-(y-camera.y))*.866*scale,height*.48+(x-camera.x+y-camera.y)*.48*scale]}
+function unproject(x,y){
+  const a=(x-width/2)/(.866*scale),b=(y-height*.48)/(.48*scale)
+  return {x:camera.x+(a+b)/2,y:camera.y+(b-a)/2}
+}
+function polygon(points,fill,stroke){
+  ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath()
+  ctx.fillStyle=fill;ctx.fill()
+  if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}
+}
+function tile(x,y,s,fill,line){polygon([project(x,y),project(x+s,y),project(x+s,y+s),project(x,y+s)],fill,line)}
+function ellipse(x,y,rx,ry,color,stroke){
+  ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2)
+  if(color){ctx.fillStyle=color;ctx.fill()}
+  if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}
+}
+function pillar(x,y){
+  const [a,b]=project(x,y),s=scale
+  ellipse(a,b,23*s,9*s,'#08070988')
+  polygon([[a-15*s,b],[a,b+8*s],[a,b-58*s],[a-15*s,b-65*s]],'#403337','#171316')
+  polygon([[a,b+8*s],[a+15*s,b],[a+15*s,b-65*s],[a,b-58*s]],'#241e25','#171316')
+  ellipse(a,b-65*s,18*s,7*s,'#6a4a3a','#21191d')
+  const glow=ctx.createRadialGradient(a,b-70*s,0,a,b-70*s,48*s)
+  glow.addColorStop(0,'#ff9c4775');glow.addColorStop(1,'#ff752200')
+  ellipse(a,b-70*s,48*s,48*s,glow)
+  ellipse(a,b-73*s,3*s,(7+Math.sin(clock*13+x)*3)*s,'#ffc477')
+}
+function actor(unit,hero){
+  const [x,y]=project(unit.x,unit.y), s=scale*(unit.kind==='warden'?1.75:unit.kind==='brute'?1.25:1)
+  const color=unit.hit>0?'#f0b892':hero?'#9d9ca7':({warden:'#a65a43',brute:'#75564f',adept:'#77518d',husk:'#656956'})[unit.kind]
+  ellipse(x,y,21*s,9*s,'#080609aa')
+  polygon([[x-12*s,y-28*s],[x+11*s,y-29*s],[x+17*s,y-4*s],[x-10*s,y+3*s]],hero?'#6f2930':color,'#171116')
+  ellipse(x,y-28*s,12*s,13*s,color,'#21191d')
+  ellipse(x,y-42*s,8*s,8*s,hero?'#cbc0ae':color,'#21191d')
+  ellipse(x+3*s,y-43*s,2*s,1.5*s,hero?'#f0d7ad':'#ff8b54')
+  const side=unit.facing||-1
+  polygon([[x+side*8*s,y-20*s],[x+side*30*s,y-34*s],[x+side*27*s,y-26*s],[x+side*10*s,y-16*s]],hero?'#dbceaa':'#8b7664','#292125')
+  if(!hero){
+    const bar=unit.kind==='warden'?63:31
+    ctx.fillStyle='#160b10';ctx.fillRect(x-bar/2,y-58*s,bar,4)
+    ctx.fillStyle='#b8493a';ctx.fillRect(x-bar/2,y-58*s,bar*unit.hp/unit.max,4)
+  }
+}
+function draw(){
+  ctx.fillStyle='#0f0d12';ctx.fillRect(0,0,width,height)
+  const props=[]
+  rooms.forEach(([rx,ry],index)=>{
+    const x=rx*roomSize,y=ry*roomSize
+    for(let i=0;i<10;i++)for(let j=0;j<10;j++){
+      const shade=(i*31+j*29+i*j*7+index*5)%16
+      const lit=index<=room+1
+      tile(x+i*62,y+j*62,62,lit?'rgb('+[40+shade,35+shade,38+shade].join(',')+')':'#19161d','#242025')
+      if((i*13+j*7)%11===0)tile(x+i*62+9,y+j*62+11,19,'#3b2c30')
+    }
+    for(const [px,py] of [[75,70],[544,70],[75,544],[544,544]])props.push({x:x+px,y:y+py,pillar:true})
+  })
+  if(!enemies.length&&room<3){
+    const [x,y]=rooms[room], [nx,ny]=rooms[room+1]
+    const [sx,sy]=project((x+nx+1)*roomSize/2,(y+ny+1)*roomSize/2)
+    ellipse(sx,sy,28*scale,13*scale,'#ffcf5738','#eab96d')
+  }
+  if(destination){const [x,y]=project(destination.x,destination.y);ellipse(x,y,8,4,null,'#b99463')}
+  for(const enemy of enemies)if(enemy.cast){
+    const [x,y]=project(enemy.mark.x,enemy.mark.y)
+    ellipse(x,y,enemy.radius*1.22*scale,enemy.radius*.68*scale,'#c83b3438','#da6258')
+  }
+  for(const item of drops){
+    const [x,y]=project(item.x,item.y),color=tiers[item.tier]
+    ctx.strokeStyle=color;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-28);ctx.stroke()
+    ellipse(x,y,6,4,color)
+    ctx.font='13px Georgia';ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(item.name,x,y-33)
+  }
+  for(const unit of [...props,...enemies,player].sort((a,b)=>a.x+a.y-b.x-b.y)){
+    if(unit.pillar)pillar(unit.x,unit.y);else actor(unit,unit===player)
+  }
+  for(const effect of effects){
+    const [x,y]=project(effect.x,effect.y), ratio=effect.life/effect.max
+    ctx.globalAlpha=ratio
+    if(effect.label){
+      ctx.font='bold 17px Georgia';ctx.textAlign='center';ctx.fillStyle=effect.color
+      ctx.fillText(effect.label,x,y-(1-ratio)*28)
+    }else{
+      const r=effect.r*(1-ratio*.65)*scale
+      ctx.lineWidth=3;ellipse(x,y,r*1.22,r*.68,null,effect.color);ctx.lineWidth=1
+    }
+    ctx.globalAlpha=1
+  }
+  const vignette=ctx.createRadialGradient(width/2,height*.46,height*.21,width/2,height*.46,Math.max(width,height)*.65)
+  vignette.addColorStop(0,'#09060a00');vignette.addColorStop(1,'#09060ae8')
+  ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height)
+  el('stats').textContent='Level '+player.level+' · '+gold+' gold'
+  el('quest').textContent='Depth '+floor+' · '+(enemies.length?enemies.length+' enemies remain':room===3?'Collect the Warden’s gear':'Follow the golden doorway')
+  el('life').textContent=Math.ceil(player.hp)+' HP';el('life').style.setProperty('--fill',player.hp/maxHealth()*100+'%')
+  el('mana').textContent=Math.floor(player.mana)+' Fury';el('mana').style.setProperty('--fill',player.mana+'%')
+  el('xp').style.width=player.xp/(player.level*50)*100+'%'
+  document.querySelector('[data-skill=nova]').disabled=player.mana<35
+  document.querySelector('[data-skill=dash]').disabled=dashTime>clock
+  document.querySelector('[data-skill=heal]').disabled=potionTime>clock||player.hp>=maxHealth()
+}
+function resize(){
+  width=canvas.clientWidth;height=canvas.clientHeight;const dpr=Math.min(2,devicePixelRatio||1)
+  canvas.width=width*dpr;canvas.height=height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)
+  scale=Math.max(.55,Math.min(1.2,width/1000,height/680))
+}
+function choosePoint(event){
+  pointer.x=event.clientX;pointer.y=event.clientY;aim=unproject(pointer.x,pointer.y)
+}
+canvas.addEventListener('pointermove',choosePoint)
+canvas.addEventListener('pointerdown',event=>{
+  choosePoint(event)
+  if(event.button!==0)return
+  target=enemies.find(enemy=>{
+    const [x,y]=project(enemy.x,enemy.y)
+    return Math.hypot(x-pointer.x,y-20*scale-pointer.y)<(enemy.kind==='warden'?44:31)*scale
+  })??null
+  destination=target?null:aim
+})
+canvas.addEventListener('contextmenu',event=>{event.preventDefault();cast('nova')})
+function showGear(){
+  el('equipped').textContent=gear.weapon.name+' · '+gear.weapon.power+' damage / '+gear.armor.name+' · '+gear.armor.power+' armor'
+  el('items').replaceChildren()
+  if(!bag.length)el('items').textContent='Gear drops from defeated enemies.'
+  bag.forEach((item,index)=>{
+    const button=document.createElement('button')
+    button.style.color=tiers[item.tier];button.textContent=item.name+' · '+item.power+' '+item.slot+' · Equip'
+    button.onclick=()=>{bag[index]=gear[item.slot];gear[item.slot]=item;player.hp=Math.min(maxHealth(),player.hp);showGear()}
+    el('items').append(button)
+  })
+}
+function toggleGear(){
+  if(inventory.open){inventory.close();return}
+  if(!started||document.querySelector('dialog[open]'))return
+  keys.clear();showGear();inventory.showModal()
+}
+addEventListener('keydown',event=>{
+  const key=event.key.toLowerCase()
+  if(!event.repeat&&key==='i')toggleGear()
+  if(document.querySelector('dialog[open]'))return
+  keys.add(key)
+  if(!event.repeat&&key==='q')cast('dash')
+  if(!event.repeat&&key==='1')cast('heal')
+  if(key===' '){event.preventDefault();cast('primary')}
+})
+addEventListener('keyup',event=>keys.delete(event.key.toLowerCase()))
+addEventListener('blur',()=>keys.clear())
+document.querySelectorAll('[data-skill]').forEach(button=>button.onclick=()=>cast(button.dataset.skill))
+el('bag').onclick=toggleGear
+el('close').onclick=()=>inventory.close()
+el('begin').onclick=()=>{started=true;intro.close()}
+intro.addEventListener('cancel',event=>event.preventDefault())
+result.addEventListener('cancel',event=>event.preventDefault())
+addEventListener('resize',resize)
+reset();resize();intro.showModal()
+let previous=performance.now()
+function frame(now){
+  if(started&&!document.querySelector('dialog[open]'))update(Math.min(.04,(now-previous)/1000))
+  previous=now;draw();requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+</script>
+</html>
+

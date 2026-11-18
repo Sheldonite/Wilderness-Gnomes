@@ -28,11 +28,12 @@ export class BuzzardBoss extends EnemyController {
     if (this.isDead) return;
     const phase = this.encounter.phase;
     this.vulnerability = this.encounter.vulnerability;
-    const before = this.position;
+    const diveStep = this.encounter.diveStep;
+    if (diveStep.x || diveStep.y) {
+      this.sprite.setPosition(this.sprite.x + diveStep.x, this.sprite.y + diveStep.y);
+      this.face(diveStep.x, diveStep.y);
+    }
     if (phase === 'diving') {
-      const step = this.encounter.diveStep;
-      this.sprite.setPosition(before.x + step.x, before.y + step.y);
-      this.face(step.x, step.y);
       this.sprite.play(KING_FRANKIE_DIVE_KEY, true);
       return;
     }
@@ -41,9 +42,11 @@ export class BuzzardBoss extends EnemyController {
       this.sprite.anims.stop(); this.sprite.setFrame(0);
       return;
     }
+    const before = this.position;
     const target = this.encounter.flyTarget;
     const dx = target.x - before.x, dy = target.y - before.y, distance = Math.hypot(dx, dy);
-    const step = Math.min(distance, BUZZARD.flySpeed * this.effectiveSlow * deltaMs / 1000);
+    const speed = this.encounter.pursuing ? BUZZARD.catchUpFlySpeed : BUZZARD.flySpeed;
+    const step = Math.min(distance, speed * this.effectiveSlow * deltaMs / 1000);
     if (distance > .01) this.sprite.setPosition(before.x + dx / distance * step, before.y + dy / distance * step);
     if (phase === 'diveWindup' && this.encounter.lane) this.face(this.encounter.lane.direction.x, this.encounter.lane.direction.y);
     else if (distance > 2) this.face(dx, dy);

@@ -1,12 +1,11 @@
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
-import { GAME_CONFIG } from '../config/gameConfig';
 import type { PlayerCharacterDefinition } from '../config/playerCharacters';
 import { LOOK, reducedMotion } from '../config/presentation';
 import { WEAPONS } from '../config/weapons';
 import type { PlayerStats, Vector2Like } from '../core/types';
-import { clampToArena, lerpAngle, normalize } from '../utils/math';
+import { lerpAngle, normalize } from '../utils/math';
 import { PlayerAura } from './PlayerAura';
 
 export const WOODLAND_DASH = {
@@ -171,13 +170,10 @@ export class PlayerController {
     }
 
     const dt = deltaMs / 1000;
-    const next = clampToArena(
-      {
-        x: this.sprite.x + moveVector.x * moveSpeed * dt,
-        y: this.sprite.y + moveVector.y * moveSpeed * dt
-      },
-      this.radius
-    );
+    const next = {
+      x: this.sprite.x + moveVector.x * moveSpeed * dt,
+      y: this.sprite.y + moveVector.y * moveSpeed * dt
+    };
 
     const safe = this.navigation?.move(this.position, next, this.radius) ?? next;
     this.movementDirection = normalize(safe.x - this.sprite.x, safe.y - this.sprite.y);
@@ -293,7 +289,4 @@ export class PlayerController {
     return this.movementDirection;
   }
 
-  resetToCenter(): void {
-    this.sprite.setPosition(GAME_CONFIG.arena.width / 2, GAME_CONFIG.arena.height / 2);
-  }
 }

@@ -1,13 +1,14 @@
 /**
- * King Frankie, the great buzzard: the level 25 boss. He circles overhead, where he is hard to hurt,
+ * King Frankie, the great buzzard, circles overhead where he is hard to hurt,
  * and comes down only to dive. After a dive he lands to catch his breath: that is the moment to strike.
  */
 export const BUZZARD = {
-  level: 25, name: 'King Frankie', health: 22000, healthPerMinute: 380, contactDamage: 22,
+  name: 'King Frankie', health: 22000, healthPerMinute: 380, contactDamage: 22,
   radius: 36, spawnDistance: 380, introductionMs: 2000,
   /** Circling: he orbits the player at this distance, flying over scenery. The orbit is squashed
    * top to bottom so he stays on a wide, short screen. */
-  circleRadius: 280, circleSquash: .62, circleSpeed: .9, flySpeed: 330, circleMs: 2200, enragedCircleMs: 1500,
+  circleRadius: 280, circleSquash: .62, circleSpeed: .9, flySpeed: 330, catchUpFlySpeed: 450,
+  circleMs: 2200, enragedCircleMs: 1500,
   /** Damage taken while flying, and while landed after a dive. */
   airborneVulnerability: .5, perchVulnerability: 1.3,
   /** What he does each time he finishes circling, in order, round and round. */

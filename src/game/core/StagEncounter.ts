@@ -1,8 +1,9 @@
 import { STAG } from '../config/stagBoss';
+import { BOSS_ENGAGE_DISTANCE } from './BossPursuit';
 import type { Vector2Like } from './types';
 import { distanceSq, normalize } from '../utils/math';
 
-export type StagPhase = 'arrival' | 'stalking' | 'windup' | 'charging' | 'recovering' | 'stunned' | 'sweepWindup'
+export type StagPhase = 'arrival' | 'stalking' | 'windup' | 'charging' | 'recovering' | 'sweepWindup'
   | 'volleyWindup' | 'bellowWindup';
 export type StagAttack = 'charge' | 'volley' | 'bellow';
 /** `feinted` once the lane has swung to a new aim partway through the windup. */
@@ -16,17 +17,16 @@ export type StagHit = (damage: number, push: Vector2Like, knockback?: number) =>
  * One encounter per run, advanced only on the gameplay clock.
  * Each time he finishes stalking he runs the next attack in `STAG.attackOrder`:
  * - Charge: paws the ground while aiming a lane (locked at windup), then charges down it. Landing
- *   the charge throws the player back; where it ends, his stomp shakes anything close. Baited into
- *   a tree he is stunned and takes extra damage.
+ *   the charge throws the player back, and his stomp shakes anything close where it ends.
+ *   He tires after the last charge in a burst and takes extra damage while recovering.
  * - Velvet volley: shakes his head and flings a fan of antler shards along a locked aim.
  * - Bellow: rears and roars. A player within reach is slowed, and he charges straight after.
  * Crowd him and he sweeps his antlers. Below half health he is enraged: shorter windups, two
  * charges in a row (the second leads the player), and every other charge is a feint whose lane
  * swings partway through. Below the rut fraction he is in a frenzy: triple charges, quicker
- * everything, shorter stuns and a wider volley. He calls the herd at each stampede threshold.
+ * everything, shorter recovery and a wider volley. He calls the herd at each stampede threshold.
  */
 export class StagEncounter {
-  spawned = false;
   defeated = false;
   phase: StagPhase = 'arrival';
   lane?: ChargeLane;
@@ -62,16 +62,10 @@ export class StagEncounter {
   /** Smoothed player velocity in pixels per second, for leading enraged charges. */
   playerVelocity: Vector2Like = { x: 0, y: 0 };
 
-  shouldSpawn(level: number): boolean {
-    if (this.spawned || level < STAG.level) return false;
-    this.spawned = true; return true;
-  }
-
   get enraged(): boolean { return this.healthFraction <= STAG.enrageFraction; }
   /** The final frenzy. */
   get rut(): boolean { return this.healthFraction <= STAG.rutFraction; }
-  /** Stunned against a tree: the damage window. */
-  get vulnerable(): boolean { return this.phase === 'stunned'; }
+  get vulnerable(): boolean { return this.phase === 'recovering' && this.chargesLeft === 0; }
   /** The attack he will use next time he finishes stalking. */
   get nextAttack(): StagAttack { return STAG.attackOrder[this.attackIndex % STAG.attackOrder.length]; }
   private healthFraction = 1;
@@ -83,7 +77,7 @@ export class StagEncounter {
     this.volley = undefined;
     this.bellowed = false;
     this.bellowHit = false;
-    if (!this.spawned || this.defeated) return;
+    if (this.defeated) return;
     this.healthFraction = healthFraction;
     this.trackPlayer(deltaMs, player);
     while (this.stampedeWaves < STAG.stampedeThresholds.length && healthFraction <= STAG.stampedeThresholds[this.stampedeWaves]) {
@@ -91,15 +85,16 @@ export class StagEncounter {
     }
     if (this.phase === 'charging') {
       const speed = STAG.chargeSpeed * (this.rut ? STAG.rutChargeSpeed : 1);
-      const step = Math.min(speed * deltaMs / 1000, STAG.chargeDistance - this.travelled);
-      this.chargeStep = { x: this.lane!.direction.x * step, y: this.lane!.direction.y * step };
+      const lane = this.lane!;
+      const step = Math.min(speed * deltaMs / 1000, lane.length - this.travelled);
+      this.chargeStep = { x: lane.direction.x * step, y: lane.direction.y * step };
       this.travelled += step;
       const after = { x: boss.x + this.chargeStep.x, y: boss.y + this.chargeStep.y };
       if (!this.hitThisCharge && this.segmentHits(boss, after, player, playerRadius)) {
         this.hitThisCharge = true;
-        hit(STAG.chargeDamage, this.lane!.direction);
+        hit(STAG.chargeDamage, lane.direction);
       }
-      if (this.travelled >= STAG.chargeDistance - 1e-6) this.endCharge(after, player, playerRadius, hit);
+      if (this.travelled >= lane.length - 1e-6) this.endCharge(after, player, playerRadius, hit);
       return;
     }
     // Hugging him to dodge charges earns an antler sweep.
@@ -116,14 +111,13 @@ export class StagEncounter {
     }
     if (this.timer > 0) return;
     if (this.phase === 'arrival') { this.phase = 'stalking'; this.timer = 900; }
-    else if (this.phase === 'stalking') this.beginAttack(boss, player);
+    else if (this.phase === 'stalking' && distanceSq(boss, player) <= BOSS_ENGAGE_DISTANCE ** 2) this.beginAttack(boss, player);
     else if (this.phase === 'windup') {
       this.phase = 'charging'; this.travelled = 0; this.hitThisCharge = false;
     } else if (this.phase === 'recovering') {
       if (this.chargesLeft > 0) this.beginWindup(boss, player);
       else this.rest();
-    } else if (this.phase === 'stunned') this.rest();
-    else if (this.phase === 'sweepWindup') this.resolveSweep(player, playerRadius, hit);
+    } else if (this.phase === 'sweepWindup') this.resolveSweep(player, playerRadius, hit);
     else if (this.phase === 'volleyWindup') this.releaseVolley(boss);
     else if (this.phase === 'bellowWindup') {
       this.bellowed = true;
@@ -169,8 +163,10 @@ export class StagEncounter {
   }
 
   private aimLane(boss: Vector2Like, target: Vector2Like): ChargeLane {
-    const aim = normalize(target.x - boss.x, target.y - boss.y);
-    return { from: { ...boss }, direction: aim.x === 0 && aim.y === 0 ? { x: 1, y: 0 } : aim, length: STAG.chargeDistance };
+    const dx = target.x - boss.x, dy = target.y - boss.y;
+    const aim = normalize(dx, dy);
+    const length = Math.max(STAG.chargeMinDistance, Math.min(STAG.chargeDistance, Math.hypot(dx, dy) + STAG.chargeOvershoot));
+    return { from: { ...boss }, direction: aim.x === 0 && aim.y === 0 ? { x: 1, y: 0 } : aim, length };
   }
 
   private beginWindup(boss: Vector2Like, player: Vector2Like): void {
@@ -231,16 +227,6 @@ export class StagEncounter {
     const len2 = dx * dx + dy * dy;
     const t = len2 ? Math.max(0, Math.min(1, ((player.x - a.x) * dx + (player.y - a.y) * dy) / len2)) : 0;
     return distanceSq({ x: a.x + dx * t, y: a.y + dy * t }, player) <= reach * reach;
-  }
-
-  /**
-   * Called when something stops the charge short. Scenery stuns him (`stun`); the arena's edge
-   * only ends the charge.
-   */
-  blocked(at: Vector2Like, player: Vector2Like, playerRadius: number, hit: StagHit, stun = true): void {
-    if (this.phase !== 'charging') return;
-    this.endCharge(at, player, playerRadius, hit);
-    if (stun) { this.phase = 'stunned'; this.timer = this.rut ? STAG.rutStunMs : STAG.stunMs; this.chargesLeft = 0; }
   }
 
   defeat(): void {

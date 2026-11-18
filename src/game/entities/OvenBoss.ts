@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { OVEN, OVEN_LOOK } from '../config/ovenBoss';
 import { OVEN_TEXTURE } from '../config/ovenSprite';
 import { reducedMotion } from '../config/presentation';
+import { bossPursuitStep } from '../core/BossPursuit';
 import { OvenWalk } from '../core/OvenWalk';
 import type { OvenEncounter } from '../core/OvenEncounter';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
@@ -73,6 +74,8 @@ export class OvenBoss extends EnemyController {
     }
 
     this.sprite.setOrigin(0.5, 1);
+    const landing = this.encounter.slamLanded;
+    if (landing) this.sprite.setPosition(landing.x, landing.y);
 
     if (phase === 'overheated') {
       this.sprite.anims.stop();
@@ -81,7 +84,7 @@ export class OvenBoss extends EnemyController {
       return;
     }
 
-    if (phase !== 'walking') {
+    if (phase !== 'walking' || landing) {
       this.sprite.anims.stop();
       this.sprite.setFrame(phase === 'windup' ? 4 : phase === 'throwing' || phase === 'blasting' ? 5 : 2);
       if (phase === 'windup' || phase === 'blasting') {
@@ -92,9 +95,9 @@ export class OvenBoss extends EnemyController {
     }
 
     const before = this.position;
-    const remaining = Math.max(0, Math.hypot(target.x - before.x, target.y - before.y) - OVEN.standOff);
-    const speed = OVEN.speed * (this.encounter.hot ? OVEN.hotSpeedMultiplier : 1) * this.effectiveSlow;
-    const next = this.navigation!.toward(before, target, Math.min(remaining, speed * deltaMs / 1000), this.radius, this.route);
+    const speed = OVEN.speed * (this.encounter.hot ? OVEN.hotSpeedMultiplier : 1);
+    const step = bossPursuitStep(before, target, OVEN.standOff, speed, this.effectiveSlow, deltaMs);
+    const next = { x: before.x + step.x, y: before.y + step.y };
     this.sprite.setPosition(next.x, next.y);
     this.sprite.anims.stop();
     const dx = next.x - before.x;

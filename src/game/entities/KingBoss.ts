@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { KING, KING_LOOK } from '../config/kingBoss';
 import { ARMADILLO_ROLL_ANIMATION, ARMADILLO_ROLL_KEY, ARMADILLO_SPRITE_KEY, ARMADILLO_WALK_ANIMATION_BY_DIRECTION } from '../config/enemySprite';
 import type { KingEncounter } from '../core/KingEncounter';
+import { bossPursuitStep } from '../core/BossPursuit';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import type { Vector2Like } from '../core/types';
 import { normalize } from '../utils/math';
@@ -29,21 +30,11 @@ export class KingBoss extends EnemyController {
     const phase = this.encounter.phase;
     this.vulnerability = this.encounter.vulnerable ? KING.dizzyVulnerability : 1;
     this.sprite.setAngle(0);
-    if (phase === 'rolling') {
-      const step = this.encounter.rollStep;
-      const before = this.position;
-      const wanted = { x: before.x + step.x, y: before.y + step.y };
-      // King Rumbles rolls straight through trees; only the arena edge bounces him.
-      const safe = this.navigation?.move(before, wanted, this.radius) ?? wanted;
-      this.sprite.setPosition(safe.x, safe.y);
-      if ((step.x || step.y) && Math.hypot(safe.x - before.x, safe.y - before.y) < Math.hypot(step.x, step.y) * .5) {
-        this.encounter.blocked(safe);
-        this.sprite.scene?.events.emit('presentation:level', safe);
-        this.sprite.scene?.cameras?.main?.shake(140, .004);
-      }
-      this.curled();
-    } else if (phase === 'curling') {
-      this.curled();
+    const step = this.encounter.rollStep;
+    this.sprite.setPosition(this.sprite.x + step.x, this.sprite.y + step.y);
+    const curledUp = phase === 'rolling' || phase === 'curling' || phase === 'turning';
+    if (curledUp) {
+      this.curled(phase === 'rolling');
     } else {
       if (this.sprite.texture.key !== ARMADILLO_SPRITE_KEY) this.sprite.setTexture(ARMADILLO_SPRITE_KEY, 0);
       if (phase === 'dizzy' || phase === 'arrival') {
@@ -53,21 +44,20 @@ export class KingBoss extends EnemyController {
       } else {
         // stalking: close to the standoff distance and hold there
         const before = this.position;
-        const remaining = Math.max(0, Math.hypot(target.x - before.x, target.y - before.y) - KING.standOff);
-        const next = this.navigation!.toward(before, target, Math.min(remaining, KING.speed * this.effectiveSlow * deltaMs / 1000), this.radius, this.route);
-        this.sprite.setPosition(next.x, next.y);
-        const moved = normalize(next.x - before.x, next.y - before.y);
+        const walk = bossPursuitStep(before, target, KING.standOff, KING.speed, this.effectiveSlow, deltaMs);
+        this.sprite.setPosition(before.x + walk.x, before.y + walk.y);
+        const moved = normalize(walk.x, walk.y);
         this.updateAnimation(moved.x || moved.y ? moved : normalize(target.x - before.x, target.y - before.y));
         if (!moved.x && !moved.y) this.sprite.anims.pause();
       }
     }
-    const curledUp = phase === 'rolling' || phase === 'curling';
     this.crown.setVisible(!curledUp).setPosition(this.sprite.x, this.sprite.y - this.sprite.displayHeight * .3).setAngle(this.sprite.angle);
   }
 
-  private curled(): void {
+  private curled(rolling: boolean): void {
     if (this.sprite.texture.key !== ARMADILLO_ROLL_KEY) this.sprite.setTexture(ARMADILLO_ROLL_KEY);
-    this.sprite.play(ARMADILLO_ROLL_ANIMATION, true);
+    if (rolling) this.sprite.play(ARMADILLO_ROLL_ANIMATION, true);
+    else this.sprite.anims.stop();
   }
 
   override destroy(): void { this.crown.destroy(); super.destroy(); }

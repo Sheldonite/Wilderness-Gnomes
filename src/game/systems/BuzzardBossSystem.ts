@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { BUZZARD, BUZZARD_LOOK } from '../config/buzzardBoss';
-import { scaledBossHealth } from '../core/BossGate';
+import { scaledBossHealth } from '../core/BossSchedule';
 import { BuzzardEncounter, type BuzzardHit } from '../core/BuzzardEncounter';
-import type { KingArena } from '../core/KingEncounter';
 import type { GameManager } from '../core/GameManager';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import type { Vector2Like } from '../core/types';
@@ -25,7 +24,7 @@ export class BuzzardBossSystem {
   private lastPhase?: BuzzardEncounter['phase'];
 
   constructor(private readonly scene: Phaser.Scene, private readonly game: GameManager, private readonly navigation: SceneryNavigation,
-    private readonly arena: () => KingArena | undefined, private readonly hitPlayer: BuzzardHit, private readonly flingFeathers: FlingFeathers) {
+    private readonly hitPlayer: BuzzardHit, private readonly flingFeathers: FlingFeathers) {
     this.graphics = scene.add.graphics().setDepth(5);
     this.hud = document.createElement('section'); this.hud.className = 'boss-hud'; this.hud.hidden = true;
     this.hud.setAttribute('aria-label', BUZZARD.name);
@@ -34,16 +33,12 @@ export class BuzzardBossSystem {
     this.fill = this.hud.querySelector('i')!; this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
-  spawnEncore(player: Vector2Like, enemies: EnemyController[], healthMultiplier: number): void {
+  spawnEncounter(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    if (this.boss && !this.boss.isDead && !this.encounter.defeated) return;
     this.encounter = new BuzzardEncounter();
-    this.encounter.spawned = true;
     this.celebrationMs = 0;
     this.gustMs = -1;
     this.gustCone = undefined;
-    this.spawnBoss(player, enemies, healthMultiplier);
-  }
-
-  private spawnBoss(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
     // He swoops in from off to one side; flying, he needs no clear path.
     const spawn = { x: player.x - BUZZARD.spawnDistance, y: player.y - 60 };
     const health = Math.round(scaledBossHealth(BUZZARD.health, BUZZARD.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier);
@@ -54,10 +49,7 @@ export class BuzzardBossSystem {
     this.scene.events.emit('audio:play', 'boss-spawn');
   }
 
-  update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
-    if (this.game.bossGate.required(this.game.level) === 'buzzard' && this.encounter.shouldSpawn(this.game.level)) {
-      this.spawnBoss(player, enemies);
-    }
+  update(deltaMs: number, player: Vector2Like, playerRadius: number): void {
     this.graphics.clear();
     if (this.encounter.defeated) {
       this.celebrationMs = Math.max(0, this.celebrationMs - deltaMs);
@@ -65,9 +57,8 @@ export class BuzzardBossSystem {
       return;
     }
     if (!this.boss || this.boss.isDead) return;
-    const arena = this.arena() ?? { center: { ...player }, radius: 520 };
     const fraction = this.boss.health / this.boss.maxHealth;
-    this.encounter.update(deltaMs, this.boss.position, player, playerRadius, fraction, arena, this.hitPlayer);
+    this.encounter.update(deltaMs, this.boss.position, player, playerRadius, fraction, this.hitPlayer);
     if (this.encounter.volley) this.flingFeathers(this.encounter.volley.origin, this.encounter.volley.directions);
     const phase = this.encounter.phase;
     const message = phase === 'arrival' ? 'King Frankie circles overhead...'

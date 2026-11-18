@@ -1,6 +1,7 @@
 import { OVEN } from '../config/ovenBoss';
+import { BOSS_ENGAGE_DISTANCE } from './BossPursuit';
 import type { Vector2Like } from './types';
-import { clampToArena, distanceSq } from '../utils/math';
+import { distanceSq } from '../utils/math';
 
 /** `wave` 1 is the delayed outer collapsing ring; it starts with negative age so it lands later. */
 export interface FlyingTaco {
@@ -52,7 +53,6 @@ const ROTATION: OvenAttack[] = ['toss', 'ring', 'slam', 'cone'];
  * Toaster Slam straight into Flame Sweep before overheating.
  */
 export class OvenEncounter {
-  spawned = false;
   defeated = false;
   phase: OvenPhase = 'arrival';
   tacos: FlyingTaco[] = [];
@@ -87,12 +87,6 @@ export class OvenEncounter {
   private coneElapsedMs = 0;
   private coneHitCooldownMs = 0;
   private coneSweepSign = 1;
-
-  shouldSpawn(level: number): boolean {
-    if (this.spawned || level < OVEN.level) return false;
-    this.spawned = true;
-    return true;
-  }
 
   get hot(): boolean {
     return this.healthFraction <= OVEN.hotFraction;
@@ -130,13 +124,12 @@ export class OvenEncounter {
     player: Vector2Like,
     playerRadius: number,
     healthFraction: number,
-    hit: (damage: number) => void,
-    clampLanding?: (point: Vector2Like, radius: number) => Vector2Like
+    hit: (damage: number) => void
   ): void {
     this.impacts = [];
     this.coneFired = false;
     this.slamLanded = undefined;
-    if (!this.spawned || this.defeated) return;
+    if (this.defeated) return;
 
     this.healthFraction = healthFraction;
     this.trackPlayer(deltaMs, player);
@@ -206,7 +199,7 @@ export class OvenEncounter {
       this.phase = 'walking';
       this.timer = OVEN.arrivalWalkMs;
     } else if (this.phase === 'walking') {
-      this.beginWindup(boss, player, clampLanding);
+      if (distanceSq(boss, player) <= BOSS_ENGAGE_DISTANCE ** 2) this.beginWindup(boss, player);
     } else if (this.phase === 'windup') {
       if (this.attack === 'cone') {
         this.phase = 'blasting';
@@ -221,7 +214,7 @@ export class OvenEncounter {
       } else if (this.attack === 'slam') {
         this.phase = 'slamming';
         this.timer = OVEN.slamFlightMs;
-        const target = this.slam ? this.slam.target : this.clampSlamTarget(player, clampLanding);
+        const target = this.slam?.target ?? player;
         this.slam = { start: { ...boss }, target: { ...target }, age: 0, radius: OVEN.slamRadius };
       } else {
         this.phase = 'throwing';
@@ -304,10 +297,7 @@ export class OvenEncounter {
     const life = this.hot ? OVEN.hotSalsaLifeMs : OVEN.salsaLifeMs;
     for (let i = 0; i < OVEN.slamEmberCount; i++) {
       const a = baseAngle + i * (Math.PI * 2 / OVEN.slamEmberCount);
-      const ember = clampToArena(
-        { x: target.x + Math.cos(a) * OVEN.slamEmberRadius, y: target.y + Math.sin(a) * OVEN.slamEmberRadius },
-        OVEN.salsaRadius
-      );
+      const ember = { x: target.x + Math.cos(a) * OVEN.slamEmberRadius, y: target.y + Math.sin(a) * OVEN.slamEmberRadius };
       this.salsa.push({ ...ember, age: 0, life });
     }
     this.capSalsa();
@@ -331,22 +321,13 @@ export class OvenEncounter {
     }
   }
 
-  private clampSlamTarget(point: Vector2Like, clampLanding?: (point: Vector2Like, radius: number) => Vector2Like): Vector2Like {
-    const arenaClamped = clampToArena(point, OVEN.radius);
-    return clampLanding ? clampLanding(arenaClamped, OVEN.radius) : arenaClamped;
-  }
-
   private capSalsa(): void {
     if (this.salsa.length > OVEN.maxSalsa) {
       this.salsa.splice(0, this.salsa.length - OVEN.maxSalsa);
     }
   }
 
-  private beginWindup(
-    boss: Vector2Like,
-    player: Vector2Like,
-    clampLanding?: (point: Vector2Like, radius: number) => Vector2Like
-  ): void {
+  private beginWindup(boss: Vector2Like, player: Vector2Like): void {
     this.phase = 'windup';
     if (this.chainingCone) {
       this.chainingCone = false;
@@ -381,13 +362,13 @@ export class OvenEncounter {
     if (this.attack === 'slam') {
       const speed = Math.hypot(this.playerVelocity.x, this.playerVelocity.y);
       const leadSec = speed > 10 ? OVEN.slamLeadMs / 1000 : 0;
-      const rawTarget = {
+      const target = {
         x: player.x + this.playerVelocity.x * leadSec,
         y: player.y + this.playerVelocity.y * leadSec
       };
       this.slam = {
         start: { ...boss },
-        target: this.clampSlamTarget(rawTarget, clampLanding),
+        target,
         age: 0,
         radius: OVEN.slamRadius
       };
@@ -403,11 +384,10 @@ export class OvenEncounter {
       const outerCount = this.hot ? OVEN.hotOuterRingTacos : OVEN.outerRingTacos;
       const innerStep = Math.PI * 2 / innerCount;
       const outerStep = Math.PI * 2 / outerCount;
-      const atRing = (a: number, r: number) =>
-        clampToArena({ x: player.x + Math.cos(a) * r, y: player.y + Math.sin(a) * r }, OVEN.blastRadius);
+      const atRing = (a: number, r: number) => ({ x: player.x + Math.cos(a) * r, y: player.y + Math.sin(a) * r });
 
       this.pending = [
-        { target: clampToArena(player, OVEN.blastRadius), wave: 0 },
+        { target: { ...player }, wave: 0 },
         ...Array.from({ length: innerCount }, (_, i) => ({ target: atRing(angle + i * innerStep, OVEN.innerRingRadius), wave: 0 })),
         ...Array.from({ length: outerCount }, (_, i) => ({ target: atRing(angle + (i + 0.5) * outerStep, OVEN.outerRingRadius), wave: 1 }))
       ];
@@ -427,13 +407,10 @@ export class OvenEncounter {
     this.pending = Array.from({ length: count }, (_, i) => {
       const offset = i - half;
       return {
-        target: clampToArena(
-          {
-            x: predicted.x + Math.cos(fanAngle) * offset * OVEN.spread,
-            y: predicted.y + Math.sin(fanAngle) * offset * OVEN.spread
-          },
-          OVEN.blastRadius
-        ),
+        target: {
+          x: predicted.x + Math.cos(fanAngle) * offset * OVEN.spread,
+          y: predicted.y + Math.sin(fanAngle) * offset * OVEN.spread
+        },
         wave: 0
       };
     });

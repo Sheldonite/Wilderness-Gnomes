@@ -22,6 +22,7 @@ export type SoundId =
   | 'boss-spawn'
   | 'boss-warn'
   | 'boss-impact'
+  | 'boss-defeat'
   | 'companion-hit'
   | 'ui-click'
   | 'upgrade-pick';
@@ -43,6 +44,7 @@ export const SOUND_IDS: readonly SoundId[] = Object.freeze([
   'boss-spawn',
   'boss-warn',
   'boss-impact',
+  'boss-defeat',
   'companion-hit',
   'ui-click',
   'upgrade-pick'
@@ -64,6 +66,7 @@ export interface AudioParamLike {
   linearRampToValueAtTime?(value: number, endTime: number): unknown;
   exponentialRampToValueAtTime?(value: number, endTime: number): unknown;
   setTargetAtTime?(target: number, startTime: number, timeConstant: number): unknown;
+  cancelAndHoldAtTime?(cancelTime: number): unknown;
   cancelScheduledValues?(cancelTime: number): unknown;
 }
 
@@ -129,6 +132,12 @@ export interface AudioSystemOptions {
 interface ActiveVoice {
   stop?(when?: number): void;
   disconnect?(): void;
+  onended?: ((event?: unknown) => void) | null;
+}
+
+interface MusicTrack {
+  gain: GainNodeLike;
+  voices: Set<ActiveVoice>;
 }
 
 interface TimestampSample {
@@ -179,6 +188,7 @@ interface MusicPattern {
 
 const SFX_HEADROOM = 0.72;
 const MUSIC_HEADROOM = 0.28;
+const MUSIC_CROSSFADE_SEC = 0.24;
 const XP_COMBO_WINDOW_MS = 350;
 const XP_BASE_HZ = 659.25; // E5 warm crystal chime
 const XP_SEMITONES = [0, 2, 4, 7, 9, 12, 14, 16, 19] as const;
@@ -232,18 +242,35 @@ const MUSIC_PATTERNS: Record<Exclude<MusicMode, 'silent'>, MusicPattern> = {
     bass: [110.0, null, 164.81, null, 146.83, null, 164.81, null, 110.0, null, 196.0, null, 146.83, null, 164.81, null]
   },
   boss: {
-    stepMs: 280,
-    cutoffHz: 1120,
-    bassCutoffHz: 460,
-    noteDurationSec: 0.25,
-    bassDurationSec: 0.45,
-    melodyGain: 0.17,
-    bassGain: 0.16,
-    // Energetic yet cozy D minor storybook tension
-    melody: [587.33, null, 698.46, 880, 932.33, null, 880, 698.46, 659.25, 698.46, 783.99, null, 880, 698.46, 659.25, null],
-    bass: [146.83, 146.83, null, 174.61, 146.83, null, 196.0, 174.61, 146.83, 146.83, null, 220.0, 196.0, null, 174.61, null]
+    stepMs: 238,
+    cutoffHz: 1820,
+    bassCutoffHz: 560,
+    noteDurationSec: 0.36,
+    bassDurationSec: 0.28,
+    melodyGain: 0.23,
+    bassGain: 0.22,
+    // Four bars of D minor, B-flat, G minor, and A leading back to D.
+    melody: [
+      293.66, null, 349.23, 440, 587.33, null, 440, 349.23,
+      466.16, null, 440, 349.23, 293.66, 349.23, 466.16, null,
+      392, null, 466.16, 587.33, 698.46, null, 587.33, 466.16,
+      440, null, 659.25, 587.33, 554.37, 440, 554.37, null
+    ],
+    bass: [
+      73.42, 73.42, null, 110, 73.42, null, 110, 73.42,
+      58.27, 58.27, null, 87.31, 58.27, null, 87.31, 58.27,
+      49, 49, null, 73.42, 49, null, 73.42, 49,
+      55, 55, null, 82.41, 55, null, 82.41, 55
+    ]
   }
 };
+
+const BOSS_CHORDS = [
+  [146.83, 174.61, 220],
+  [116.54, 146.83, 174.61],
+  [98, 146.83, 233.08],
+  [110, 164.81, 277.18]
+] as const;
 
 function defaultCreateContext(): AudioContextLike | null {
   try {
@@ -330,7 +357,7 @@ export class AudioSystem {
   private readonly customNow?: () => number;
   private readonly unsubscribePreferences: () => void;
   private readonly lastPlayedAt = new Map<SoundId, TimestampSample>();
-  private readonly activeMusicVoices = new Set<ActiveVoice>();
+  private readonly fadingMusicTracks = new Set<MusicTrack>();
   private readonly sceneDetachers = new Map<object, () => void>();
   private readonly sceneGestureCleanups = new Set<() => void>();
 
@@ -343,6 +370,7 @@ export class AudioSystem {
 
   private musicMode: MusicMode = 'silent';
   private musicTimer: ReturnType<typeof setInterval> | null = null;
+  private musicTrack: MusicTrack | null = null;
   private musicStep = 0;
 
   private xpStreak = 0;
@@ -385,18 +413,15 @@ export class AudioSystem {
     return this.triggerSound(ctx, this.sfxGain, sound, volume, pitch, pan);
   }
 
-  /** Switches the procedural ambient soundtrack and stops cleanly on 'silent'. */
+  /** Crossfades soundtracks on a mode change and stops cleanly on 'silent'. */
   setMusicMode(mode: MusicMode): void {
     if (this.destroyed) return;
-    if (mode === this.musicMode && (mode === 'silent' || this.musicTimer !== null)) return;
-
-    this.musicMode = mode;
-    this.musicStep = 0;
-    this.stopMusicLoop();
-
-    if (mode !== 'silent') {
-      this.maybeStartMusicLoop();
+    if (mode !== this.musicMode) {
+      this.musicMode = mode;
+      this.musicStep = 0;
+      this.stopMusicLoop(mode !== 'silent');
     }
+    this.maybeStartMusicLoop();
   }
 
   getMusicMode(): MusicMode {
@@ -695,15 +720,25 @@ export class AudioSystem {
   }
 
   private maybeStartMusicLoop(): void {
-    if (this.destroyed || this.musicMode === 'silent' || this.isMuted()) return;
+    if (this.destroyed || this.musicMode === 'silent' || this.isMuted() || this.musicTimer !== null) return;
     if (this.preferences.musicVolume <= 0) return;
 
     const ctx = this.ensureContext();
     if (!ctx || ctx.state !== 'running') return;
     this.ensureGraph(ctx);
-    if (!this.musicGain || this.musicTimer !== null) return;
+    if (!this.musicGain) return;
 
-    const pattern = MUSIC_PATTERNS[this.musicMode];
+    const mode = this.musicMode;
+    const pattern = MUSIC_PATTERNS[mode];
+    const gain = ctx.createGain();
+    const now = Math.max(0, ctx.currentTime || 0);
+    const crossfading = this.fadingMusicTracks.size > 0;
+    setParam(gain.gain, crossfading ? 0 : 1, now);
+    if (crossfading) linearRamp(gain.gain, 1, now + MUSIC_CROSSFADE_SEC);
+    gain.connect(this.musicGain);
+    const track: MusicTrack = { gain, voices: new Set() };
+    this.musicTrack = track;
+
     // Ensure starting or unmuting lands immediately on an audible beat rather than a rest.
     for (let i = 0; i < pattern.melody.length; i++) {
       const m = pattern.melody[this.musicStep % pattern.melody.length];
@@ -711,14 +746,14 @@ export class AudioSystem {
       if (m !== null || b !== null) break;
       this.musicStep++;
     }
-    this.scheduleMusicStep(ctx, this.musicGain, pattern);
+    this.scheduleMusicStep(ctx, track, pattern, mode === 'boss');
     this.musicTimer = setInterval(() => {
       if (this.destroyed || this.isMuted() || this.musicMode === 'silent') {
         this.stopMusicLoop();
         return;
       }
-      if (!this.ctx || this.ctx.state !== 'running' || !this.musicGain) return;
-      this.scheduleMusicStep(this.ctx, this.musicGain, MUSIC_PATTERNS[this.musicMode]);
+      if (this.ctx !== ctx || ctx.state !== 'running' || this.musicTrack !== track) return;
+      this.scheduleMusicStep(ctx, track, pattern, mode === 'boss');
     }, pattern.stepMs);
     const timerHandle = this.musicTimer as unknown as { unref?: () => void };
     if (typeof timerHandle.unref === 'function') {
@@ -726,56 +761,116 @@ export class AudioSystem {
     }
   }
 
-  private stopMusicLoop(): void {
+  private stopMusicLoop(crossfade = false): void {
     if (this.musicTimer !== null) {
       clearInterval(this.musicTimer);
       this.musicTimer = null;
     }
-    for (const voice of [...this.activeMusicVoices]) {
+    const track = this.musicTrack;
+    this.musicTrack = null;
+    const ctx = this.ctx;
+    const canFade = crossfade && ctx?.state === 'running';
+    if (track && canFade && track.voices.size) {
+      const now = Math.max(0, ctx.currentTime || 0);
+      const param = track.gain.gain;
+      if (param.cancelAndHoldAtTime) {
+        param.cancelAndHoldAtTime(now);
+      } else {
+        const value = param.value;
+        param.cancelScheduledValues?.(now);
+        setParam(param, value, now);
+      }
+      linearRamp(param, 0, now + MUSIC_CROSSFADE_SEC);
+      this.fadingMusicTracks.add(track);
+    } else if (track) {
+      this.stopMusicTrack(track);
+    }
+    if (!canFade) {
+      for (const fadingTrack of this.fadingMusicTracks) this.stopMusicTrack(fadingTrack);
+      this.fadingMusicTracks.clear();
+    }
+  }
+
+  private stopMusicTrack(track: MusicTrack): void {
+    safeDisconnect(track.gain);
+    for (const voice of track.voices) {
       safeStop(voice);
       safeDisconnect(voice);
     }
-    this.activeMusicVoices.clear();
+    track.voices.clear();
   }
 
-  private scheduleMusicStep(ctx: AudioContextLike, dest: GainNodeLike, pattern: MusicPattern): void {
+  private scheduleMusicStep(ctx: AudioContextLike, track: MusicTrack, pattern: MusicPattern, battle: boolean): void {
     const idx = this.musicStep++;
+    const dest = track.gain;
     const melodyHz = pattern.melody[idx % pattern.melody.length];
     const bassHz = pattern.bass[idx % pattern.bass.length];
 
     if (melodyHz !== null) {
       const voice = this.playTone(ctx, dest, {
-        wave: 'sine',
+        wave: battle ? 'triangle' : 'sine',
         freq: melodyHz,
-        attackSec: 0.035,
+        attackSec: battle ? 0.025 : 0.035,
         durationSec: pattern.noteDurationSec,
         gain: pattern.melodyGain,
         filterType: 'lowpass',
         filterFreq: pattern.cutoffHz
       });
-      if (voice) this.trackMusicVoice(voice);
+      this.trackMusicVoice(track, voice);
     }
 
     if (bassHz !== null) {
       const voice = this.playTone(ctx, dest, {
         wave: 'triangle',
         freq: bassHz,
-        attackSec: 0.05,
+        attackSec: battle ? 0.009 : 0.05,
         durationSec: pattern.bassDurationSec,
         gain: pattern.bassGain,
         filterType: 'lowpass',
         filterFreq: pattern.bassCutoffHz
       });
-      if (voice) this.trackMusicVoice(voice);
+      this.trackMusicVoice(track, voice);
+    }
+    if (battle) this.scheduleBattleLayers(ctx, track, idx);
+  }
+
+  private scheduleBattleLayers(ctx: AudioContextLike, track: MusicTrack, step: number): void {
+    const stepInBar = step % 8;
+    const bar = Math.floor(step / 8) % BOSS_CHORDS.length;
+    const dest = track.gain;
+    if (stepInBar === 0 || stepInBar === 3 || stepInBar === 6 || (bar === 3 && stepInBar === 7)) {
+      const downbeat = stepInBar === 0;
+      this.trackMusicVoice(track, this.playTone(ctx, dest, {
+        wave: 'sine', freq: downbeat ? 128 : 160, freqEnd: downbeat ? 44 : 68,
+        attackSec: 0.004, durationSec: downbeat ? 0.31 : 0.19, gain: downbeat ? 0.29 : 0.15
+      }));
+    }
+    if (stepInBar === 0 || stepInBar === 2 || stepInBar === 4 || stepInBar === 7) {
+      const accent = stepInBar === 0 || stepInBar === 4;
+      this.trackMusicVoice(track, this.playNoiseBurst(ctx, dest, {
+        attackSec: 0.004, durationSec: accent ? 0.18 : 0.075, gain: accent ? 0.10 : 0.045,
+        filterType: 'bandpass', filterFreq: accent ? 1350 : 3000, filterQ: 0.8,
+        fallbackFreq: 380, fallbackFreqEnd: 190
+      }));
+    }
+    if (stepInBar === 0 || stepInBar === 4) {
+      for (const [index, hz] of BOSS_CHORDS[bar].entries()) {
+        this.trackMusicVoice(track, this.playTone(ctx, dest, {
+          wave: 'sawtooth', freq: hz, attackSec: 0.055, durationSec: stepInBar === 0 ? 0.94 : 0.67,
+          gain: stepInBar === 0 ? 0.095 : 0.065, filterFreq: 960, pan: (index - 1) * 0.34
+        }));
+      }
     }
   }
 
-  private trackMusicVoice(voice: ActiveVoice & { onended?: ((event?: unknown) => void) | null }): void {
-    this.activeMusicVoices.add(voice);
+  private trackMusicVoice(track: MusicTrack, voice: ActiveVoice | null): void {
+    if (!voice) return;
+    track.voices.add(voice);
     const prev = voice.onended;
     voice.onended = (event?: unknown) => {
-      this.activeMusicVoices.delete(voice);
+      track.voices.delete(voice);
       prev?.(event);
+      if (track.voices.size === 0 && this.fadingMusicTracks.delete(track)) safeDisconnect(track.gain);
     };
   }
 
@@ -924,6 +1019,20 @@ export class AudioSystem {
         this.playNoiseBurst(ctx, dest, { attackSec: 0.004, durationSec: 0.18, gain: v(0.14), filterType: 'lowpass', filterFreq: 480, filterFreqEnd: 130, fallbackFreq: p(140), fallbackFreqEnd: p(60), pan });
         return true;
 
+      case 'boss-defeat':
+        this.playTone(ctx, dest, { wave: 'sine', freq: p(128), freqEnd: p(50), attackSec: 0.004, durationSec: 0.34, gain: v(0.22), pan });
+        this.playArpeggio(ctx, dest, [293.66, 440, 587.33, 739.99].map(p), 0.095, {
+          wave: 'triangle', durationSec: 0.54, gain: v(0.16),
+          overtoneWave: 'sine', overtoneRatio: 2, overtoneGain: v(0.045), pan
+        });
+        for (const hz of [146.83, 220, 369.99]) {
+          this.playTone(ctx, dest, {
+            wave: 'sawtooth', freq: p(hz), delaySec: 0.285, attackSec: 0.04,
+            durationSec: 0.86, gain: v(0.075), filterFreq: 1150, pan
+          });
+        }
+        return true;
+
       case 'companion-hit':
         this.playTone(ctx, dest, { wave: 'triangle', freq: p(540), freqEnd: p(285), attackSec: 0.003, durationSec: 0.065, gain: v(0.13), filterType: 'lowpass', filterFreq: 1600, pan });
         this.playTone(ctx, dest, { wave: 'sine', freq: p(980), delaySec: 0.008, attackSec: 0.002, durationSec: 0.04, gain: v(0.06), pan });
@@ -1019,11 +1128,11 @@ export class AudioSystem {
     return scheduled ? osc : null;
   }
 
-  private playNoiseBurst(ctx: AudioContextLike, dest: GainNodeLike, spec: NoiseSpec): void {
+  private playNoiseBurst(ctx: AudioContextLike, dest: GainNodeLike, spec: NoiseSpec): ActiveVoice | null {
     const buffer = this.ensureNoiseBuffer(ctx);
     if (!buffer || typeof ctx.createBufferSource !== 'function') {
       if (spec.fallbackFreq !== undefined) {
-        this.playTone(ctx, dest, {
+        return this.playTone(ctx, dest, {
           wave: 'triangle',
           freq: spec.fallbackFreq,
           freqEnd: spec.fallbackFreqEnd,
@@ -1036,13 +1145,13 @@ export class AudioSystem {
           pan: spec.pan
         });
       }
-      return;
+      return null;
     }
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
-    this.scheduleVoice(ctx, source, dest, {
+    const scheduled = this.scheduleVoice(ctx, source, dest, {
       delaySec: spec.delaySec,
       attackSec: spec.attackSec,
       durationSec: spec.durationSec,
@@ -1053,6 +1162,7 @@ export class AudioSystem {
       filterQ: spec.filterQ,
       pan: spec.pan
     });
+    return scheduled ? source : null;
   }
 
   private scheduleVoice(

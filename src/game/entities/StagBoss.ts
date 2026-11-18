@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { STAG, STAG_LOOK } from '../config/stagBoss';
 import { STAG_FRAMES, STAG_LEFT_OFFSET, STAG_TEXTURE } from '../config/stagSprite';
-import type { StagEncounter, StagHit } from '../core/StagEncounter';
+import type { StagEncounter } from '../core/StagEncounter';
+import { bossPursuitStep } from '../core/BossPursuit';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import type { Vector2Like } from '../core/types';
 import { EnemyController } from './EnemyController';
@@ -22,23 +23,11 @@ export class StagBoss extends EnemyController {
   override update(deltaMs: number, target: Vector2Like): void {
     if (this.isDead) return;
     const phase = this.encounter.phase;
-    this.vulnerability = this.encounter.vulnerable ? STAG.stunVulnerability : 1;
+    this.vulnerability = this.encounter.vulnerable ? STAG.recoveryVulnerability : 1;
     this.sprite.setAngle(0);   // poses below that lean or shake set their own angle
+    const step = this.encounter.chargeStep;
+    this.sprite.setPosition(this.sprite.x + step.x, this.sprite.y + step.y);
     if (phase === 'charging') {
-      const step = this.encounter.chargeStep;
-      const before = this.position;
-      const wanted = { x: before.x + step.x, y: before.y + step.y };
-      const safeNav = this.navigation?.move(before, wanted, this.radius) ?? wanted;
-      const treeHit = this.hitTree(before, safeNav, this.radius);
-      const safe = treeHit ? treeHit.point : safeNav;
-      this.sprite.setPosition(safe.x, safe.y);
-      if ((step.x || step.y) && (treeHit || Math.hypot(safe.x - before.x, safe.y - before.y) < Math.hypot(step.x, step.y) * .5)) {
-        // Rammed a tree: he is stunned.
-        this.encounter.blocked(safe, target, this.blockedPlayerRadius, this.blockedHit, true);
-        this.vulnerability = this.encounter.vulnerable ? STAG.stunVulnerability : 1;
-        this.sprite.scene?.events.emit('presentation:level', safe);
-        this.sprite.scene?.cameras?.main?.shake(200, .005);
-      }
       this.face(step.x);
       this.play('stag-charge');
       return;
@@ -57,26 +46,15 @@ export class StagBoss extends EnemyController {
       this.sprite.setAngle(this.facingRight ? -9 : 9);
       return;
     }
-    if (phase === 'stunned') {
-      // Dazed: rest frame with a woozy sway.
-      this.still(STAG_FRAMES.rest);
-      this.sprite.setAngle(Math.sin(performance.now() / 120) * 4);
-      return;
-    }
     if (phase === 'recovering' || phase === 'arrival') { this.still(STAG_FRAMES.rest); return; }
     // stalking: close to the standoff distance and hold there
     const before = this.position;
-    const remaining = Math.max(0, Math.hypot(target.x - before.x, target.y - before.y) - STAG.standOff);
-    const next = this.navigation!.toward(before, target, Math.min(remaining, STAG.speed * (this.encounter.rut ? STAG.rutStalkSpeed : 1) * this.effectiveSlow * deltaMs / 1000), this.radius, this.route);
-    this.sprite.setPosition(next.x, next.y);
-    const dx = next.x - before.x, dy = next.y - before.y;
-    if (Math.hypot(dx, dy) > .05) { this.face(dx); this.play('stag-walk'); }
+    const speed = STAG.speed * (this.encounter.rut ? STAG.rutStalkSpeed : 1);
+    const walk = bossPursuitStep(before, target, STAG.standOff, speed, this.effectiveSlow, deltaMs);
+    this.sprite.setPosition(before.x + walk.x, before.y + walk.y);
+    if (Math.hypot(walk.x, walk.y) > .05) { this.face(walk.x); this.play('stag-walk'); }
     else { this.face(target.x - before.x); this.still(STAG_FRAMES.walk[0]); }
   }
-
-  /** Set by the system each frame so a blocked charge can still stomp. */
-  blockedPlayerRadius = 18;
-  blockedHit: StagHit = () => {};
 
   private face(dx: number): void {
     if (Math.abs(dx) > .01) this.facingRight = dx > 0;

@@ -123,16 +123,18 @@ function createHarness({ reducedMotion = false } = {}) {
         on: (ev, fn) => scaleEvents.on(ev, fn),
         off: (ev, fn) => scaleEvents.off(ev, fn)
       },
-      cameras: { main: { shakeCalls: [], shake(d, i) { this.shakeCalls.push({ d, i }); } } },
+      cameras: { main: { worldView: { left: 960, top: 1240, right: 2240, bottom: 1960 },
+        shakeCalls: [], shake(d, i) { this.shakeCalls.push({ d, i }); } } },
       textures: {
         exists: (k) => texturesMap.has(k),
+        remove: (k) => texturesMap.delete(k),
         createCanvas: (k) => {
           texturesMap.add(k);
           const ctx = {
             lineCap: '', lineJoin: '', strokeStyle: '', fillStyle: '', lineWidth: 1, globalAlpha: 1,
             beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, fill() {},
             ellipse() {}, fillRect() {}, strokeRect() {}, save() {}, restore() {},
-            translate() {}, rotate() {}, drawImage() {}, createPattern() { return '#5b8a78'; }
+            translate() {}, rotate() {}, scale() {}, drawImage() {}, createPattern() { return '#5b8a78'; }
           };
           return { context: ctx, refresh() {} };
         },
@@ -189,7 +191,7 @@ function createHarness({ reducedMotion = false } = {}) {
         }
       }
     };
-    return { scene, created, events };
+    return { scene, created, events, texturesMap };
   }
 
   const phaser = {
@@ -232,181 +234,119 @@ function createHarness({ reducedMotion = false } = {}) {
   return { load, createMockScene };
 }
 
-test('hitTreeTrunk and resolveTreeTrunkBlock accurately detect and push out of tree trunks', () => {
-  const { load } = createHarness();
-  const { hitTreeTrunk, resolveTreeTrunkBlock } = load('src/game/systems/ScenerySystem.ts');
-  const trunks = [{ x: 300, y: 200, radius: 24 }, { x: 800, y: 800, radius: 24 }];
-
-  const miss = hitTreeTrunk(trunks, { x: 100, y: 100 }, { x: 500, y: 100 }, 20);
-  assert.equal(miss, undefined);
-
-  const hit = hitTreeTrunk(trunks, { x: 100, y: 200 }, { x: 320, y: 200 }, 26);
-  assert.ok(hit, 'direct horizontal path through trunk should register hit');
-  assert.ok(Math.abs(hit.point.x - 250) < 0.01, `expected contact near x=250, got ${hit.point.x}`);
-  assert.ok(Math.abs(hit.point.y - 200) < 0.01);
-  assert.ok(hit.normal.x < -0.99 && Math.abs(hit.normal.y) < 0.01);
-
-  const resolved = resolveTreeTrunkBlock(trunks, { x: 240, y: 200 }, { x: 270, y: 200 }, 26);
-  assert.ok(Math.hypot(resolved.x - 300, resolved.y - 200) >= 49.9);
-});
-
-test('ScenerySystem plants inner trees accessible around start and ensures boss arena trees', () => {
+test('ScenerySystem streams and reclaims decorative chunks and textures as the camera moves', () => {
   const { load, createMockScene } = createHarness();
   const { ScenerySystem } = load('src/game/systems/ScenerySystem.ts');
-  const { scene } = createMockScene();
-  const scenery = new ScenerySystem(scene);
+  const { scene, created, events, texturesMap } = createMockScene();
+  const scenery = new ScenerySystem(scene, 'test woodland seed');
   scenery.create();
+  scenery.update(100, [{ x: 1600, y: 1600 }]);
 
-  assert.ok(scenery.treeTrunks.length > 50, 'forest props populate treeTrunks');
-  assert.ok(scenery.navigation.treeCollider, 'navigation exposes attached treeCollider without breaking walkability');
+  const grounds = () => created.images.filter(image => !image.destroyed && image.texture.key === 'storybook-ground');
+  const plants = () => created.images.filter(image => !image.destroyed && image.texture.key === 'storybook-props');
+  const positions = () => plants().map(({ x, y, frame }) => [x, y, frame]);
+  const startPlants = positions();
+  const startImages = [...created.images];
+  const startTextures = [...texturesMap];
+  assert.equal(grounds().length, 9);
+  assert.ok(startPlants.length > 100 && startTextures.length > 0);
+  assert.ok(plants().every(plant => !scenery.navigation.blocked(plant, 18)));
+  assert.equal(scenery.navigation.isDry({ x: 720, y: 2460 }, 18), false);
+  assert.equal(scenery.navigation.blocked({ x: 720, y: 2460 }, 18), false);
 
-  // Verify normal crowd pathing across trees remains unblocked while treeCollider reports trunk hits.
-  const firstTrunk = scenery.treeTrunks[0];
-  assert.equal(scenery.navigation.blocked(firstTrunk, 18), false, 'navigation stays smooth for regular crowds');
-  const blockedPos = scenery.resolveTreeBlock({ x: firstTrunk.x - 60, y: firstTrunk.y }, firstTrunk, 18);
-  assert.ok(Math.hypot(blockedPos.x - firstTrunk.x, blockedPos.y - firstTrunk.y) >= firstTrunk.radius + 17.9, 'treeCollider resolves trunk collision');
+  const camera = scene.cameras.main;
+  const originalView = camera.worldView;
+  camera.worldView = { left: -7208, right: -5928, top: 1240, bottom: 1960 };
+  scenery.update(100, []);
+  assert.ok(startImages.every(image => image.destroyed));
+  assert.ok(startTextures.every(key => !texturesMap.has(key)));
+  assert.ok(grounds().length <= 9 && grounds().every(image => image.x < 0));
 
-  const centerRingCount = scenery.treeTrunks.filter((t) => {
-    const d = Math.hypot(t.x - 1600, t.y - 1600);
-    return d >= 180 && d <= 500;
-  }).length;
-  assert.ok(centerRingCount >= 4, `expected >= 4 inner trees inside 500px of start, got ${centerRingCount}`);
-
-  // Ensure an isolated empty corner receives guaranteed boss arena trees away from player spawn.
-  const isolatedCenter = { x: 700, y: 700 };
-  const added = scenery.ensureArenaTrees(isolatedCenter, 520, 3, [isolatedCenter]);
-  const arenaTrunks = scenery.treeTrunks.filter((t) => {
-    const d = Math.hypot(t.x - isolatedCenter.x, t.y - isolatedCenter.y);
-    return d >= 120 && d <= 450;
-  });
-  assert.ok(added >= 0 && arenaTrunks.length >= 3, 'ensureArenaTrees guarantees >= 3 trees inside boss arena');
+  camera.worldView = originalView;
+  scenery.update(100, []);
+  assert.deepEqual(positions(), startPlants);
+  events.emit('shutdown');
+  assert.equal(texturesMap.size, 0);
+  assert.equal(created.images.every(image => image.destroyed), true);
 });
 
-test('StagBoss charging into a tree stuns Wonky, enables stun vulnerability, and shakes camera', () => {
+test('StagBoss applies the full charge step in open space and takes extra damage during recovery', () => {
   const { load, createMockScene } = createHarness();
   const { StagBoss } = load('src/game/entities/StagBoss.ts');
   const { StagEncounter } = load('src/game/core/StagEncounter.ts');
-  const { hitTreeTrunk } = load('src/game/systems/ScenerySystem.ts');
   const { scene, events } = createMockScene();
-
-  const nav = new SceneryNavigation(false, false);
-  const trunks = [];
-  nav.treeCollider = { hitTree: (from, to, r) => hitTreeTrunk(trunks, from, to, r) };
 
   const quiet = () => {};
   const encounter = new StagEncounter();
-  encounter.shouldSpawn(STAG.level);
-  const player = { x: 1320, y: 1000 };
-  const stag = new StagBoss(scene, { x: 1000, y: 1000 }, nav, encounter);
+  const player = { x: 3400, y: -1200 };
+  const start = { x: 3080, y: -1200 };
+  const stag = new StagBoss(scene, start, new SceneryNavigation(false, false, true), encounter);
 
-  encounter.update(STAG.introductionMs, { x: stag.position.x, y: stag.position.y }, player, 18, 1, quiet);
-  encounter.update(900, { x: stag.position.x, y: stag.position.y }, player, 18, 1, quiet);
-  assert.equal(encounter.phase, 'windup');
-  encounter.update(STAG.windupMs, { x: stag.position.x, y: stag.position.y }, player, 18, 1, quiet);
-  assert.equal(encounter.phase, 'charging');
+  encounter.update(STAG.introductionMs, stag.position, player, 18, 1, quiet);
+  encounter.update(900, stag.position, player, 18, 1, quiet);
+  const endX = start.x + encounter.lane.length;
+  encounter.update(STAG.windupMs, stag.position, player, 18, 1, quiet);
+  encounter.update(1000, stag.position, player, 18, 1, quiet);
+  stag.update(1000, player, 0);
 
-  // Place a sturdy oak directly in Wonky's locked charge path
-  trunks.push({
-    x: stag.position.x + encounter.lane.direction.x * 160,
-    y: stag.position.y + encounter.lane.direction.y * 160,
-    radius: 24
-  });
-
-  // Step frames until Wonky crashes into the tree trunk
-  for (let i = 0; i < 30 && encounter.phase === 'charging'; i++) {
-    encounter.update(25, { x: stag.position.x, y: stag.position.y }, player, 18, 1, quiet);
-    stag.update(25, player, 0);
-  }
-
-  assert.equal(encounter.phase, 'stunned', 'hitting a tree must stun Wonky');
+  assert.equal(encounter.phase, 'recovering');
+  assert.ok(Math.abs(stag.position.x - endX) < 0.0001);
+  assert.equal(stag.position.y, start.y);
   assert.equal(encounter.vulnerable, true);
-  assert.equal(stag.vulnerability, STAG.stunVulnerability);
-  assert.ok(scene.cameras.main.shakeCalls.length > 0, 'tree impact triggers camera shake');
-  assert.ok(events.emitted.some((e) => e.event === 'presentation:level'), 'tree impact emits burst');
+  assert.equal(stag.vulnerability, STAG.recoveryVulnerability);
 
   const emittedDamage = [];
   events.on('presentation:damage', (p) => emittedDamage.push(p));
   const healthBefore = stag.health;
-  const killed = stag.takeDamage(100);
-  assert.equal(killed, false);
-  assert.equal(healthBefore - stag.health, 100 * STAG.stunVulnerability);
+  assert.equal(stag.takeDamage(100), false);
+  assert.equal(healthBefore - stag.health, 100 * STAG.recoveryVulnerability);
   assert.equal(emittedDamage.length, 1);
-  assert.equal(emittedDamage[0].amount, 100 * STAG.stunVulnerability);
-  assert.equal(emittedDamage[0].vulnerability, STAG.stunVulnerability);
+  assert.equal(emittedDamage[0].amount, 100 * STAG.recoveryVulnerability);
+  assert.equal(emittedDamage[0].vulnerability, STAG.recoveryVulnerability);
   assert.equal(emittedDamage[0].isBoss, true);
 });
 
-test('KingBoss rolls straight through tree trunks without bouncing', () => {
+test('KingBoss follows the roll through its full distance and applies the turn point in open space', () => {
   const { load, createMockScene } = createHarness();
   const { KingBoss } = load('src/game/entities/KingBoss.ts');
   const { KingEncounter } = load('src/game/core/KingEncounter.ts');
-  const { hitTreeTrunk } = load('src/game/systems/ScenerySystem.ts');
-  const { scene, events } = createMockScene();
-
-  const nav = new SceneryNavigation(false, false);
-  const trunks = [];
-  nav.treeCollider = { hitTree: (from, to, r) => hitTreeTrunk(trunks, from, to, r) };
-
+  const { scene } = createMockScene();
   const quiet = () => {};
-  const arena = { center: { x: 1000, y: 1000 }, radius: 520 };
   const encounter = new KingEncounter();
-  encounter.shouldSpawn(KING.level);
-  const player = { x: 1320, y: 1000 };
-  const king = new KingBoss(scene, { x: 1000, y: 1000 }, nav, encounter);
+  const start = { x: 3080, y: -1200 };
+  const player = { x: 3400, y: -1200 };
+  const king = new KingBoss(scene, start, new SceneryNavigation(false, false, true), encounter);
 
-  encounter.update(KING.introductionMs, { x: king.position.x, y: king.position.y }, player, 18, 1, arena, quiet);
-  encounter.update(1000, { x: king.position.x, y: king.position.y }, player, 18, 1, arena, quiet);
-  assert.equal(encounter.phase, 'curling');
-  encounter.update(KING.curlMs, { x: king.position.x, y: king.position.y }, player, 18, 1, arena, quiet);
-  assert.equal(encounter.phase, 'rolling');
-  const initialDir = { ...encounter.direction };
+  encounter.update(KING.introductionMs, king.position, player, 18, 1, quiet);
+  encounter.update(1000, king.position, player, 18, 1, quiet);
+  const endX = start.x + encounter.lane.length;
+  encounter.update(KING.curlMs, king.position, player, 18, 1, quiet);
+  encounter.update(1000, king.position, player, 18, 1, quiet);
+  king.update(1000, player, 0);
 
-  // Place a sturdy oak directly ahead on King Rumbles's roll trajectory
-  trunks.push({
-    x: king.position.x + initialDir.x * 130,
-    y: king.position.y + initialDir.y * 130,
-    radius: 24
-  });
-
-  const start = { ...king.position };
-  for (let i = 0; i < 12; i++) {
-    encounter.update(25, { x: king.position.x, y: king.position.y }, player, 18, 1, arena, quiet);
-    king.update(25, player, 0);
-    const dot = encounter.direction.x * initialDir.x + encounter.direction.y * initialDir.y;
-    assert.ok(dot > 0.99, 'King Rumbles keeps rolling in the same direction through the tree');
-    assert.equal(encounter.ripples.length, 0, 'no tree ripple');
-  }
-  const travelled = (king.position.x - start.x) * initialDir.x + (king.position.y - start.y) * initialDir.y;
-  assert.ok(travelled > 154, `rolled past the trunk (travelled ${travelled})`);
-  assert.equal(scene.cameras.main.shakeCalls.length, 0);
-  assert.ok(!events.emitted.some((e) => e.event === 'presentation:level'));
+  assert.equal(encounter.phase, 'turning');
+  assert.ok(Math.abs(king.position.x - endX) < 0.0001);
+  assert.equal(king.position.y, start.y);
+  assert.equal(encounter.ripples.length, 1);
+  assert.ok(Math.abs(encounter.ripples[0].origin.x - king.position.x) < 0.0001);
 });
 
-test('stampeding deer break against tree trunks and halt their stampede', () => {
+test('stampeding deer cross scenery and former map edges without ending their charge', () => {
   const { load, createMockScene } = createHarness();
   const { EnemyController } = load('src/game/entities/EnemyController.ts');
-  const { hitTreeTrunk } = load('src/game/systems/ScenerySystem.ts');
-  const { scene, events } = createMockScene();
+  const { scene } = createMockScene();
+  const nav = new SceneryNavigation(false, false, true);
+  nav.addCircle(10, 1000, 24);
 
-  const nav = new SceneryNavigation(false, false);
-  const trunks = [{ x: 1110, y: 1000, radius: 24 }];
-  nav.treeCollider = { hitTree: (from, to, r) => hitTreeTrunk(trunks, from, to, r) };
+  const buck = new EnemyController(scene, -105, 1000, 0, nav, undefined, 'buck');
+  buck.stampede({ x: 1, y: 0 }, 300, 420);
+  for (let i = 0; i < 12; i++) buck.update(30, { x: 400, y: 1000 }, 0);
+  assert.ok(Math.abs(buck.position.x - 46.2) < .01);
+  assert.equal(buck.stampeding, true);
 
-  const buck = new EnemyController(scene, 1000, 1000, 0, nav, undefined, 'buck');
-  buck.stampede({ x: 1, y: 0 }, 420, 900);
-
-  for (let i = 0; i < 12; i++) {
-    buck.update(30, { x: 1500, y: 1000 }, 0);
-  }
-  const stoppedX = buck.position.x;
-  assert.ok(stoppedX < 1110, `stampeding buck (${stoppedX}) should break before trunk center 1110`);
-  assert.equal(buck.stampeding, false, 'buck stampede run ends immediately on tree hit');
-  assert.ok(events.emitted.some((e) => e.event === 'presentation:trail'), 'tree break emits impact dust/trail');
-
-  // On subsequent frame, since run ended on tree impact, buck moves only at normal speed (<= normal speed * dt).
-  const beforeNormal = buck.position.x;
-  buck.update(50, { x: 1500, y: 1000 }, 0);
-  assert.ok(buck.position.x - beforeNormal < (420 * 0.05) - 1, 'buck should no longer be moving at stampede run speed');
+  for (let i = 0; i < 12; i++) buck.update(30, { x: 400, y: 1000 }, 0);
+  assert.ok(Math.abs(buck.position.x - 195) < .01);
+  assert.equal(buck.stampeding, false);
 });
 
 test('PlayerController supports Arrow keys, Woodland Dash burst/cooldown/i-frames, and hit blink', () => {

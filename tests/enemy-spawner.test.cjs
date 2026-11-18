@@ -60,6 +60,25 @@ function assertOutside(enemy, view) {
   `spawn (${x}, ${y}) must be outside ${JSON.stringify(view)}`);
 }
 
+test('wilds spawn positions depend on the player rather than camera size and avoid overlapping a batch', () => {
+  const player = { x: -1300, y: 4300 };
+  const runs = [[640, 360], [180, 640]].map(([halfW, halfH]) => harness({
+    level: 1, navigation: new SceneryNavigation(false, false, true),
+    view: { left: player.x - halfW, right: player.x + halfW, top: player.y - halfH, bottom: player.y + halfH }
+  }));
+  for (const run of runs) run.update();
+  const positions = run => run.enemies.map(enemy => [enemy.position.x, enemy.position.y]);
+  const [first, second] = runs.map(positions);
+  assert.deepEqual(first, second);
+  assert.ok(first.length >= 2);
+  assert.notDeepEqual(first[0], first[1]);
+  for (const [x, y] of first) {
+    const distance = Math.hypot(x - player.x, y - player.y);
+    assert.ok(Math.abs(distance - BALANCE.spawner.spawnMinDistance) < 1e-6);
+    assert.ok(x < 0 && y > 3200);
+  }
+});
+
 test('the normal spawn pipeline unlocks armadillos at level 20 and initializes walking and rolling', () => {
   const run = harness();
   run.update(BALANCE.spawner.initialSpawnIntervalMs - 1, 19);

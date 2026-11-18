@@ -1,13 +1,13 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
-import { GAME_CONFIG } from '../config/gameConfig';
 import { reducedMotion } from '../config/presentation';
+import type { ChestCarrier } from '../core/ChestDrops';
 import { RunEvents, WOODLAND_SHRINE_REWARD, ringPositions, stampedeLane, stampedeStarts, type RunEvent, type ShrineReward, type StampedeLane } from '../core/RunEvents';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import { rollSpawnVariant } from '../core/SquirrelBehavior';
 import type { Vector2Like } from '../core/types';
 import { EnemyController, type EnemyVariant } from '../entities/EnemyController';
-import { clampToArena, distanceSq } from '../utils/math';
+import { distanceSq } from '../utils/math';
 import type { EnemySpawner } from './EnemySpawner';
 
 interface PendingStampede { lane: StampedeLane; warnMs: number; count: number; variants: EnemyVariant[]; level: number }
@@ -17,6 +17,9 @@ const VARIANT_NAMES: Record<EnemyVariant, string> = {
   brown: 'squirrel', grey: 'acorn-thrower', scout: 'scout squirrel', hedgehog: 'hedgehog',
   doe: 'doe', fawn: 'fawn', buck: 'buck', armadillo: 'armadillo', buzzard: 'buzzard'
 };
+const HEDGEHOG_ARRIVAL_MS = 700;
+const ELITE_LEAD_IN_MS = 4000;
+const ELITE_QUIET_AFTER_MS = 8000;
 
 /**
  * Set pieces between bosses: gilded elites that carry a chest, rings of creatures closing in, and
@@ -32,6 +35,11 @@ export class RunEventSystem {
   private pendingShrineRewards: ShrineReward[] = [];
   private shrineBursts: { position: Vector2Like; age: number }[] = [];
   private shrinePulseMs = 0;
+  private pendingTimedElites = 0;
+  private nextEliteRetryAtMs = 0;
+  private lastOrdinaryEliteAtMs = -Infinity;
+  private featuredSpacingUntilMs = 0;
+  private featuredArrival?: { enemy: EnemyController; remainingMs: number };
 
   constructor(private readonly scene: Phaser.Scene, private readonly navigation: SceneryNavigation) {
     this.graphics = scene.add.graphics().setDepth(4);
@@ -42,16 +50,28 @@ export class RunEventSystem {
   }
 
   /**
-   * `open` is false during boss fights: the schedule pauses, but stampedes already announced
-   * (including Wonky's herd) still run.
+   * `open` controls automatic set pieces. Announced stampedes still run in review scenes
+   * that disable the automatic schedule.
    */
   update(deltaMs: number, open: boolean, level: number, minutes: number, player: Vector2Like,
     camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner,
     onShrineCollect?: (reward: ShrineReward, position: Vector2Like) => void): void {
     this.shrinePulseMs += Math.max(0, deltaMs);
     if (open) {
-      for (const event of this.schedule.update(deltaMs, minutes)) this.trigger(event, level, minutes, player, camera, enemies, spawner);
+      const scheduled = this.schedule.update(deltaMs, minutes);
+      if (scheduled.some(event => event.kind === 'elite')) this.pendingTimedElites++;
+      if (this.pendingTimedElites && this.schedule.elapsedMs >= this.nextEliteRetryAtMs) {
+        this.nextEliteRetryAtMs = this.schedule.elapsedMs + 500;
+        if (this.spawnElite(level, minutes, player, camera, enemies, spawner)) this.pendingTimedElites--;
+      }
+      for (const event of scheduled) {
+        if (event.kind !== 'elite') this.trigger(event, level, minutes, player, camera, enemies, spawner);
+      }
       if (this.schedule.consumeShrineDue()) this.spawnShrine(player);
+    }
+    if (this.featuredArrival) {
+      this.featuredArrival.remainingMs -= deltaMs;
+      if (this.featuredArrival.enemy.isDead || this.featuredArrival.remainingMs <= 0) this.featuredArrival = undefined;
     }
     this.pending = this.pending.filter(p => {
       p.warnMs -= deltaMs;
@@ -95,14 +115,15 @@ export class RunEventSystem {
     for (let i = 0; i < 16; i++) {
       const a = baseAngle + (i / 16) * Math.PI * 2;
       const dist = 220 + (i % 3) * 45;
-      const candidate = clampToArena({ x: player.x + Math.cos(a) * dist, y: player.y + Math.sin(a) * dist }, 48);
+      const candidate = this.navigation.constrain({ x: player.x + Math.cos(a) * dist, y: player.y + Math.sin(a) * dist }, 48);
       const spot = this.navigation.nearest(candidate, 28);
-      if (!this.navigation.blocked(spot, 24)) {
+      if (!this.navigation.blocked(spot, 24) && (!this.navigation.unbounded || this.navigation.isDry(spot, 24))) {
         chosen = spot;
         break;
       }
     }
-    const position = chosen ?? this.navigation.nearest(clampToArena({ x: player.x + 220, y: player.y }, 48), 28);
+    const fallback = this.navigation.constrain({ x: player.x + 220, y: player.y }, 48);
+    const position = chosen ?? (this.navigation.unbounded ? this.navigation.nearestDry(fallback, 28) : this.navigation.nearest(fallback, 28));
     const shrine: WoodlandShrine = { position, spawnedAtMs: this.shrinePulseMs, collected: false };
     this.shrines.push(shrine);
     this.announce('A cozy Woodland Campfire glows nearby!');
@@ -110,14 +131,50 @@ export class RunEventSystem {
     return shrine;
   }
 
-  /** A golden elite carrying a chest, just off screen. Returns false if no spawn point was found. */
+  /** Dispatch a chest carrier; a false result leaves the caller's reward pending. */
   spawnElite(level: number, minutes: number, player: Vector2Like,
-    camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner): boolean {
-    const enemy = spawner.spawnEnemy(player, camera, minutes, rollSpawnVariant(level), level);
+    camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[], spawner: EnemySpawner,
+    kind: ChestCarrier = 'elite'): boolean {
+    const now = this.schedule.elapsedMs;
+    if (kind === 'featured-hedgehog') {
+      if (now - this.lastOrdinaryEliteAtMs < ELITE_LEAD_IN_MS) return false;
+      const spot = this.featuredSpot(player, camera, enemies);
+      if (!spot) return false;
+      const enemy = new EnemyController(this.scene, spot.x, spot.y, minutes, this.navigation, undefined, 'hedgehog', level);
+      enemy.makeElite();
+      enemy.root(HEDGEHOG_ARRIVAL_MS);
+      enemies.push(enemy);
+      this.featuredArrival = { enemy, remainingMs: HEDGEHOG_ARRIVAL_MS };
+      this.featuredSpacingUntilMs = now + ELITE_QUIET_AFTER_MS;
+      this.announce('Golden hedgehog! Sidestep its roll to earn a chest.');
+      return true;
+    }
+    if (now < this.featuredSpacingUntilMs) return false;
+    const enemy = spawner.spawnEnemy(player, camera, minutes, rollSpawnVariant(level), level, enemies);
     if (!enemy) return false;
     enemy.makeElite(); enemies.push(enemy);
+    this.lastOrdinaryEliteAtMs = now;
     this.announce(`A golden ${VARIANT_NAMES[enemy.variant]} prowls the woods. It carries a chest!`);
     return true;
+  }
+
+  private featuredSpot(player: Vector2Like, camera: Phaser.Cameras.Scene2D.Camera, enemies: EnemyController[]): Vector2Like | undefined {
+    const { radius } = BALANCE.hedgehog;
+    const view = this.navigation.unbounded ? undefined : camera.worldView;
+    const hasView = view && view.right > view.left && view.bottom > view.top;
+    const angle = Math.random() * Math.PI * 2;
+    let reachable: Vector2Like | undefined;
+    for (const distance of [250, 210, 165]) {
+      for (const spot of ringPositions(player, 12, distance, angle)) {
+        if (this.navigation.blocked(spot, radius + 8) || !this.navigation.clear(player, spot, BALANCE.player.radius)) continue;
+        if (enemies.some(enemy => !enemy.isDead && distanceSq(spot, enemy.position) <
+          (enemy.elite ? 180 : radius + enemy.radius + 16) ** 2)) continue;
+        if (!hasView || (spot.x >= view.left + 35 && spot.x <= view.right - 35 &&
+          spot.y >= view.top + 45 && spot.y <= view.bottom - 35)) return spot;
+        reachable ??= spot;
+      }
+    }
+    return reachable;
   }
 
   /** Run one set piece now (the schedule, or a review page). */
@@ -152,7 +209,7 @@ export class RunEventSystem {
     const e = BALANCE.events;
     stampedeStarts(p.lane, p.count, e.stampedeSpacing).forEach((start, i) => {
       if (enemies.length >= BALANCE.spawner.maxEnemiesCap + e.capAllowance) return;
-      const spot = this.navigation.nearest(clampToArena(start, 30), 30);
+      const spot = this.navigation.nearest(this.navigation.constrain(start, 30), 30);
       if (this.navigation.blocked(spot, 22)) return;
       const deer = new EnemyController(this.scene, spot.x, spot.y, minutes, this.navigation, undefined, p.variants[i], p.level);
       deer.stampede(p.lane.direction, p.lane.length + i * e.stampedeSpacing, e.stampedeSpeed);
@@ -165,7 +222,7 @@ export class RunEventSystem {
     for (const point of ringPositions(player, count, BALANCE.events.ringRadius, Math.random() * Math.PI)) {
       if (enemies.length >= cap) break;
       const edge = Math.max(BALANCE.enemy.radius, 30);
-      const inside = { x: Phaser.Math.Clamp(point.x, edge, GAME_CONFIG.arena.width - edge), y: Phaser.Math.Clamp(point.y, edge, GAME_CONFIG.arena.height - edge) };
+      const inside = this.navigation.constrain(point, edge);
       const spot = this.navigation.nearest(inside, edge);
       if (this.navigation.blocked(spot, edge)) continue;
       enemies.push(new EnemyController(this.scene, spot.x, spot.y, minutes, this.navigation, undefined, variant, level));
@@ -176,12 +233,16 @@ export class RunEventSystem {
     this.banner.textContent = text; this.banner.hidden = false; this.bannerMs = 3200;
   }
 
-  /** Drop announced-but-unreleased stampedes (a boss arena is opening). */
-  clear(): void { this.pending = []; this.graphics.clear(); }
-
   private draw(): void {
     const g = this.graphics.clear();
     const e = BALANCE.events;
+    if (this.featuredArrival) {
+      const { x, y } = this.featuredArrival.enemy.position;
+      const progress = reducedMotion() ? .5 : 1 - this.featuredArrival.remainingMs / HEDGEHOG_ARRIVAL_MS;
+      g.fillStyle(0xfbc25e, .18).fillCircle(x, y, 44);
+      g.lineStyle(4, 0xffe5a0, .95).strokeCircle(x, y, 31 + progress * 13);
+      g.lineStyle(2, 0x71451e, .85).strokeCircle(x, y, 48);
+    }
     for (const p of this.pending) {
       const { from, direction, length } = p.lane;
       const nx = -direction.y, ny = direction.x, half = e.stampedeLaneWidth / 2;

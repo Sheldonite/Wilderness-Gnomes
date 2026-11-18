@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { BALANCE } = require('../artifacts/ability-tests/game/config/balance.js');
 const { RunEvents, ringCount, ringPositions, stampedeLane, stampedeStarts } = require('../artifacts/ability-tests/game/core/RunEvents.js');
-const { BossGate, scaledBossHealth } = require('../artifacts/ability-tests/game/core/BossGate.js');
+const { scaledBossHealth } = require('../artifacts/ability-tests/game/core/BossSchedule.js');
 const { GameManager } = require('../artifacts/ability-tests/game/core/GameManager.js');
 const { UpgradeSystem } = require('../artifacts/ability-tests/game/systems/UpgradeSystem.js');
 
@@ -37,17 +37,6 @@ test('boss health scales with the run clock', () => {
   assert.equal(scaledBossHealth(1000, 100, 0), 1000);
   assert.equal(scaledBossHealth(1000, 100, 7.5), 1750);
   assert.equal(scaledBossHealth(1000, 100, -3), 1000);
-});
-
-test('four bosses gate the run in order, and the last one wins it', () => {
-  const gate = new BossGate();
-  assert.equal(gate.required(30), 'oven'); gate.defeat('oven');
-  assert.equal(gate.required(30), 'stag'); gate.defeat('stag');
-  assert.equal(gate.required(24), undefined);
-  assert.equal(gate.required(25), 'buzzard'); gate.defeat('buzzard');
-  assert.equal(gate.required(29), undefined);
-  assert.equal(gate.required(30), 'king'); assert.ok(!gate.allDefeated);
-  gate.defeat('king'); assert.ok(gate.allDefeated); assert.equal(gate.required(40), undefined);
 });
 
 test('Split Charm stops being offered after its pick limit', () => {

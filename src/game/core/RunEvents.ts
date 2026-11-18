@@ -48,8 +48,7 @@ export function stampedeStarts(lane: StampedeLane, count: number, spacing: numbe
 }
 
 /**
- * Schedules elites, encircling rings and stampedes. Its clock only advances while the caller
- * says the woods are open, so boss fights neither trigger events nor stack a backlog of them.
+ * Schedules elites, encircling rings and stampedes as active time advances in the woods.
  */
 export class RunEvents {
   private clockMs = 0;

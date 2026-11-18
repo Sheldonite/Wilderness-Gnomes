@@ -252,8 +252,9 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 #ui-root .ward-pill.ward-recharging{opacity:.82}
 #ui-root .shout-pill{border-color:#f0b958;color:#ffe7a8}
 #ui-root .harvest-pill{border-color:#8cc45e;color:#e4f9ca}
-#ui-root .boss-milestone-pill{border-color:#d6854d}
+#ui-root .boss-milestone-pill{border-color:#d6854d;max-width:100%}
 #ui-root .boss-milestone-pill svg{color:#ffb86b}
+#ui-root .boss-milestone-pill small{min-width:0;overflow:hidden;text-overflow:ellipsis}
 #ui-root .waking-pill{border-color:#8cc45e;color:#e7f9cf}
 #ui-root .waking-pill svg{color:#9ad36c}
 #ui-root .waking-pill strong{color:#fff6d2;font-weight:700}
@@ -325,6 +326,11 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
 #ui-root .xp-value{position:absolute;right:2px;bottom:11px;font:600 12px var(--display);color:var(--cream);text-shadow:var(--outline-text);font-variant-numeric:tabular-nums}
 /* the boss, under the clock */
 #ui-root .boss-hud{top:46px;width:min(400px,calc(100% - 20px));padding:7px 14px 9px}
+#ui-root .encounter-hud{position:absolute;top:46px;left:50%;transform:translateX(-50%);width:min(400px,calc(100% - 20px));display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;z-index:12}
+#ui-root .encounter-hud > :is(.boss-hud,.event-banner){position:relative;top:auto;left:auto;transform:none}
+#ui-root .encounter-hud > .boss-hud{width:100%}
+#ui-root .encounter-hud > .event-banner{order:1;animation:encounter-note-in .3s ease-out}
+@keyframes encounter-note-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 #ui-root .boss-hud>div:first-child{flex-direction:row;justify-content:space-between;align-items:baseline;gap:10px}
 #ui-root .boss-hud strong{font:700 15px var(--display);color:var(--gold);text-shadow:none;flex-shrink:0}
 #ui-root .boss-caption{font:italic 12px var(--display);color:#f1e2c0;min-height:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -348,7 +354,7 @@ button:focus-visible{outline:2px dashed var(--gold);outline-offset:5px}
   #ui-root .aim-button{height:34px;padding:0 9px;font-size:11px}
   #ui-root .run-stats{left:auto;right:10px;transform:none;top:48px;gap:12px}#ui-root .run-stats b{font-size:15px}
   #ui-root .status-strip{top:84px;left:10px;max-width:calc(100vw - 20px)}
-  #ui-root .boss-hud,#ui-root .event-banner{top:118px}.rare-rock-toast{top:170px}
+  #ui-root .boss-hud,#ui-root .event-banner,#ui-root .encounter-hud{top:118px}.rare-rock-toast{top:170px}
   #ui-root .touch-joystick{left:14px;bottom:28px;width:104px;height:104px}
   #ui-root .joystick-knob{width:42px;height:42px}
   #ui-root .touch-dash-button{right:14px;bottom:34px;width:68px;height:68px}

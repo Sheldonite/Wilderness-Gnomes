@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SQUIRREL_CHIEF, SQUIRREL_CHIEF_LOOK } from '../config/squirrelChief';
-import { scaledBossHealth } from '../core/BossGate';
+import { scaledBossHealth } from '../core/BossSchedule';
 import type { GameManager } from '../core/GameManager';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import {
@@ -45,26 +45,13 @@ export class SquirrelChiefSystem {
     this.caption = this.hud.querySelector('.boss-caption')!;
   }
 
-  private spawnBoss(player: Vector2Like, enemies: EnemyController[]): void {
-    let spawn = this.navigation?.nearest({ x: player.x - SQUIRREL_CHIEF.spawnDistance, y: player.y }, SQUIRREL_CHIEF.radius) ?? {
-      x: player.x - SQUIRREL_CHIEF.spawnDistance,
-      y: player.y
-    };
-    if (this.navigation) {
-      for (let i = 0; i < 16; i++) {
-        const angle = Math.PI + (i * Math.PI) / 8;
-        const candidate = {
-          x: player.x + Math.cos(angle) * SQUIRREL_CHIEF.spawnDistance,
-          y: player.y + Math.sin(angle) * SQUIRREL_CHIEF.spawnDistance
-        };
-        if (this.navigation.clear(player, candidate, SQUIRREL_CHIEF.radius)) {
-          spawn = candidate;
-          break;
-        }
-      }
-    }
+  spawnEncounter(player: Vector2Like, enemies: EnemyController[], healthMultiplier = 1): void {
+    if (this.boss && !this.boss.isDead && !this.encounter.defeated) return;
+    this.encounter = new SquirrelChiefEncounter();
+    this.celebrationMs = 0;
+    const spawn = { x: player.x - SQUIRREL_CHIEF.spawnDistance, y: player.y };
     const health = Math.round(
-      scaledBossHealth(SQUIRREL_CHIEF.health, SQUIRREL_CHIEF.healthPerMinute, this.game.getDifficultyMinutes())
+      scaledBossHealth(SQUIRREL_CHIEF.health, SQUIRREL_CHIEF.healthPerMinute, this.game.getDifficultyMinutes()) * healthMultiplier
     );
     this.boss = new SquirrelChiefBoss(this.scene, spawn, this.navigation, this.encounter, health);
     enemies.push(this.boss);
@@ -74,10 +61,7 @@ export class SquirrelChiefSystem {
     this.scene.events.emit('audio:play', 'boss-spawn');
   }
 
-  update(deltaMs: number, player: Vector2Like, playerRadius: number, enemies: EnemyController[]): void {
-    if (this.encounter.shouldSpawn(this.game.level)) {
-      this.spawnBoss(player, enemies);
-    }
+  update(deltaMs: number, player: Vector2Like, playerRadius: number): void {
     this.graphics.clear();
     if (this.encounter.defeated) {
       this.celebrationMs = Math.max(0, this.celebrationMs - deltaMs);

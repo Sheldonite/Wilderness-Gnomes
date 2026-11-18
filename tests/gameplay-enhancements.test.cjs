@@ -15,7 +15,7 @@ const { CombatResolver } = require('../artifacts/ability-tests/game/core/CombatR
 const { FrankieFlock } = require('../artifacts/ability-tests/game/core/FrankieFlock.js');
 const { TobiasSwim } = require('../artifacts/ability-tests/game/core/TobiasSwim.js');
 const { AbilitySimulation } = require('../artifacts/ability-tests/game/core/AbilitySimulation.js');
-const { BossGate, BOSS_ORDER } = require('../artifacts/ability-tests/game/core/BossGate.js');
+const { BossSchedule, BOSS_WAIT_MS } = require('../artifacts/ability-tests/game/core/BossSchedule.js');
 const { RunEvents, WOODLAND_SHRINE_REWARD } = require('../artifacts/ability-tests/game/core/RunEvents.js');
 const { SceneryNavigation } = require('../artifacts/ability-tests/game/core/SceneryNavigation.js');
 const { UpgradeSystem } = require('../artifacts/ability-tests/game/systems/UpgradeSystem.js');
@@ -377,8 +377,8 @@ test('rerolls, skipUpgradeForBonus, damage breakdown, and HudSnapshot work accur
   assert.equal(snap.rerollsRemaining, 0);
   assert.equal(snap.bonusGold, 2);
   assert.equal(snap.wardStatus, 'locked');
-  assert.equal(snap.nextBossLevel, 10);
-  assert.equal(snap.nextBossName, 'Oven');
+  assert.equal(snap.nextBossRemainingMs, BOSS_WAIT_MS);
+  assert.equal(snap.nextBossName, 'Squirrel Chief');
 });
 
 test('character passives differentiate Nick, Hailey, Sheldon, and Ron cleanly', () => {
@@ -622,24 +622,74 @@ test('Woodland Shrines spawn every ~2.5 min and RunEventSystem delivers choice-f
   assert.equal(gm.playerStats.shrineMoveSpeedBonus, 0);
 });
 
-test('BossGate supports optional Encore cycles at 40, 50... while keeping required() undefined', () => {
-  const gate = new BossGate();
-  assert.equal(gate.nextBossMilestone(1).level, 10);
-  assert.equal(gate.nextBossMilestone(1).encore, false);
+test('wilds shrines, enemy rings and stampede lanes remain near the player beyond the old map', () => {
+  const player = { x: -2400, y: 6300 };
+  const nav = new SceneryNavigation(false, false, true, position => position.x >= player.x);
+  const { load, scene } = loadWithPhaserMocks();
+  const { RunEventSystem } = load('src/game/systems/RunEventSystem.ts');
+  const events = new RunEventSystem(scene, nav);
+  const enemies = [];
+  const outsideOldMap = point => point.x < 0 && point.y > 3200;
 
-  for (const id of BOSS_ORDER) gate.defeat(id);
-  assert.equal(gate.allDefeated, true);
-  assert.equal(gate.required(40), undefined, 'story required() remains undefined after allDefeated');
+  const shrine = events.spawnShrine(player);
+  assert.ok(outsideOldMap(shrine.position) && nav.isDry(shrine.position, 24));
+  assert.ok(Math.hypot(shrine.position.x - player.x, shrine.position.y - player.y) <= 310.001);
+  events.trigger({ kind: 'ring', count: 4 }, 11, 0, player, {}, enemies, {});
+  assert.equal(enemies.length, 4);
+  assert.ok(enemies.every(enemy => outsideOldMap(enemy.position)));
+  events.launchStampede(player, 1, 4, 11);
+  events.update(BALANCE.events.stampedeWarnMs + 1, false, 11, 0, player, {}, enemies, {});
+  assert.equal(enemies.length, 8);
+  assert.ok(enemies.slice(4).every(enemy => enemy.stampeding && outsideOldMap(enemy.position)));
+  events.destroy();
+});
 
-  assert.equal(gate.encoreCount, 0);
-  assert.equal(gate.encoreAvailable(39), undefined);
-  assert.equal(gate.encoreAvailable(40), 'oven');
-  assert.equal(gate.nextBossMilestone(40).encore, true);
-  assert.equal(gate.nextBossMilestone(40).level, 40);
+test('a living timed boss leaves ordinary chest carriers and chest upgrades available', () => {
+  const { load, scene } = loadWithPhaserMocks();
+  const { ChestSystem } = load('src/game/systems/ChestSystem.ts');
+  const chests = new ChestSystem(scene, new SceneryNavigation(false, false, true));
+  const gm = new GameManager();
+  gm.update(60_000);
+  gm.bossSchedule.startDue(gm.elapsedMs);
+  assert.equal(gm.bossSchedule.activeBoss, 'chief');
+  gm.level = 10;
 
-  gate.defeatEncore('oven');
-  assert.equal(gate.encoreCount, 1);
-  assert.equal(gate.encoreAvailable(49), undefined);
-  assert.equal(gate.encoreAvailable(50), 'stag');
-  assert.ok(gate.encoreHealthMultiplier() > 1);
+  const player = { x: -2400, y: 6300 };
+  const dispatched = [];
+  chests.spawnCarrier = kind => { dispatched.push(kind); return true; };
+  chests.drops.addChest(player);
+
+  assert.equal(chests.update(16, player, gm), true);
+  assert.deepEqual(dispatched, ['featured-hedgehog']);
+  assert.equal(chests.drops.chests.length, 0);
+  assert.equal(gm.upgradeSource, 'chest');
+  assert.equal(gm.bossSchedule.activeBoss, 'chief');
+});
+
+test('timed Encore bosses keep a full countdown after each defeat and increase in strength', () => {
+  const schedule = new BossSchedule();
+  let elapsedMs = 0;
+  for (const id of ['chief', 'oven', 'stag', 'buzzard', 'king']) {
+    elapsedMs += BOSS_WAIT_MS;
+    assert.equal(schedule.startDue(elapsedMs)?.id, id);
+    elapsedMs += 35_000;
+    assert.equal(schedule.defeat(id, elapsedMs), true);
+  }
+  assert.equal(schedule.storyFinished, true);
+  assert.equal(schedule.startDue(elapsedMs + BOSS_WAIT_MS - 1), undefined);
+  elapsedMs += BOSS_WAIT_MS;
+  const first = schedule.startDue(elapsedMs);
+  assert.equal(first.id, 'oven');
+  assert.match(first.name, /Encore 1/);
+  assert.equal(first.healthMultiplier, 1);
+
+  elapsedMs += 90_000;
+  assert.equal(schedule.startDue(elapsedMs), undefined);
+  assert.equal(schedule.defeat('oven', elapsedMs), true);
+  assert.equal(schedule.upcoming(elapsedMs).remainingMs, BOSS_WAIT_MS);
+  assert.equal(schedule.startDue(elapsedMs + BOSS_WAIT_MS - 1), undefined);
+  const second = schedule.startDue(elapsedMs + BOSS_WAIT_MS);
+  assert.equal(second.id, 'stag');
+  assert.match(second.name, /Encore 2/);
+  assert.ok(second.healthMultiplier > first.healthMultiplier);
 });

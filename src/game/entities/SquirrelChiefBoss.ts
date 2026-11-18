@@ -3,12 +3,13 @@ import { GREY_ENEMY_SPRITE_KEY, GREY_ENEMY_WALK_ANIMATION_BY_DIRECTION } from '.
 import { SQUIRREL_CHIEF, SQUIRREL_CHIEF_LOOK } from '../config/squirrelChief';
 import type { SceneryNavigation } from '../core/SceneryNavigation';
 import type { SquirrelChiefEncounter } from '../core/SquirrelChiefEncounter';
+import { bossPursuitStep } from '../core/BossPursuit';
 import type { Vector2Like } from '../core/types';
-import { clampToArena, normalize } from '../utils/math';
+import { normalize } from '../utils/math';
 import { EnemyController } from './EnemyController';
 
 /**
- * Level 5 Squirrel Chief mini-boss: 1.7x scaled warband squirrel with crimson/gold tint,
+ * Squirrel Chief: 1.7x scaled warband squirrel with crimson/gold tint,
  * grounded shadow, telegraphed charge, acorn barrage, and catch-breath vulnerability window.
  */
 export class SquirrelChiefBoss extends EnemyController {
@@ -50,22 +51,10 @@ export class SquirrelChiefBoss extends EnemyController {
     if (this.isDead) return;
     const phase = this.encounter.phase;
     this.vulnerability = this.encounter.vulnerable ? SQUIRREL_CHIEF.vulnerableMultiplier : 1;
+    const step = this.encounter.chargeStep;
+    this.sprite.setPosition(this.sprite.x + step.x, this.sprite.y + step.y);
 
     if (phase === 'charging') {
-      const step = this.encounter.chargeStep;
-      const before = this.position;
-      const wanted = { x: before.x + step.x, y: before.y + step.y };
-      const safeNav = this.navigation?.move(before, wanted, this.radius) ?? clampToArena(wanted, this.radius);
-      const treeHit = this.hitTree(before, safeNav, this.radius);
-      const safe = treeHit ? treeHit.point : safeNav;
-      this.sprite.setPosition(safe.x, safe.y);
-      if (
-        (step.x || step.y) &&
-        (treeHit || Math.hypot(safe.x - before.x, safe.y - before.y) < Math.hypot(step.x, step.y) * 0.4)
-      ) {
-        this.encounter.blocked();
-        this.vulnerability = this.encounter.vulnerable ? SQUIRREL_CHIEF.vulnerableMultiplier : 1;
-      }
       this.setBaseTint(SQUIRREL_CHIEF.tint);
       this.updateAnimation(normalize(step.x, step.y));
       return;
@@ -96,13 +85,8 @@ export class SquirrelChiefBoss extends EnemyController {
     // arrival / stalking
     this.setBaseTint(SQUIRREL_CHIEF.tint);
     const before = this.position;
-    const speed = SQUIRREL_CHIEF.speed * this.effectiveSlow;
-    const step = (speed * deltaMs) / 1000;
-    const direction = normalize(target.x - before.x, target.y - before.y);
-    const wanted = clampToArena({ x: before.x + direction.x * step, y: before.y + direction.y * step }, this.radius);
-    const next = this.navigation?.toward(before, target, step, this.radius, this.route) ?? wanted;
-    this.sprite.setPosition(next.x, next.y);
-    const actual = normalize(next.x - before.x, next.y - before.y);
-    this.updateAnimation(actual.x === 0 && actual.y === 0 ? direction : actual);
+    const walk = bossPursuitStep(before, target, 0, SQUIRREL_CHIEF.speed, this.effectiveSlow, deltaMs);
+    this.sprite.setPosition(before.x + walk.x, before.y + walk.y);
+    this.updateAnimation(normalize(target.x - before.x, target.y - before.y));
   }
 }

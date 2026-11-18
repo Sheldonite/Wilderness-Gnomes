@@ -1,4 +1,5 @@
 import { SQUIRREL_CHIEF } from '../config/squirrelChief';
+import { BOSS_ENGAGE_DISTANCE } from './BossPursuit';
 import type { Vector2Like } from './types';
 import { normalize } from '../utils/math';
 
@@ -27,12 +28,11 @@ export interface AcornBarrage {
 export type ChiefHit = (damage: number, push: Vector2Like) => void;
 
 /**
- * Pure state machine for the Level 5 Squirrel Chief mini-boss.
+ * Pure state machine for the Squirrel Chief mini-boss.
  * Alternates between Acorn Barrage (5-acorn spread fan) and Chief Charge (650ms telegraphed
  * 380px dash at 560 speed), followed by a 900ms catch-breath vulnerable window (1.3x damage).
  */
 export class SquirrelChiefEncounter {
-  spawned = false;
   defeated = false;
   phase: SquirrelChiefPhase = 'arrival';
   lane?: ChiefChargeLane;
@@ -44,12 +44,6 @@ export class SquirrelChiefEncounter {
   private attackIndex = 0;
   private travelled = 0;
   private hitThisCharge = false;
-
-  shouldSpawn(level: number): boolean {
-    if (this.spawned || level < SQUIRREL_CHIEF.level) return false;
-    this.spawned = true;
-    return true;
-  }
 
   get vulnerable(): boolean {
     return this.phase === 'catchBreath';
@@ -76,7 +70,7 @@ export class SquirrelChiefEncounter {
   ): void {
     this.chargeStep = { x: 0, y: 0 };
     this.barrage = undefined;
-    if (!this.spawned || this.defeated) return;
+    if (this.defeated) return;
 
     if (this.phase === 'charging') {
       const step = Math.min(
@@ -110,6 +104,7 @@ export class SquirrelChiefEncounter {
     }
 
     if (this.phase === 'stalking') {
+      if (Math.hypot(player.x - boss.x, player.y - boss.y) > BOSS_ENGAGE_DISTANCE) return;
       const attack = this.nextAttack;
       this.attackIndex++;
       if (attack === 'barrage') {
@@ -143,16 +138,9 @@ export class SquirrelChiefEncounter {
     }
   }
 
-  /** Called when the chief's charge is stopped early by a tree or arena wall. */
-  blocked(): void {
-    if (this.phase !== 'charging') return;
-    this.enterCatchBreath();
-  }
-
   private enterCatchBreath(): void {
     this.phase = 'catchBreath';
     this.lane = undefined;
-    this.chargeStep = { x: 0, y: 0 };
     this.timer = SQUIRREL_CHIEF.catchBreathMs;
   }
 

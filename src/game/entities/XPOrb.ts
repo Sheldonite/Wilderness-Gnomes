@@ -3,14 +3,12 @@ import { LOOK } from '../config/presentation';
 import { BALANCE } from '../config/balance';
 import { ABILITIES } from '../config/abilities';
 import type { Vector2Like } from '../core/types';
-import { distanceSq, normalize } from '../utils/math';
 
 export class XPOrb {
   readonly radius = BALANCE.xp.radius;
   readonly sprite: Phaser.GameObjects.Sprite;
   isCollected = false;
   private magnetized = false;
-  private ageMs = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -29,31 +27,15 @@ export class XPOrb {
       return;
     }
 
-    this.ageMs += deltaMs;
     const effectiveRange = BALANCE.xp.magnetRange * Math.max(0.1, magnetMultiplier);
-    const magnetRangeSq = effectiveRange * effectiveRange;
-    const distSq = distanceSq(this.position, playerPosition);
-    const direction = normalize(playerPosition.x - this.sprite.x, playerPosition.y - this.sprite.y);
-    const dt = deltaMs / 1000;
-    const dist = Math.sqrt(distSq);
+    const dx = playerPosition.x - this.sprite.x;
+    const dy = playerPosition.y - this.sprite.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq === 0 || (!this.magnetized && distSq > effectiveRange ** 2)) return;
 
-    if (!this.magnetized && distSq > magnetRangeSq) {
-      const driftMs = Math.max(0, Math.min(deltaMs, this.ageMs - 100));
-      if (driftMs <= 0) return;
-      const drift = Math.min(dist, BALANCE.xp.idleSpeed * (driftMs / 1000));
-      this.sprite.setPosition(
-        this.sprite.x + direction.x * drift,
-        this.sprite.y + direction.y * drift
-      );
-      return;
-    }
-
-    const travel = Math.min(dist,
-      (this.magnetized ? ABILITIES.magnet.speed : BALANCE.xp.magnetSpeed) * dt);
-    this.sprite.setPosition(
-      this.sprite.x + direction.x * travel,
-      this.sprite.y + direction.y * travel
-    );
+    const speed = this.magnetized ? ABILITIES.magnet.speed : BALANCE.xp.magnetSpeed;
+    const step = Math.min(1, speed * deltaMs / (1000 * Math.sqrt(distSq)));
+    this.sprite.setPosition(this.sprite.x + dx * step, this.sprite.y + dy * step);
   }
 
   collect(): void {

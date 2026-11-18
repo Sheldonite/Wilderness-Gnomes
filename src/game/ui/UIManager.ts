@@ -203,7 +203,7 @@ export class UIManager {
           <div class="status-pill ward-pill" hidden></div>
           <div class="status-pill buff-pill shout-pill" hidden></div>
           <div class="status-pill buff-pill harvest-pill" hidden></div>
-          <div class="status-pill boss-milestone-pill" hidden></div>
+          <div class="status-pill boss-milestone-pill" role="timer" hidden></div>
           <div class="status-pill waking-pill" hidden></div>
           <div class="status-pill combo-pill" hidden></div>
         </div>
@@ -673,8 +673,10 @@ export class UIManager {
       ? Math.max(0, ext.harvestBonus)
       : Math.max(0, this.gameManager.playerStats.harvestBonus ?? 0);
     const harvestVisible = harvestBonus > 0.001;
-    const nextBossLevel = typeof ext.nextBossLevel === 'number' && ext.nextBossLevel > 0 ? ext.nextBossLevel : undefined;
-    const nextBossName = typeof ext.nextBossName === 'string' && ext.nextBossName ? ext.nextBossName : undefined;
+    const nextBossSeconds = ext.nextBossRemainingMs !== undefined && Number.isFinite(ext.nextBossRemainingMs)
+      ? Math.ceil(Math.max(0, ext.nextBossRemainingMs) / 1000)
+      : undefined;
+    const nextBossName = nextBossSeconds === undefined ? undefined : ext.nextBossName;
 
     const wakingCompleted = Boolean(ext.wakingCompleted);
     const wakingRemainingMs = typeof ext.wakingRemainingMs === 'number' && Number.isFinite(ext.wakingRemainingMs)
@@ -709,7 +711,7 @@ export class UIManager {
       wardVisible, wardStatus, wardLeaves, wardMaxLeaves,
       shoutVisible, Math.ceil(shoutRemainingMs / 100), Math.round(shoutAttackSpeedBonus * 100),
       harvestVisible, Math.round(harvestBonus * 100),
-      nextBossLevel ?? null, nextBossName ?? null,
+      nextBossSeconds ?? null, nextBossName ?? null,
       wakingVisible, wakingCompleted, wakingKills ?? null, wakingGoal ?? null,
       Math.ceil(wakingRemainingMs / 1000), Math.round(wakingProgress * 100),
       comboVisible, comboCount, Math.round(comboMultiplier * 100), Math.round(comboTimerRatio * 100)
@@ -779,9 +781,9 @@ export class UIManager {
     }
 
     if (this.bossMilestonePill) {
-      this.bossMilestonePill.hidden = nextBossLevel === undefined;
-      if (nextBossLevel !== undefined) {
-        const label = `Next Boss: Lv. ${nextBossLevel}`;
+      this.bossMilestonePill.hidden = nextBossSeconds === undefined;
+      if (nextBossSeconds !== undefined) {
+        const label = `Next Boss in ${formatTime(nextBossSeconds)}`;
         this.bossMilestonePill.innerHTML = `${icon('crownfire')}<span>${label}</span>${nextBossName ? `<small>${this.escapeHtml(nextBossName)}</small>` : ''}`;
         this.bossMilestonePill.setAttribute('aria-label', nextBossName ? `${label} (${nextBossName})` : label);
       }
@@ -820,7 +822,7 @@ export class UIManager {
       }
     }
 
-    this.statusStrip.hidden = !(dashVisible || wardVisible || shoutVisible || harvestVisible || nextBossLevel !== undefined || wakingVisible || comboVisible);
+    this.statusStrip.hidden = !(dashVisible || wardVisible || shoutVisible || harvestVisible || nextBossSeconds !== undefined || wakingVisible || comboVisible);
   }
 
   private showReceipt(heading: string, detail: string): void {

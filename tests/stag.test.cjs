@@ -1,12 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { StagEncounter } = require('../artifacts/ability-tests/game/core/StagEncounter.js');
+const { BOSS_ENGAGE_DISTANCE, bossPursuitStep } = require('../artifacts/ability-tests/game/core/BossPursuit.js');
 const { STAG } = require('../artifacts/ability-tests/game/config/stagBoss.js');
 const boss = { x: 1600, y: 1600 }, player = { x: 1900, y: 1600 };
 const quiet = () => {};
 
 function ready(health = 1) {
-  const fight = new StagEncounter(); fight.shouldSpawn(15);
+  const fight = new StagEncounter();
   fight.update(STAG.introductionMs, boss, player, 18, health, quiet);
   fight.update(900, boss, player, 18, health, quiet);
   return fight;
@@ -22,12 +23,18 @@ function runCharge(fight, from, target, radius, hit, frameMs = 16, health = 1) {
   return pos;
 }
 
-test('level fifteen unlocks exactly one stag, including skipped levels and new runs', () => {
+test('Wonky closes a large gap before locking a new charge lane', () => {
   const fight = new StagEncounter();
-  for (let i = 1; i < 15; i++) assert.equal(fight.shouldSpawn(i), false);
-  assert.equal(fight.shouldSpawn(15), true); assert.equal(fight.shouldSpawn(16), false);
-  fight.defeat(); assert.equal(fight.shouldSpawn(20), false);
-  assert.equal(new StagEncounter().shouldSpawn(17), true);
+  const origin = { x: -6000, y: 8000 };
+  const runner = { x: origin.x + 1000, y: origin.y };
+  fight.update(STAG.introductionMs, origin, runner, 18, 1, quiet);
+  fight.update(1000, origin, runner, 18, 1, quiet);
+  assert.equal(fight.phase, 'stalking');
+  const step = bossPursuitStep(origin, runner, STAG.standOff, STAG.speed, .7, 1000);
+  assert.ok(step.x > 235, 'catch-up can close the gap with a running player even while slowed');
+  const close = { x: runner.x - BOSS_ENGAGE_DISTANCE, y: runner.y };
+  fight.update(16, close, runner, 18, 1, quiet);
+  assert.equal(fight.phase, 'windup');
 });
 
 test('the stag locks its lane at windup and only charges after the windup ends', () => {
@@ -45,33 +52,25 @@ test('the stag locks its lane at windup and only charges after the windup ends',
 test('a charge hits a player standing in the lane once, and misses one who stepped out', () => {
   for (const [where, expected] of [[player, STAG.chargeDamage], [{ x: 1900, y: 1600 + STAG.radius + 18 + 30 }, 0]]) {
     const fight = ready(); fight.update(STAG.windupMs, boss, player, 18, 1, quiet);
+    const length = fight.lane.length;
     let taken = 0, pushes = [];
     const end = runCharge(fight, boss, where, 18, (d, push) => { taken += d; pushes.push(push); });
     assert.equal(fight.phase, 'recovering');
-    assert.ok(Math.abs(end.x - boss.x - STAG.chargeDistance) < 1, 'ran the full lane');
+    assert.ok(Math.abs(end.x - boss.x - length) < 1, 'ran the full telegraphed lane');
     // the stomp at the far end is out of reach of both players here
     assert.equal(taken, expected);
     if (expected) assert.ok(pushes[0].x > .99, 'thrown along the lane');
   }
 });
 
-test('the stomp where the charge ends hurts anyone close, and a blocked charge stomps early', () => {
+test('the stomp lands at the end of the telegraphed charge', () => {
   const fight = ready(); fight.update(STAG.windupMs, boss, player, 18, 1, quiet);
-  const landing = { x: boss.x + STAG.chargeDistance, y: boss.y };
+  const landing = { x: boss.x + fight.lane.length, y: boss.y };
   const bystander = { x: landing.x + STAG.stompRadius - 10, y: landing.y + 60 };
   let taken = 0;
   runCharge(fight, boss, bystander, 18, d => taken += d);
   assert.equal(taken, STAG.stompDamage);
-  assert.equal(fight.impacts.length, 1);
-  const wall = ready(); wall.update(STAG.windupMs, boss, player, 18, 1, quiet);
-  wall.update(16, boss, player, 18, 1, quiet);
-  let stomp = 0;
-  wall.blocked({ x: boss.x + 40, y: boss.y }, { x: boss.x + 80, y: boss.y }, 18, d => stomp += d);
-  assert.equal(wall.phase, 'stunned', 'a tree stuns him'); assert.equal(stomp, STAG.stompDamage);
-  const edge = ready(); edge.update(STAG.windupMs, boss, player, 18, 1, quiet);
-  edge.update(16, boss, player, 18, 1, quiet);
-  edge.blocked({ x: boss.x + 40, y: boss.y }, { x: boss.x + 800, y: boss.y }, 18, quiet, false);
-  assert.equal(edge.phase, 'recovering', 'the arena edge only ends the charge');
+  assert.ok(Math.abs(fight.impacts[0].x - landing.x) < 0.001);
 });
 
 test('below half health the stag winds up faster and charges twice before resting', () => {
@@ -103,20 +102,22 @@ test('defeat clears the lane and steps and stops the encounter', () => {
   assert.equal(taken, 0); assert.equal(fight.phase, 'charging', 'frozen where it was');
 });
 
-test('a stag stunned against a tree takes extra damage until he shakes it off', () => {
+test('only the final charge in a burst gives Wonky a window of extra damage', () => {
   const fight = ready(); fight.update(STAG.windupMs, boss, player, 18, 1, quiet);
-  fight.update(16, boss, player, 18, 1, quiet);
-  fight.blocked({ x: boss.x + 40, y: boss.y }, { x: 0, y: 0 }, 18, quiet);
+  const far = { x: 0, y: 0 };
+  const end = runCharge(fight, boss, far, 18, quiet);
   assert.ok(fight.vulnerable);
-  fight.update(STAG.stunMs - 1, boss, { x: 0, y: 0 }, 18, 1, quiet);
-  assert.equal(fight.phase, 'stunned');
-  fight.update(1, boss, { x: 0, y: 0 }, 18, 1, quiet);
+  fight.update(STAG.recoverMs - 1, end, far, 18, 1, quiet);
+  assert.equal(fight.phase, 'recovering');
+  fight.update(1, end, far, 18, 1, quiet);
   assert.equal(fight.phase, 'stalking'); assert.ok(!fight.vulnerable);
   const enraged = ready(.4); enraged.update(STAG.enragedWindupMs, boss, player, 18, .4, quiet);
-  enraged.update(16, boss, player, 18, .4, quiet);
-  enraged.blocked(boss, { x: 0, y: 0 }, 18, quiet);
-  enraged.update(STAG.stunMs, boss, { x: 0, y: 0 }, 18, .4, quiet);
-  assert.equal(enraged.phase, 'stalking', 'a stun cancels the second enraged charge');
+  const midpoint = runCharge(enraged, boss, far, 18, quiet, 16, .4);
+  assert.ok(!enraged.vulnerable);
+  enraged.update(STAG.recoverMs, midpoint, far, 18, .4, quiet);
+  enraged.update(STAG.enragedWindupMs, midpoint, far, 18, .4, quiet);
+  runCharge(enraged, midpoint, far, 18, quiet, 16, .4);
+  assert.ok(enraged.vulnerable);
 });
 
 /** A charge that ends far away, leaving the stag recovering at `end`. */
@@ -263,9 +264,4 @@ test('in the rut he charges three times on quicker windups and flings a wider fa
   fight.update(STAG.enragedCooldownMs, pos, { x: pos.x - 400, y: pos.y }, 18, .2, quiet);
   fight.update(STAG.volleyWindupMs, pos, { x: pos.x - 400, y: pos.y }, 18, .2, quiet);
   assert.equal(fight.volley.directions.length, STAG.rutVolleyShards);
-  const stunned = ready(.2); stunned.update(STAG.rutWindupMs, boss, player, 18, .2, quiet);
-  stunned.update(16, boss, player, 18, .2, quiet);
-  stunned.blocked(boss, { x: 0, y: 0 }, 18, quiet);
-  stunned.update(STAG.rutStunMs, boss, { x: 0, y: 0 }, 18, .2, quiet);
-  assert.equal(stunned.phase, 'stalking', 'his stuns are shorter in the rut');
 });

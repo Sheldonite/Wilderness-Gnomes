@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
-import { ChestDrops } from '../core/ChestDrops';
+import { ChestDrops, type ChestCarrier } from '../core/ChestDrops';
 import { LOOK, reducedMotion } from '../config/presentation';
 import type { GameManager } from '../core/GameManager';
-import { SceneryNavigation } from '../core/SceneryNavigation';
+import type { SceneryNavigation } from '../core/SceneryNavigation';
 import type { Vector2Like } from '../core/types';
 
 /** Small gold-banded woodland chests, drawn with the game's existing vector effects. */
@@ -10,31 +10,29 @@ export class ChestSystem {
   readonly drops: ChestDrops;
   private readonly views = new Map<number, { body: Phaser.GameObjects.Graphics; glow: Phaser.GameObjects.Graphics }>();
   private retryMs = 0;
-  private readonly ground = new SceneryNavigation();
 
   /**
    * When set, earned chests are never handed out for free: each one arrives carried by a golden
    * elite that must be hunted down. Returns true once the carrier is in the woods.
    */
-  spawnCarrier?: () => boolean;
+  spawnCarrier?: (kind: ChestCarrier) => boolean;
 
-  constructor(private readonly scene: Phaser.Scene, navigation: SceneryNavigation) {
+  constructor(private readonly scene: Phaser.Scene, private readonly navigation: SceneryNavigation) {
     // Water is walkable scenery in the current game, but treasure should still sit on dry land.
     this.drops = new ChestDrops({
-      blocked: (position, radius) => this.ground.blocked(position, radius) || navigation.blocked(position, radius),
+      blocked: (position, radius) => !navigation.isDry(position, radius) || navigation.blocked(position, radius),
       clear: (from, to, radius) => navigation.clear(from, to, radius)
     });
   }
 
   update(deltaMs: number, player: Vector2Like, game: GameManager): boolean {
     if (game.state !== 'Playing') return false;
-    if (game.bossGate.required(game.level)) return false;
     this.drops.advanceToLevel(game.level, game.marketBonuses.extraChestChance);
     this.retryMs -= deltaMs;
     if (this.retryMs <= 0 && this.drops.pending) {
       this.retryMs = 500;
       if (this.spawnCarrier) {
-        if (this.spawnCarrier()) this.drops.pending--;
+        this.drops.dispatchCarrier(this.spawnCarrier);
       } else {
         const chest = this.drops.spawnNear(player);
         if (chest) this.createView(chest.id, chest.position);
@@ -56,12 +54,12 @@ export class ChestSystem {
 
   /** An elite's chest, placed on dry ground where it fell. */
   dropChest(position: Vector2Like): void {
-    const chest = this.drops.addChest(this.ground.nearest(position, 24));
+    const chest = this.drops.addChest(this.navigation.nearestDry(position, 24));
     this.createView(chest.id, chest.position);
   }
 
   dropBoss(position: Vector2Like): void {
-    const chest = this.drops.addBoss(this.ground.nearest(position, 24));
+    const chest = this.drops.addBoss(this.navigation.nearestDry(position, 24));
     this.createView(chest.id, chest.position, true);
   }
 

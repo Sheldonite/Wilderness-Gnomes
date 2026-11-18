@@ -16,7 +16,7 @@ import type {
   WeaponId,
   UpgradeSource
 } from './types';
-import { BossGate } from './BossGate';
+import { BossSchedule } from './BossSchedule';
 import { createRunId, marketBonuses, type MarketProfile } from './MarketProgress';
 import { WOODLAND_SHRINE_REWARD, type ShrineReward } from './RunEvents';
 
@@ -33,7 +33,6 @@ export class GameManager {
   readonly marketBonuses: ReturnType<typeof marketBonuses>;
   state: GameRunState = 'Playing';
   upgradeSource: UpgradeSource = 'level';
-  readonly bossGate = new BossGate();
   bossUpgradeAvailable = false;
   /** Set once the final boss falls; the run may continue as an encore. */
   victorious = false;
@@ -66,7 +65,8 @@ export class GameManager {
   private shrineFrenzyRemainingMs = 0;
   private readonly damageBySource = new Map<DamageSourceId, number>();
 
-  constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile, characterId: PlayerCharacterId = 'wizard') {
+  constructor(weaponId: WeaponId = 'spell', marketProfile?: MarketProfile, characterId: PlayerCharacterId = 'wizard',
+    readonly bossSchedule = new BossSchedule()) {
     const arm = getWeapon(weaponId);
     this.marketBonuses = marketBonuses(marketProfile);
     const bonuses = this.marketBonuses;
@@ -245,7 +245,7 @@ export class GameManager {
 
     const gained = amount > 0 ? Math.round(amount * this.getComboXpMultiplier()) : amount;
     this.xp += gained;
-    if (this.xp < this.xpToNextLevel || this.bossGate.required(this.level)) {
+    if (this.xp < this.xpToNextLevel) {
       return false;
     }
 
@@ -263,7 +263,7 @@ export class GameManager {
     this.state = 'LevelUpPaused';
   }
 
-  /** Review pages and boss gates set the level directly; keep the companion in step with it. */
+  /** Review pages can set the level directly; keep the companion in step with it. */
   syncCompanionToLevel(): void {
     this.playerStats.level = this.level;
     this.applyCompanionRank();
@@ -282,7 +282,7 @@ export class GameManager {
       this.state = 'Playing';
       this.upgradeSource = 'level';
       this.bossUpgradeAvailable = false;
-      if (this.xp >= this.xpToNextLevel && !this.bossGate.required(this.level)) this.advanceLevel();
+      if (this.xp >= this.xpToNextLevel) this.advanceLevel();
     }
   }
 
@@ -420,7 +420,7 @@ export class GameManager {
   }
 
   getHudSnapshot(): HudSnapshot {
-    const milestone = this.bossGate.nextBossMilestone(this.level);
+    const nextBoss = this.bossSchedule.upcoming(this.elapsedMs);
     const wardMaxLeaves = this.bark?.leaves ?? (this.playerStats.abilityRanks['barkskin-ward'] > 0 ? 1 : 0);
     const wardStatus = this.wardStatus;
     const wardLeaves = this.bark ? this.wardLeaves : (wardStatus === 'ready' ? 1 : 0);
@@ -439,8 +439,8 @@ export class GameManager {
       wardMaxLeaves,
       shoutRemainingMs: this.playerStats.shoutRemainingMs ?? 0,
       harvestBonus: this.playerStats.harvestBonus,
-      nextBossLevel: milestone.level,
-      nextBossName: milestone.name,
+      nextBossRemainingMs: nextBoss?.remainingMs,
+      nextBossName: nextBoss?.name,
       wakingProgress: Math.min(1, this.wakingKills / this.wakingGoal),
       wakingRemainingMs: Math.max(0, this.wakingWindowMs - this.elapsedMs),
       wakingKills: this.wakingKills,

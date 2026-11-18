@@ -119,7 +119,7 @@ export interface HudSnapshot {
   wardMaxLeaves?: number;
   shoutRemainingMs?: number;
   harvestBonus?: number;
-  nextBossLevel?: number;
+  nextBossRemainingMs?: number;
   nextBossName?: string;
   wakingProgress?: number;
   wakingRemainingMs?: number;

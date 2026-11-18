@@ -13,7 +13,7 @@ const { MidnightBehavior } = require('../artifacts/ability-tests/game/core/Midni
 const { FrankieFlock } = require('../artifacts/ability-tests/game/core/FrankieFlock.js');
 const { TobiasSwim } = require('../artifacts/ability-tests/game/core/TobiasSwim.js');
 const { SceneryNavigation } = require('../artifacts/ability-tests/game/core/SceneryNavigation.js');
-const { BossGate } = require('../artifacts/ability-tests/game/core/BossGate.js');
+const { BOSS_WAIT_MS } = require('../artifacts/ability-tests/game/core/BossSchedule.js');
 const { WOODLAND_SHRINE_REWARD } = require('../artifacts/ability-tests/game/core/RunEvents.js');
 const { MarketProgress, emptyMarketProfile, goldForLevel } = require('../artifacts/ability-tests/game/core/MarketProgress.js');
 
@@ -322,28 +322,6 @@ test('Stage 2 Woodland Shrine reward syncs HP, frenzy speed, bonusGold, XP, and 
   assert.equal(settled.goldEarned, goldForLevel(10) + WOODLAND_SHRINE_REWARD.bonusGold);
 });
 
-test('Stage 2 BossGate Encore cycles past level 30 and scales Encore health', () => {
-  const gate = new BossGate();
-  assert.equal(gate.encoreAvailable(40), undefined);
-
-  gate.defeat('oven');
-  gate.defeat('stag');
-  gate.defeat('buzzard');
-  gate.defeat('king');
-  assert.equal(gate.allDefeated, true);
-
-  assert.equal(gate.encoreAvailable(39), undefined);
-  assert.equal(gate.encoreAvailable(40), 'oven');
-  assert.equal(gate.encoreHealthMultiplier(), 1);
-  assert.equal(gate.nextBossMilestone(40).name, 'Oven (Encore 1)');
-
-  gate.defeatEncore('oven');
-  assert.equal(gate.encoreAvailable(40), undefined);
-  assert.equal(gate.encoreAvailable(50), 'stag');
-  assert.ok(Math.abs(gate.encoreHealthMultiplier() - 1.45) < 1e-6);
-  assert.equal(gate.nextBossMilestone(50).level, 50);
-});
-
 test('Stage 2 weapon shots, chests, and rare rocks emit audio:play SFX events', () => {
   const { scene, emittedEvents, load } = loadTsWithPhaserMock();
   const { WeaponSystem } = load('src/game/systems/WeaponSystem.ts');
@@ -404,7 +382,7 @@ test('earned chests are never free: each roll sends a golden elite carrier inste
   assert.equal(chestSystem.drops.chests.length, 0, 'chests only appear when the elite falls');
 });
 
-test('Stage 2 opening ambush pack spawns 7 brown squirrels off-screen on opposite flanks', () => {
+test('Stage 2 lead and reinforcement squirrels close in on opposite flanks', () => {
   const { scene, load } = loadTsWithPhaserMock();
   const { EnemySpawner } = load('src/game/systems/EnemySpawner.ts');
   const nav = new SceneryNavigation(false);
@@ -413,13 +391,13 @@ test('Stage 2 opening ambush pack spawns 7 brown squirrels off-screen on opposit
   const player = { x: 1600, y: 1600 };
   const enemies = [];
 
+  spawner.spawnEnemy = () => undefined;
   const spawned = spawner.spawnOpeningPack(player, camera, 0, enemies, BALANCE.spawner.openingPackCount);
-  assert.equal(spawned.length, 7);
+  assert.equal(spawned.length, 3);
+  spawner.update(BALANCE.spawner.openingReinforcementDelayMs, player, camera, enemies, 0, 1);
   assert.equal(enemies.length, 7);
-  const leftFlank = enemies.filter(e => e.position.x < camera.worldView.left);
-  const rightFlank = enemies.filter(e => e.position.x > camera.worldView.right);
-  assert.ok(leftFlank.length >= 3, 'at least 3 squirrels on left flank');
-  assert.ok(rightFlank.length >= 3, 'at least 3 squirrels on right flank');
+  assert.ok(enemies.slice(0, 3).every(e => e.position.x < player.x));
+  assert.ok(enemies.slice(3).every(e => e.position.x > player.x));
   for (const squirrel of enemies) {
     assert.equal(squirrel.variant, 'brown');
     const distBefore = Math.hypot(squirrel.position.x - player.x, squirrel.position.y - player.y);
@@ -429,7 +407,7 @@ test('Stage 2 opening ambush pack spawns 7 brown squirrels off-screen on opposit
   }
 });
 
-test('Stage 2 Lv 5 SquirrelChiefSystem lifecycle, barrage/charge vulnerability, and defeat chest + gold + XP drop', () => {
+test('Stage 2 timed Squirrel Chief encounter, attacks, and defeat rewards', () => {
   const { scene, emittedEvents, load } = loadTsWithPhaserMock();
   const { SquirrelChiefSystem } = load('src/game/systems/SquirrelChiefSystem.ts');
   const { SQUIRREL_CHIEF } = load('src/game/config/squirrelChief.ts');
@@ -453,32 +431,31 @@ test('Stage 2 Lv 5 SquirrelChiefSystem lifecycle, barrage/charge vulnerability, 
     }
   );
 
-  // Below level 5: does not spawn
-  gm.level = 4;
-  squirrelChief.update(16, { x: 1600, y: 1600 }, 18, enemies);
+  const player = { x: 1600, y: 1600 };
+  squirrelChief.update(16, player, 18);
   assert.equal(squirrelChief.boss, undefined);
 
-  // Level 5: spawns Squirrel Chief
-  gm.level = 5;
-  squirrelChief.update(16, { x: 1600, y: 1600 }, 18, enemies);
-  assert.ok(squirrelChief.boss, 'Squirrel Chief spawns at level 5');
+  gm.update(BOSS_WAIT_MS);
+  assert.equal(gm.bossSchedule.startDue(gm.elapsedMs)?.id, 'chief');
+  squirrelChief.spawnEncounter(player, enemies);
+  assert.ok(squirrelChief.boss, 'Squirrel Chief spawns on request at level 1');
   assert.equal(enemies.length, 1);
   assert.equal(squirrelChief.boss.health, SQUIRREL_CHIEF.health);
   assert.ok(emittedEvents.some(e => e.event === 'audio:play' && e.args[0] === 'boss-spawn'));
 
   // Advance through arrival -> stalking -> barrageWindup -> fires 5 acorns
-  squirrelChief.update(SQUIRREL_CHIEF.introductionMs + 10, { x: 1600, y: 1600 }, 18, enemies);
-  squirrelChief.update(SQUIRREL_CHIEF.stalkMs + 10, { x: 1600, y: 1600 }, 18, enemies);
+  squirrelChief.update(SQUIRREL_CHIEF.introductionMs + 10, player, 18);
+  squirrelChief.update(SQUIRREL_CHIEF.stalkMs + 10, player, 18);
   assert.equal(squirrelChief.encounter.phase, 'barrageWindup');
-  squirrelChief.update(SQUIRREL_CHIEF.barrageWindupMs + 10, { x: 1600, y: 1600 }, 18, enemies);
+  squirrelChief.update(SQUIRREL_CHIEF.barrageWindupMs + 10, player, 18);
   assert.equal(firedAcorns.length, SQUIRREL_CHIEF.barrageCount);
 
   // Advance through stalking -> chargeWindup -> charging -> catchBreath (1.3x vulnerability)
-  squirrelChief.update(SQUIRREL_CHIEF.stalkMs + SQUIRREL_CHIEF.barrageRestMs + 10, { x: 1600, y: 1600 }, 18, enemies);
+  squirrelChief.update(SQUIRREL_CHIEF.stalkMs + SQUIRREL_CHIEF.barrageRestMs + 10, player, 18);
   assert.equal(squirrelChief.encounter.phase, 'chargeWindup');
-  squirrelChief.update(SQUIRREL_CHIEF.chargeWindupMs + 10, { x: 1600, y: 1600 }, 18, enemies);
+  squirrelChief.update(SQUIRREL_CHIEF.chargeWindupMs + 10, player, 18);
   assert.equal(squirrelChief.encounter.phase, 'charging');
-  squirrelChief.update(1000, { x: 1600, y: 1600 }, 18, enemies);
+  squirrelChief.update(1000, player, 18);
   assert.equal(squirrelChief.encounter.phase, 'catchBreath');
   squirrelChief.boss.update(16, { x: 1600, y: 1600 });
   assert.equal(squirrelChief.boss.vulnerability, SQUIRREL_CHIEF.vulnerableMultiplier);
@@ -488,6 +465,7 @@ test('Stage 2 Lv 5 SquirrelChiefSystem lifecycle, barrage/charge vulnerability, 
     gm.recordKill();
     if (enemy === squirrelChief.boss) {
       squirrelChief.defeated();
+      assert.equal(gm.bossSchedule.defeat('chief', gm.elapsedMs), true);
       chestSystem.dropChest(enemy.position);
       gm.bonusGold += 3;
       xpOrbs.push(new XPOrb(scene, enemy.position.x, enemy.position.y, SQUIRREL_CHIEF.xp));
@@ -495,6 +473,8 @@ test('Stage 2 Lv 5 SquirrelChiefSystem lifecycle, barrage/charge vulnerability, 
   });
   combat.damage(squirrelChief.boss, squirrelChief.boss.health);
   assert.equal(squirrelChief.encounter.defeated, true);
+  assert.equal(gm.getHudSnapshot().nextBossName, 'Oven');
+  assert.equal(gm.getHudSnapshot().nextBossRemainingMs, BOSS_WAIT_MS);
   assert.equal(chestSystem.drops.chests.length, 1, 'defeating Squirrel Chief drops a guaranteed chest');
   assert.equal(gm.bonusGold, 3);
   assert.equal(xpOrbs.length, 1);
@@ -564,29 +544,48 @@ test('Stage 2 recordKill() drives combo damage in CollisionSystem, combo XP in G
   assert.equal(gm.bonusGold, 8);
 });
 
-test('Stage 2 Level 3 guaranteed chest roll queues an elite carrier via ChestSystem', () => {
+test('Stage 2 Level 3 dispatches a golden hedgehog before other elite carriers', () => {
   const { scene, load } = loadTsWithPhaserMock();
   const { ChestSystem } = load('src/game/systems/ChestSystem.ts');
+  const { EnemyController } = load('src/game/entities/EnemyController.ts');
+  const { RunEventSystem } = load('src/game/systems/RunEventSystem.ts');
 
   const nav = new SceneryNavigation(false);
   const chestSystem = new ChestSystem(scene, nav);
-  // Force RNG to 0.99 so random 40% chest rolls never hit, isolating the Lv 3 guarantee
+  const runEvents = new RunEventSystem(scene, nav);
   chestSystem.drops = new ChestDrops(nav, () => 0.99);
-  let carriersSpawned = 0;
-  chestSystem.spawnCarrier = () => {
-    carriersSpawned += 1;
-    return true;
+  const player = { x: 1600, y: 1600 };
+  const camera = { worldView: { left: 960, right: 2240, top: 1240, bottom: 1960 } };
+  const enemies = [];
+  const spawner = {
+    spawnEnemy: () => new EnemyController(scene, 700, 1600, 0, nav, undefined, 'brown', 3)
   };
 
   const gm = new GameManager('spell', undefined, 'wizard');
+  chestSystem.spawnCarrier = kind => runEvents.spawnElite(gm.level, 0, player, camera, enemies, spawner, kind);
   gm.level = 2;
-  chestSystem.update(500, { x: 1600, y: 1600 }, gm);
-  assert.equal(carriersSpawned, 0, 'no guaranteed carrier at level 2');
+  chestSystem.update(500, player, gm);
+  assert.equal(enemies.length, 0, 'no guaranteed carrier at level 2');
+  runEvents.update(BALANCE.elite.firstMs - 1000, true, gm.level, 0, player, camera, enemies, spawner);
 
   gm.level = 3;
-  chestSystem.update(500, { x: 1600, y: 1600 }, gm);
-  assert.equal(carriersSpawned, 1, 'reaching level 3 dispatches a guaranteed chest carrier');
+  chestSystem.drops.pending++;
+  chestSystem.update(500, player, gm);
+  assert.deepEqual(enemies.map(enemy => enemy.variant), ['hedgehog']);
+  assert.equal(enemies[0].elite, true);
+  assert.equal(chestSystem.drops.pending, 1);
+  assert.equal(chestSystem.drops.chests.length, 0);
+
+  runEvents.update(1000, true, gm.level, 0, player, camera, enemies, spawner);
+  chestSystem.update(500, player, gm);
+  assert.equal(enemies.length, 1, 'both elite sources wait through the featured encounter opening');
+  assert.equal(chestSystem.drops.pending, 1);
+
+  runEvents.update(7500, true, gm.level, 0, player, camera, enemies, spawner);
+  chestSystem.update(500, player, gm);
+  assert.deepEqual(enemies.map(enemy => enemy.variant), ['hedgehog', 'brown', 'brown']);
   assert.equal(chestSystem.drops.pending, 0);
+  runEvents.destroy();
 });
 
 test('Stage 2 EnemySpawner and RunEventSystem forward playerLevel contact-damage scaling and handle frame-0 camera.worldView', () => {
@@ -617,13 +616,16 @@ test('Stage 2 EnemySpawner and RunEventSystem forward playerLevel contact-damage
   const spawner = new EnemySpawner(scene, nav);
   const player = { x: 1600, y: 1600 };
 
-  // Frame-0 camera with zeroed worldView spawns opening pack flanking both sides around x=1600
+  // Frame-0 camera with zeroed worldView still places the lead flank relative to the player.
   const zeroViewCamera = { width: 1280, height: 720, worldView: { left: 0, right: 0, top: 0, bottom: 0 } };
   const opening = [];
   spawner.spawnOpeningPack(player, zeroViewCamera, 0, opening, 7);
-  assert.equal(opening.length, 7);
-  assert.ok(opening.filter(e => e.position.x < player.x - 600).length >= 3);
-  assert.ok(opening.filter(e => e.position.x > player.x + 600).length >= 3);
+  assert.equal(opening.length, 3);
+  for (const squirrel of opening) {
+    assert.ok(squirrel.position.x < player.x);
+    assert.ok(Math.abs(Math.hypot(squirrel.position.x - player.x, squirrel.position.y - player.y) -
+      BALANCE.spawner.openingLeadDistance) < 0.001);
+  }
 
   // RunEventSystem.trigger('ring') forwards level so ring enemies scale contactDamage with playerLevel
   const runEvents = new RunEventSystem(scene, nav);

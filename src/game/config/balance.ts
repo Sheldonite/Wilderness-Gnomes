@@ -7,7 +7,7 @@ export const BALANCE = {
   },
   enemy: {
     radius: 15,
-    health: 28,
+    health: 20,
     speed: 92,
     contactDamage: 11,
     contactDamageCooldownMs: 520,
@@ -77,7 +77,7 @@ export const BALANCE = {
     buck: { health: 150, speed: 105, contactDamage: 20, radius: 26, scale: 1.55 }
   },
   /**
-   * Buzzards join the spawns from King Frankie's level (the gate holds the run at 25 until he falls).
+   * Buzzards join the regular spawns at player level 25.
    * They fly straight over scenery, and when close they hover, then swoop in a locked straight line.
    */
   buzzard: {
@@ -116,7 +116,7 @@ export const BALANCE = {
   rangedEnemy: {
     unlockLevel: 2,
     spawnChance: 0.2,
-    health: 22,
+    health: 17,
     speed: 84,
     preferredRange: 500,
     retreatRange: 300,
@@ -130,7 +130,7 @@ export const BALANCE = {
   scout: {
     unlockLevel: 1,
     spawnChance: 0.14,
-    health: 18,
+    health: 14,
     speed: 152,
     contactDamage: 10,
     radius: 13,
@@ -139,7 +139,7 @@ export const BALANCE = {
   hedgehog: {
     unlockLevel: 3,
     spawnChance: 0.16,
-    health: 48,
+    health: 36,
     walkSpeed: 88,
     rollSpeed: 370,
     rollDistance: 240,
@@ -160,8 +160,14 @@ export const BALANCE = {
     maxEnemiesCap: 180,
     maxEnemiesAddedPerMinute: 24,
     spawnOutsideViewPadding: 90,
-    /** Initial pack spawned when a run opens so action starts immediately. */
+    spawnMinDistance: 640,
+    spawnMaxDistance: 780,
+    /** A small lead flank opens the run, with the rest arriving from the other side. */
     openingPackCount: 7,
+    openingLeadCount: 3,
+    openingLeadDistance: 240,
+    openingReinforcementDistance: 350,
+    openingReinforcementDelayMs: 4500,
     /** From this minute each spawn tick brings a small group, growing every few minutes. */
     batchFromMinute: 0,
     batchEveryMinutes: 2,
@@ -247,14 +253,13 @@ export const BALANCE = {
     maxOrbs: 220,
     magnetRange: 150,
     collectRange: 24,
-    idleSpeed: 42,
     magnetSpeed: 420
   },
   leveling: {
-    baseThreshold: 18,
+    baseThreshold: 116,
     thresholdGrowth: 1.22,
     linearFromLevel: 10,        // past here each level needs a fixed amount more, not a percentage
-    linearStepXp: 30,
+    linearStepXp: 192,
     choices: 3,
     /** Split Charm can be picked this many times per run. */
     maxSplitPicks: 4

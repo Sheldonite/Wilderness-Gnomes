@@ -1,5 +1,5 @@
 import { BUZZARD } from '../config/buzzardBoss';
-import { distanceToEdge, type KingArena } from './KingEncounter';
+import { BOSS_ENGAGE_DISTANCE } from './BossPursuit';
 import type { Vector2Like } from './types';
 import { distanceSq, normalize } from '../utils/math';
 
@@ -22,7 +22,6 @@ export type BuzzardHit = (damage: number, push: Vector2Like, knockback: number) 
  * Below the enrage fraction: two dives in a row, quicker windups, a wider volley, shorter rests.
  */
 export class BuzzardEncounter {
-  spawned = false;
   defeated = false;
   phase: BuzzardPhase = 'arrival';
   lane?: DiveLane;
@@ -34,6 +33,7 @@ export class BuzzardEncounter {
   blown?: GustCone;
   /** Where he wants to fly this frame (circling or hovering); the entity steers toward it. */
   flyTarget: Vector2Like = { x: 0, y: 0 };
+  pursuing = false;
   /** Offset the boss must move this frame while diving; the entity applies it. */
   diveStep: Vector2Like = { x: 0, y: 0 };
   private timer: number = BUZZARD.introductionMs;
@@ -44,11 +44,6 @@ export class BuzzardEncounter {
   private angle?: number;
   private healthFraction = 1;
 
-  shouldSpawn(level: number): boolean {
-    if (this.spawned || level < BUZZARD.level) return false;
-    this.spawned = true; return true;
-  }
-
   get enraged(): boolean { return this.healthFraction <= BUZZARD.enrageFraction; }
   /** Up in the air: body contact cannot happen. */
   get airborne(): boolean { return this.phase !== 'perched'; }
@@ -58,20 +53,25 @@ export class BuzzardEncounter {
   }
   get nextAttack(): BuzzardAttack { return BUZZARD.attackOrder[this.attackIndex % BUZZARD.attackOrder.length]; }
 
-  update(deltaMs: number, boss: Vector2Like, player: Vector2Like, playerRadius: number, healthFraction: number, arena: KingArena, hit: BuzzardHit): void {
+  update(deltaMs: number, boss: Vector2Like, player: Vector2Like, playerRadius: number, healthFraction: number, hit: BuzzardHit): void {
     this.volley = undefined;
     this.blown = undefined;
     this.diveStep = { x: 0, y: 0 };
     this.flyTarget = { ...boss };
-    if (!this.spawned || this.defeated) return;
+    this.pursuing = false;
+    if (this.defeated) return;
     this.healthFraction = healthFraction;
     if (this.phase === 'diving') { this.dive(deltaMs, boss, player, playerRadius, hit); return; }
-    if (this.phase === 'circling' || this.phase === 'arrival') this.circle(deltaMs, boss, player);
+    const outOfRange = distanceSq(boss, player) > BOSS_ENGAGE_DISTANCE ** 2;
+    const circling = this.phase === 'circling' || this.phase === 'arrival';
+    this.pursuing = outOfRange && (circling || this.phase === 'rising');
+    if (this.pursuing) this.flyTarget = { ...player };
+    else if (circling) this.circle(deltaMs, boss, player);
     this.timer -= deltaMs;
     if (this.timer > 0) return;
     if (this.phase === 'arrival' || this.phase === 'perched') this.startCircling();
-    else if (this.phase === 'circling') this.beginAttack(boss, player, arena);
-    else if (this.phase === 'rising') this.beginDive(boss, player, arena);
+    else if (this.phase === 'circling' && !outOfRange) this.beginAttack(boss, player);
+    else if (this.phase === 'rising' && !outOfRange) this.beginDive(boss, player);
     else if (this.phase === 'diveWindup') { this.phase = 'diving'; this.travelled = 0; this.hitThisDive = false; }
     else if (this.phase === 'volleyWindup') this.releaseVolley(boss);
     else if (this.phase === 'gustWindup') this.releaseGust(player, playerRadius, hit);
@@ -88,14 +88,15 @@ export class BuzzardEncounter {
     this.flyTarget = { x: player.x + Math.cos(this.angle) * BUZZARD.circleRadius, y: player.y + Math.sin(this.angle) * BUZZARD.circleRadius * BUZZARD.circleSquash };
   }
 
-  private beginAttack(boss: Vector2Like, player: Vector2Like, arena: KingArena): void {
+  private beginAttack(boss: Vector2Like, player: Vector2Like): void {
+    this.flyTarget = { ...boss };
     const attack = this.nextAttack;
     this.attackIndex++;
     const aim = normalize(player.x - boss.x, player.y - boss.y);
     const facing = aim.x === 0 && aim.y === 0 ? { x: 1, y: 0 } : aim;
     if (attack === 'dive') {
       this.divesLeft = this.enraged ? BUZZARD.enragedDives : 1;
-      this.beginDive(boss, player, arena);
+      this.beginDive(boss, player);
     } else if (attack === 'volley') {
       this.phase = 'volleyWindup'; this.timer = BUZZARD.volleyWindupMs; this.volleyAim = facing;
     } else {
@@ -104,16 +105,15 @@ export class BuzzardEncounter {
     }
   }
 
-  /** Lock a lane through the player, stopping short of the arena's edge. */
-  private beginDive(boss: Vector2Like, player: Vector2Like, arena: KingArena): void {
+  /** Lock a lane through the player, with room to sweep past before landing. */
+  private beginDive(boss: Vector2Like, player: Vector2Like): void {
     this.divesLeft--;
     this.phase = 'diveWindup';
     this.timer = this.enraged ? BUZZARD.enragedDiveWindupMs : BUZZARD.diveWindupMs;
     const aim = normalize(player.x - boss.x, player.y - boss.y);
     const direction = aim.x === 0 && aim.y === 0 ? { x: 1, y: 0 } : aim;
-    const wanted = Math.sqrt(distanceSq(boss, player)) + BUZZARD.diveOvershoot;
-    const room = distanceToEdge(boss, direction, arena.center, arena.radius - BUZZARD.radius);
-    this.lane = { from: { ...boss }, direction, length: Math.max(60, Math.min(wanted, room)) };
+    const length = Math.sqrt(distanceSq(boss, player)) + BUZZARD.diveOvershoot;
+    this.lane = { from: { ...boss }, direction, length };
   }
 
   private dive(deltaMs: number, boss: Vector2Like, player: Vector2Like, playerRadius: number, hit: BuzzardHit): void {
@@ -122,6 +122,7 @@ export class BuzzardEncounter {
     this.diveStep = { x: lane.direction.x * step, y: lane.direction.y * step };
     this.travelled += step;
     const after = { x: boss.x + this.diveStep.x, y: boss.y + this.diveStep.y };
+    this.flyTarget = after;
     if (!this.hitThisDive && segmentHits(boss, after, player, BUZZARD.radius + playerRadius)) {
       this.hitThisDive = true;
       hit(BUZZARD.diveDamage, lane.direction, BUZZARD.diveKnockback);
@@ -157,7 +158,7 @@ export class BuzzardEncounter {
 
   defeat(): void {
     this.defeated = true; this.lane = undefined; this.gust = undefined; this.volleyAim = undefined; this.volley = undefined;
-    this.diveStep = { x: 0, y: 0 };
+    this.diveStep = { x: 0, y: 0 }; this.pursuing = false;
   }
 }
 

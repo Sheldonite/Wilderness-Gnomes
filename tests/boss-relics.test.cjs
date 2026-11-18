@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { GameManager } = require('../artifacts/ability-tests/game/core/GameManager.js');
-const { BossGate, BOSS_ARENA_RADIUS, insideBossArena } = require('../artifacts/ability-tests/game/core/BossGate.js');
+const { GameManager, xpThreshold } = require('../artifacts/ability-tests/game/core/GameManager.js');
+const { BossSchedule, BOSS_WAIT_MS } = require('../artifacts/ability-tests/game/core/BossSchedule.js');
 const { BossPowerSimulation } = require('../artifacts/ability-tests/game/core/BossPowerSimulation.js');
 const { ChestDrops } = require('../artifacts/ability-tests/game/core/ChestDrops.js');
 const { UpgradeSystem } = require('../artifacts/ability-tests/game/systems/UpgradeSystem.js');
@@ -17,40 +17,49 @@ function enemy(x = 1100, y = 1000, health = 10000) {
 }
 const damage = (target, amount) => target.takeDamage(amount);
 
-test('boss gates stop XP overflow at each boss level and preserve earned XP', () => {
+test('XP and queued level-ups advance while the Oven is alive', () => {
+  const schedule = new BossSchedule('oven');
+  const game = new GameManager('spell', undefined, 'wizard', schedule);
+  game.level = 10;
+  game.xpToNextLevel = xpThreshold(10);
+  game.update(BOSS_WAIT_MS);
+  assert.equal(schedule.startDue(game.elapsedMs)?.id, 'oven');
+
+  assert.equal(game.addXp(xpThreshold(10) + xpThreshold(11) + 8), true);
+  assert.equal(game.level, 11);
+  game.resumeAfterUpgrade();
+  assert.equal(game.level, 12);
+  game.resumeAfterUpgrade();
+  assert.equal(game.state, 'Playing');
+  assert.equal(game.xp, 8);
+  assert.equal(schedule.activeBoss, 'oven');
+});
+
+test('boss timing uses active gameplay and measures each gap from defeat', () => {
   const game = new GameManager();
-  game.addXp(100000);
-  while (game.state === 'LevelUpPaused') game.resumeAfterUpgrade();
-  assert.equal(game.level, 10); assert.equal(game.bossGate.required(game.level), 'oven');
-  const saved = game.xp;
-  assert.equal(game.addXp(100), false); assert.equal(game.xp, saved + 100); assert.equal(game.level, 10);
-  assert.equal(game.bossGate.defeat('oven'), true);
-  game.addXp(0);
-  while (game.state === 'LevelUpPaused') game.resumeAfterUpgrade();
-  assert.equal(game.level, 15); assert.equal(game.bossGate.required(game.level), 'stag');
-  assert.equal(game.bossGate.defeat('stag'), true);
-  game.addXp(0); assert.equal(game.level, 16);
-});
+  const schedule = game.bossSchedule;
+  game.update(BOSS_WAIT_MS - 1);
+  game.pause();
+  game.update(BOSS_WAIT_MS);
+  assert.equal(schedule.startDue(game.elapsedMs), undefined);
+  game.resume();
+  game.openChestUpgrade();
+  game.update(BOSS_WAIT_MS);
+  assert.equal(game.getHudSnapshot().nextBossRemainingMs, 1);
+  game.resumeAfterUpgrade();
+  game.update(1);
+  assert.equal(schedule.startDue(game.elapsedMs)?.id, 'chief');
 
-test('skipped levels still require both bosses in order, and each victory earns one chest', () => {
-  const gate = new BossGate(), drops = new ChestDrops(ground);
-  assert.equal(gate.required(9), undefined); assert.equal(gate.required(20), 'oven');
-  for (let i = 0; i < 3; i++) if (gate.defeat('oven')) drops.addBoss(player);
-  assert.equal(drops.chests.length, 1); assert.equal(gate.required(20), 'stag');
-  for (let i = 0; i < 3; i++) if (gate.defeat('stag')) drops.addBoss(player);
-  assert.equal(drops.chests.length, 2); assert.equal(gate.required(20), undefined);
-  assert.equal(new BossGate().required(20), 'oven');
-});
-
-test('arena confines walking, knockback and boss charges while allowing movement inside', () => {
-  for (const radius of [18, 22, 34]) {
-    for (const point of [{ x: 9000, y: 1000 }, { x: -1000, y: -5000 }]) {
-      const safe = insideBossArena(point, player, radius);
-      assert.ok(Math.hypot(safe.x - player.x, safe.y - player.y) <= BOSS_ARENA_RADIUS - radius + 1e-6);
-    }
-    const inside = { x: 1100, y: 1200 };
-    assert.equal(insideBossArena(inside, player, radius), inside);
-  }
+  game.update(BOSS_WAIT_MS * 2);
+  assert.equal(schedule.startDue(game.elapsedMs), undefined);
+  assert.equal(game.getHudSnapshot().nextBossRemainingMs, undefined);
+  assert.equal(schedule.defeat('oven', game.elapsedMs), false);
+  assert.equal(schedule.defeat('chief', game.elapsedMs), true);
+  game.update(BOSS_WAIT_MS - 1);
+  assert.equal(schedule.defeat('chief', game.elapsedMs), false);
+  assert.equal(schedule.startDue(game.elapsedMs), undefined);
+  game.update(1);
+  assert.equal(schedule.startDue(game.elapsedMs)?.id, 'oven');
 });
 
 test('boss chest offers exactly the three exclusive powers; ordinary rewards cannot grant or upgrade them', () => {

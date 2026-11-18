@@ -379,9 +379,9 @@ test('UIManager constructor and update stay backward-compatible without options 
     const game = new GameManager('spell', undefined, 'wizard');
     let pausedCalls = 0;
     const ui = new UIManager(game, () => { pausedCalls++; }, CHARACTER, 'p.png', 'c.png');
-    // Omit optional nextBossLevel/nextBossName/waking fields to verify legacy bare-snapshot compatibility.
+    // Omit optional boss and waking fields to verify bare-snapshot compatibility.
     const {
-      nextBossLevel: _lvl,
+      nextBossRemainingMs: _bossTime,
       nextBossName: _name,
       wakingProgress: _wp,
       wakingRemainingMs: _wr,
@@ -406,7 +406,7 @@ test('UIManager constructor and update stay backward-compatible without options 
   }
 });
 
-test('in-run status strip displays dash, Barkskin ward, active buffs, and next boss milestone', () => {
+test('in-run status strip displays dash, Barkskin ward, active buffs, and the boss countdown', () => {
   const dom = setupDom();
   try {
     const game = new GameManager('spell', undefined, 'ron');
@@ -416,6 +416,10 @@ test('in-run status strip displays dash, Barkskin ward, active buffs, and next b
     });
 
     const baseSnap = game.getHudSnapshot();
+    ui.update(baseSnap);
+    const bossPill = dom.uiRoot.querySelector('.boss-milestone-pill');
+    assert.equal(bossPill.querySelector('span').textContent, 'Next Boss in 1:00');
+    assert.equal(bossPill.querySelector('small').textContent, 'Squirrel Chief');
     ui.update({
       ...baseSnap,
       dashCooldownRatio: 0,
@@ -424,7 +428,7 @@ test('in-run status strip displays dash, Barkskin ward, active buffs, and next b
       wardMaxLeaves: 4,
       shoutRemainingMs: 3200,
       harvestBonus: 0.35,
-      nextBossLevel: 10,
+      nextBossRemainingMs: 58401,
       nextBossName: 'The Woodland Oven'
     });
 
@@ -448,10 +452,21 @@ test('in-run status strip displays dash, Barkskin ward, active buffs, and next b
     assert.match(dom.uiRoot.querySelector('.shout-pill').textContent, /3\.2s/);
     assert.equal(dom.uiRoot.querySelector('.harvest-pill').hidden, false);
     assert.match(dom.uiRoot.querySelector('.harvest-pill').textContent, /\+35%/);
-    assert.equal(dom.uiRoot.querySelector('.boss-milestone-pill').hidden, false);
-    assert.match(dom.uiRoot.querySelector('.boss-milestone-pill').textContent, /Next Boss: Lv\. 10/);
+    assert.equal(bossPill.hidden, false);
+    assert.equal(bossPill.getAttribute('role'), 'timer');
+    assert.equal(bossPill.querySelector('span').textContent, 'Next Boss in 0:59');
+    assert.equal(bossPill.querySelector('small').textContent, 'The Woodland Oven');
+    assert.equal(bossPill.getAttribute('aria-label'), 'Next Boss in 0:59 (The Woodland Oven)');
 
-    // Cooldown & recharging state updates cleanly; clear nextBossLevel/nextBossName carried by baseSnap
+    ui.update({ ...baseSnap, nextBossRemainingMs: 58000 });
+    assert.equal(bossPill.querySelector('span').textContent, 'Next Boss in 0:58');
+    ui.update({ ...baseSnap, nextBossRemainingMs: 1 });
+    assert.equal(bossPill.querySelector('span').textContent, 'Next Boss in 0:01');
+    ui.update({ ...baseSnap, nextBossRemainingMs: 0, nextBossName: undefined });
+    assert.equal(bossPill.querySelector('span').textContent, 'Next Boss in 0:00');
+    assert.equal(bossPill.querySelector('small'), null);
+
+    // Cooldown and recharging indicators still update when the countdown is hidden.
     ui.update({
       ...baseSnap,
       dashCooldownRatio: 0.6,
@@ -460,7 +475,7 @@ test('in-run status strip displays dash, Barkskin ward, active buffs, and next b
       wardMaxLeaves: 4,
       shoutRemainingMs: 0,
       harvestBonus: 0,
-      nextBossLevel: undefined,
+      nextBossRemainingMs: undefined,
       nextBossName: undefined
     });
     assert.ok(dashPill.classList.contains('is-cooling'));

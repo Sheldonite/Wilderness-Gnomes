@@ -1,17 +1,17 @@
-/** Wonky, the lopsided old stag: the level 15 boss. Three points on his left antler, five on his right. */
+/** Wonky, the lopsided old stag: three points on his left antler, five on his right. */
 export const STAG = {
-  level: 15, name: 'Wonky', health: 15000, healthPerMinute: 300, contactDamage: 24,
+  name: 'Wonky', health: 15000, healthPerMinute: 300, contactDamage: 24,
   radius: 34, speed: 96, standOff: 230,
   spawnDistance: 380, introductionMs: 2000,
   windupMs: 750, enragedWindupMs: 500,
-  chargeSpeed: 820, chargeDistance: 640, chargeDamage: 34, chargeKnockback: 150,
+  chargeSpeed: 820, chargeDistance: 640, chargeMinDistance: 280, chargeOvershoot: 190, chargeDamage: 34, chargeKnockback: 150,
   stompRadius: 150, stompDamage: 14,
   recoverMs: 1100, cooldownMs: 1800, enragedCooldownMs: 1200,
   enrageFraction: .5, enragedCharges: 2,
   /** What he does each time he finishes stalking, in order, round and round. */
   attackOrder: ['charge', 'volley', 'charge', 'bellow'] as readonly ('charge' | 'volley' | 'bellow')[],
-  /** Charging into a tree stuns him, and a stunned stag takes extra damage. */
-  stunMs: 2200, stunVulnerability: 1.25,
+  /** Wonky takes extra damage while recovering from the final charge of a burst. */
+  recoveryVulnerability: 1.25,
   /** Stay close too long and he sweeps his antlers through the half circle in front of him. */
   sweepTriggerRange: 150, sweepHoldMs: 1500, sweepWindupMs: 600,
   sweepRange: 175, sweepDamage: 22, sweepKnockback: 190, sweepRestMs: 700,
@@ -23,8 +23,8 @@ export const STAG = {
   feintExtraMs: 320,
   /** Enraged follow-up charges aim where the player is heading, up to this far ahead. */
   leadMaxMs: 700,
-  /** Rut: below this health he is in a frenzy. Triple charges, faster everything, shorter stuns. */
-  rutFraction: .3, rutCharges: 3, rutWindupMs: 420, rutRecoverMs: 650, rutStunMs: 1600,
+  /** Rut: below this health he is in a frenzy. Triple charges and faster recovery. */
+  rutFraction: .3, rutCharges: 3, rutWindupMs: 420, rutRecoverMs: 650,
   rutChargeSpeed: 1.15, rutStalkSpeed: 1.6, rutTint: 0xffb8a0,
   /** He calls the herd as he passes each of these health fractions. */
   stampedeThresholds: [.5, .25], stampedeLanes: 2, stampedeCount: 5,

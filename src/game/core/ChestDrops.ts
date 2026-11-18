@@ -5,15 +5,16 @@ import type { Vector2Like } from './types';
 import { distanceSq } from '../utils/math';
 
 export interface ChestDrop { id: number; position: Vector2Like; kind: 'chest' | 'boss' }
+export type ChestCarrier = 'elite' | 'featured-hedgehog';
 
-/** One independent roll per level, including the starting level. Unplaced drops wait for clear ground. */
+/** Chest rolls start at level 1, with a guaranteed featured carrier at level 3. */
 export class ChestDrops {
   private static readonly guaranteedLevel = 3;
   readonly chests: ChestDrop[] = [];
   pending = 0;
   private lastLevel = 0;
   private nextId = 0;
-  private guaranteedLevelGranted = false;
+  private featuredPending = false;
 
   constructor(private readonly navigation: Pick<SceneryNavigation, 'blocked' | 'clear'>,
     private readonly random: () => number = Math.random) {}
@@ -22,13 +23,25 @@ export class ChestDrops {
     const chance = Math.max(0, Math.min(1, BALANCE.chest.chancePerLevel + bonusChance));
     while (this.lastLevel < level) {
       this.lastLevel++;
-      if (this.lastLevel === ChestDrops.guaranteedLevel && !this.guaranteedLevelGranted) {
-        this.guaranteedLevelGranted = true;
+      if (this.lastLevel === ChestDrops.guaranteedLevel) {
+        this.featuredPending = true;
         this.pending++;
       } else if (this.random() < chance) {
         this.pending++;
       }
     }
+  }
+
+  /** Give the level-3 carrier priority over random rolls that are still waiting. */
+  dispatchCarrier(spawn: (kind: ChestCarrier) => boolean): boolean {
+    if (!this.pending || !spawn(this.featuredPending ? 'featured-hedgehog' : 'elite')) return false;
+    this.consumePending();
+    return true;
+  }
+
+  private consumePending(): void {
+    this.pending--;
+    this.featuredPending = false;
   }
 
   spawnNear(player: Vector2Like): ChestDrop | undefined {
@@ -42,7 +55,7 @@ export class ChestDrops {
         this.chests.some(chest => distanceSq(chest.position, position) < b.spacing ** 2)) continue;
       const chest: ChestDrop = { id: ++this.nextId, position, kind: 'chest' };
       this.chests.push(chest);
-      this.pending--;
+      this.consumePending();
       return chest;
     }
   }

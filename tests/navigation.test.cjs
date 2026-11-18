@@ -15,6 +15,23 @@ test('decorative scenery allows direct movement without route searches and retai
   assert.deepEqual(nav.nearest({x:-100,y:4000},12),{x:12,y:3188});
 });
 
+test('wilds navigation stays direct across signed coordinates while finding dry loot placements', () => {
+  const nav = new SceneryNavigation(false, false, true, (point, radius) => Math.abs(point.x) >= 60 + radius);
+  const from = { x: -250, y: 7100 }, to = { x: 250, y: 7100 };
+  const water = { x: 0, y: 7100 };
+  nav.addCircle(0, 7100, 100);
+  nav.prepare = () => assert.fail('open woods never build route grids');
+  assert.equal(nav.blocked(water, 24), false);
+  assert.equal(nav.clear(from, to, 24), true);
+  assert.deepEqual(nav.move(from, to, 24), to);
+  assert.deepEqual(nav.toward(from, to, 400, 24, createNavigationRoute()), { x: 150, y: 7100 });
+  assert.deepEqual(nav.nearest(from, 24), from);
+  assert.equal(nav.isDry(water, 24), false);
+  const dry = nav.nearestDry(water, 24);
+  assert.ok(nav.isDry(dry, 24));
+  assert.ok(Math.hypot(dry.x - water.x, dry.y - water.y) < 100);
+});
+
 function follow(nav, start, target, radius = 12, limit = 3000) {
   let p = start;
   const route = createNavigationRoute();

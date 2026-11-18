@@ -57,8 +57,6 @@ test('a companion gains a rank every three levels and stops at ten', () => {
 test('levelling the run raises the companion rank and announces each growth once', () => {
   const game = new GameManager('spell', undefined, 'wizard');
   const stats = game.playerStats;
-  // The level 10 boss gate would otherwise hold the run at level 10.
-  game.bossGate.defeat('oven'); game.bossGate.defeat('stag');
   const reached = [];
   for (let level = 2; level <= 13; level++) {
     game.addXp(game.xpToNextLevel - game.xp);

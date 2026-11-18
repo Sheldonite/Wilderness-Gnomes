@@ -26,9 +26,15 @@ export class SceneryNavigation {
   private grids = new Map<number, Uint8Array>();
   private edges = new Map<number, Uint8Array>();
   private fields = new Map<string, Int16Array>();
-  constructor(private readonly water = true, private readonly sceneryCollision = true) {}
+  private readonly sceneryCollision: boolean;
 
-  private clamp(p: Vector2Like, radius: number): Vector2Like {
+  constructor(private readonly water = true, sceneryCollision = true, readonly unbounded = false,
+    private readonly dryGround?: (position: Vector2Like, radius: number) => boolean) {
+    this.sceneryCollision = sceneryCollision && !unbounded;
+  }
+
+  constrain(p: Vector2Like, radius: number): Vector2Like {
+    if (this.unbounded) return { x: p.x, y: p.y };
     return { x: Math.max(radius, Math.min(SIZE - radius, p.x)), y: Math.max(radius, Math.min(SIZE - radius, p.y)) };
   }
 
@@ -44,25 +50,31 @@ export class SceneryNavigation {
   }
 
   blocked(p: Vector2Like, radius: number): boolean {
+    if (this.unbounded) return false;
     if (p.x < radius || p.y < radius || p.x > SIZE - radius || p.y > SIZE - radius) return true;
     if (!this.sceneryCollision) return false;
-    if (this.water) {
-      if (p.x > 2180 - radius && p.x < 2640 + radius) {
-        const dx = p.x - bridgeX, dy = p.y - bridgeY;
-        const along = dx * bridgeCos + dy * bridgeSin;
-        const across = -dx * bridgeSin + dy * bridgeCos;
-        const onBridge = Math.abs(along) <= 110 && Math.abs(across) <= 43 - radius;
-        if (!onBridge && Math.abs(p.x - riverX(p.y)) < 58 + radius) return true;
-      }
-      for (const pond of PONDS) {
-        if (Math.abs(p.x - pond.x) > pond.rx + radius + 24 || Math.abs(p.y - pond.y) > pond.ry + radius + 24) continue;
-        const x = (p.x - pond.x) * pondCos - (p.y - pond.y) * pondSin;
-        const y = (p.x - pond.x) * pondSin + (p.y - pond.y) * pondCos;
-        if ((x / (pond.rx + radius)) ** 2 + (y / (pond.ry + radius)) ** 2 < 1) return true;
-      }
-    }
+    if (this.water && !this.isDry(p, radius)) return true;
     return (this.solids.get(Math.floor(p.x / 128) + Math.floor(p.y / 128) * 32) ?? [])
       .some(s => (p.x - s.x) ** 2 + (p.y - s.y) ** 2 < (radius + s.radius) ** 2);
+  }
+
+  /** Loot can use the shoreline even when water is walkable. */
+  isDry(p: Vector2Like, radius: number): boolean {
+    if (this.unbounded) return this.dryGround?.(p, radius) ?? true;
+    if (p.x > 2180 - radius && p.x < 2640 + radius) {
+      const dx = p.x - bridgeX, dy = p.y - bridgeY;
+      const along = dx * bridgeCos + dy * bridgeSin;
+      const across = -dx * bridgeSin + dy * bridgeCos;
+      const onBridge = Math.abs(along) <= 110 && Math.abs(across) <= 43 - radius;
+      if (!onBridge && Math.abs(p.x - riverX(p.y)) < 58 + radius) return false;
+    }
+    for (const pond of PONDS) {
+      if (Math.abs(p.x - pond.x) > pond.rx + radius + 24 || Math.abs(p.y - pond.y) > pond.ry + radius + 24) continue;
+      const x = (p.x - pond.x) * pondCos - (p.y - pond.y) * pondSin;
+      const y = (p.x - pond.x) * pondSin + (p.y - pond.y) * pondCos;
+      if ((x / (pond.rx + radius)) ** 2 + (y / (pond.ry + radius)) ** 2 < 1) return false;
+    }
+    return true;
   }
 
   clear(a: Vector2Like, b: Vector2Like, radius: number): boolean {
@@ -73,18 +85,27 @@ export class SceneryNavigation {
   }
 
   nearest(p: Vector2Like, radius: number): Vector2Like {
-    if (!this.sceneryCollision) return this.clamp(p, radius);
+    if (!this.sceneryCollision) return this.constrain(p, radius);
     if (!this.blocked(p, radius)) return p;
+    return this.findNearby(p, point => !this.blocked(point, radius)) ?? { x: 1600, y: 1600 };
+  }
+
+  nearestDry(p: Vector2Like, radius: number): Vector2Like {
+    const point = this.constrain(p, radius);
+    const available = (candidate: Vector2Like) => !this.blocked(candidate, radius) && this.isDry(candidate, radius);
+    return available(point) ? point : this.findNearby(point, available) ?? this.nearest(point, radius);
+  }
+
+  private findNearby(p: Vector2Like, available: (point: Vector2Like) => boolean): Vector2Like | undefined {
     for (let ring = 8; ring <= SIZE; ring += 8) for (let i = 0; i < 32; i++) {
       const q = { x: p.x + Math.cos(i * Math.PI / 16) * ring, y: p.y + Math.sin(i * Math.PI / 16) * ring };
-      if (!this.blocked(q, radius)) return q;
+      if (available(q)) return q;
     }
-    return { x: 1600, y: 1600 };
   }
 
   /** Swept small steps prevent tunnelling and slide keyboard movement along edges. */
   move(from: Vector2Like, to: Vector2Like, radius: number): Vector2Like {
-    if (!this.sceneryCollision) return this.clamp(to, radius);
+    if (!this.sceneryCollision) return this.constrain(to, radius);
     let p = { ...this.nearest(from, radius) };
     const n = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 5));
     const dx = (to.x - from.x) / n, dy = (to.y - from.y) / n;
@@ -125,7 +146,7 @@ export class SceneryNavigation {
     if (!this.sceneryCollision) {
       const dx = target.x - from.x, dy = target.y - from.y, length = Math.hypot(dx, dy);
       const step = length > 0 ? Math.min(1, distance / length) : 0;
-      return this.clamp({ x: from.x + dx * step, y: from.y + dy * step }, radius);
+      return this.constrain({ x: from.x + dx * step, y: from.y + dy * step }, radius);
     }
     if (route && route.retryFrames > 0 && route.generation === this.generation
       && Math.hypot(target.x - route.goal.x, target.y - route.goal.y) < 48) {

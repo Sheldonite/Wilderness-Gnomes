@@ -3,7 +3,7 @@ import type { SceneryNavigation } from './SceneryNavigation';
 import type { Vector2Like } from './types';
 import { distanceSq } from '../utils/math';
 
-export const RARE_ROCKS = { rollMs: 45000, chance: .2, maxActive: 3, collectRange: 28 } as const;
+export const RARE_ROCKS = { rollMs: 45000, chance: .2, maxActive: 3, localRange: 900, collectRange: 28 } as const;
 export interface RareRock { id: number; position: Vector2Like }
 
 /** About one find per 3.75 minutes; only active play advances the clock. */
@@ -11,7 +11,7 @@ export class RareRockDrops {
   readonly rocks: RareRock[] = [];
   private elapsed = 0;
   private nextId = 0;
-  constructor(private readonly navigation: Pick<SceneryNavigation, 'blocked' | 'clear'>,
+  constructor(private readonly navigation: Pick<SceneryNavigation, 'blocked' | 'clear'> & Partial<Pick<SceneryNavigation, 'unbounded'>>,
     private readonly random: () => number = Math.random) {}
 
   update(deltaMs: number, player: Vector2Like, playing: boolean): RareRock | undefined {
@@ -19,12 +19,12 @@ export class RareRockDrops {
     this.elapsed += deltaMs;
     if (this.elapsed < RARE_ROCKS.rollMs) return;
     this.elapsed %= RARE_ROCKS.rollMs;
-    if (this.rocks.length >= RARE_ROCKS.maxActive || this.random() >= RARE_ROCKS.chance) return;
+    if (!this.canSpawnNear(player) || this.random() >= RARE_ROCKS.chance) return;
     return this.spawnNear(player);
   }
 
   spawnNear(player: Vector2Like): RareRock | undefined {
-    if (this.rocks.length >= RARE_ROCKS.maxActive) return;
+    if (!this.canSpawnNear(player)) return;
     for (let attempt = 0; attempt < 24; attempt++) {
       const angle = this.random() * Math.PI * 2, radius = 120 + this.random() * 160;
       const position = { x: player.x + Math.cos(angle) * radius, y: player.y + Math.sin(angle) * radius };
@@ -34,6 +34,11 @@ export class RareRockDrops {
       this.rocks.push(rock);
       return rock;
     }
+  }
+
+  private canSpawnNear(player: Vector2Like): boolean {
+    if (!this.navigation.unbounded) return this.rocks.length < RARE_ROCKS.maxActive;
+    return this.rocks.filter(rock => distanceSq(player, rock.position) <= RARE_ROCKS.localRange ** 2).length < RARE_ROCKS.maxActive;
   }
 
   collectNearby(player: Vector2Like): RareRock | undefined {

@@ -1,11 +1,9 @@
-# Solid scenery and resting cats
+# Movement and terrain
 
-Trees block movement around their trunks and rocks around their ground footprints. The river and ponds are impassable; the existing timber bridge remains a crossing. Flowers, ferns, and small mushrooms remain walkable ground cover. Canopies still fade when they hide actors.
+The woods generate from a seed when a run starts. The camera loads nearby chunks and unloads distant ones. Returning to an explored area in the same run reproduces its paths, streams, bridges, ponds, trees, and ground cover.
 
-Player movement slides along solid edges. Enemies and both companions share navigation around obstacles, including bridge routes. Spawn/follow positions resolve onto nearby clear ground. Enemy separation also respects scenery. Mystery cannot pounce through a solid object, and neither cat can land a melee hit through one.
+Players, companions, and enemies can move across the terrain in any direction. Trees fade when they cover actors. Treasure and rare rocks use the generated shoreline to find dry ground. Market Day uses its own town map.
 
-Mystery uses her original seated frame when her position stops changing. Midnight uses the seated ready pose from her existing swat artwork. Walking resumes with actual movement; swat and pounce animations retain their combat behavior. No artwork was regenerated.
+Bosses fight in the same space as ordinary enemies. The compass tracks offscreen bosses. `?review=boss-rewards` lets you start a boss encounter and move past the former map edge during the fight.
 
-Navigation uses a spatial footprint index and bounded shared destination fields, rebuilt on restart. Tests cover swept collision, sliding, detours, water, bridge crossings at cat/enemy clearances, safe placement, and Midnight settling. All 34 tests, TypeScript, and the production build pass. A synthetic 180-enemy navigation check over 120 frames averaged 3.10 ms per frame on this machine; this measures navigation only, not full rendered frame rate.
-
-Development review: `?review=cats-rest` recruits both cats without enemies. The Walk trail button exercises walking and settling; End run checks restart. Inspected both seated poses and walking-to-sitting transitions in Chrome, verified a clean restart, and found no browser errors or warnings. Screenshot: `artifacts/screenshots/cats-sitting.jpg`.
+Mystery and Midnight still switch to their seated poses when they stop walking.
